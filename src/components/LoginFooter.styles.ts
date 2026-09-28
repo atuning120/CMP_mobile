@@ -9,13 +9,5 @@ export const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   footerRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  footerText: { fontSize: 11, color: '#94a3b8' },
-});
-
-export const darkTheme = StyleSheet.create({
-  borderTop: { borderTopColor: '#1e293b' },
-});
-
-export const lightTheme = StyleSheet.create({
-  borderTop: { borderTopColor: '#e2e8f0' },
+  footerText: { fontSize: 11 },
 });
