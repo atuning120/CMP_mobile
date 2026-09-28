@@ -2,12 +2,11 @@ import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
   container: {
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  text: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  image: {
+    width: 120,
+    height: 40,
   },
 });

@@ -1,17 +1,25 @@
 import React from 'react';
-import { Text, View, useColorScheme } from 'react-native';
+import { View, Image, useColorScheme } from 'react-native';
 import { styles } from './CmpLogo.styles';
-import { lightTheme, darkTheme } from '../constants/theme';
 
 export const CmpLogo = ({ variant = 'auto' }: { variant?: 'auto' | 'dark' | 'light' }) => {
   const colorScheme = useColorScheme();
-  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  
+  let isDark = colorScheme === 'dark';
+  if (variant === 'dark') isDark = true;
+  if (variant === 'light') isDark = false;
+
+  const logoSource = isDark 
+    ? require('../../assets/images/CMP_logo_modo_oscuro.png')
+    : require('../../assets/images/CMP_logo.png');
 
   return (
-    <View style={[styles.container, { borderColor: theme.primary, backgroundColor: theme.cardAlt }]}>
-      <Text style={[styles.text, { color: theme.primary }]}>
-        CMP Logo
-      </Text>
+    <View style={styles.container}>
+      <Image 
+        source={logoSource} 
+        style={styles.image} 
+        resizeMode="contain" 
+      />
     </View>
   );
 };

@@ -1,22 +1,23 @@
+import { CheckCircle2 } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
+import {
+  ImageBackground,
   ScrollView,
-  useColorScheme
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CheckCircle2 } from 'lucide-react-native';
 
-import { styles } from './LoginScreen.styles';
-import { LoginHeader } from '../components/LoginHeader';
-import { LoginForm } from '../components/LoginForm';
-import { MicrosoftLoginButton } from '../components/MicrosoftLoginButton';
 import { LoginFooter } from '../components/LoginFooter';
+import { LoginForm } from '../components/LoginForm';
+import { LoginHeader } from '../components/LoginHeader';
+import { MicrosoftLoginButton } from '../components/MicrosoftLoginButton';
+import { styles } from './LoginScreen.styles';
 
-import { Operador, NetworkState } from '../types/mining';
-import { lightTheme, darkTheme } from '../constants/theme';
+import { darkTheme, lightTheme } from '../constants/theme';
+import { NetworkState, Operador } from '../types/mining';
 
 interface LoginScreenProps {
   onLoginSuccess: (operador: Operador) => void;
@@ -79,9 +80,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         <LoginHeader />
 
         {/* Main Login Card */}
-        <View style={styles.mainContent}>
+        <ImageBackground
+          source={require('../../assets/images/Mina_fondo.jpg')}
+          style={styles.mainContent}
+          imageStyle={{ opacity: colorScheme === 'dark' ? 0.6 : 0.6 }}
+        >
           <View style={[
-            styles.card, 
+            styles.card,
             { backgroundColor: theme.card, borderColor: theme.border, shadowColor: colorScheme === 'dark' ? '#000' : '#000' }
           ]}>
             {/* Card Title */}
@@ -113,7 +118,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       ]}
                     >
                       <View style={[
-                        styles.avatar, 
+                        styles.avatar,
                         { backgroundColor: isSelected ? theme.primary : '#334155' }
                       ]}>
                         <Text style={[styles.avatarText, { color: '#fff' }]}>
@@ -135,7 +140,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </View>
 
             {/* Extracted Form Component */}
-            <LoginForm 
+            <LoginForm
               email={email}
               setEmail={setEmail}
               password={password}
@@ -166,7 +171,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               {networkState === 'online' ? '🟢 Conectado' : '🟠 Modo Local'}
             </Text>
           </View>
-        </View>
+        </ImageBackground>
 
         {/* Extracted Footer Component */}
         <LoginFooter />

@@ -3,47 +3,45 @@ export interface ThemeColors {
   card: string;
   text: string;
   textSecondary: string;
-  textTertiary: string; // I will add this since it's used in LoginScreen
+  textTertiary: string;
   border: string;
   primary: string;
   success: string;
   danger: string;
   warning: string;
   
-  // Specific properties used by quickOp unselected, ms button, etc.
-  // To keep it strictly to the requested keys, I'll map them.
-  cardAlt: string; // for MS button dark theme or inputs
+  cardAlt: string;
   transparentPrimary: string;
 }
 
 export const lightTheme: ThemeColors = {
-  background: '#f1f5f9',
-  card: '#ffffff',
-  text: '#0f172a',
-  textSecondary: '#64748b',
-  textTertiary: '#94a3b8',
-  border: '#e2e8f0',
-  primary: '#1A73E8', // User explicitly asked for this
-  success: '#34d399',
-  danger: '#f87171',
-  warning: '#f59e0b',
+  background: '#f8f9fa',
+  card: '#FFFFFF',
+  text: '#202124',
+  textSecondary: '#5f6368',
+  textTertiary: '#80868b',
+  border: '#dadce0',
+  primary: '#1A73E8',
+  success: '#1e8e3e',
+  danger: '#d93025',
+  warning: '#f9ab00',
   
-  cardAlt: '#f8fafc',
-  transparentPrimary: 'rgba(26, 115, 232, 0.15)',
+  cardAlt: '#f1f3f4',
+  transparentPrimary: 'rgba(26, 115, 232, 0.1)',
 };
 
 export const darkTheme: ThemeColors = {
-  background: '#0A1017',
-  card: '#101824',
-  text: '#ffffff',
-  textSecondary: '#94a3b8',
-  textTertiary: '#64748b',
-  border: '#1e293b',
+  background: '#202124',
+  card: '#292a2d',
+  text: '#FFFFFF',
+  textSecondary: '#9aa0a6',
+  textTertiary: '#bdc1c6',
+  border: '#3c4043',
   primary: '#1A73E8', 
-  success: '#34d399',
-  danger: '#f87171',
-  warning: '#f59e0b',
+  success: '#81c995',
+  danger: '#f28b82',
+  warning: '#fde293',
 
-  cardAlt: '#0B121C',
-  transparentPrimary: 'rgba(26, 115, 232, 0.15)',
+  cardAlt: '#303134',
+  transparentPrimary: 'rgba(26, 115, 232, 0.2)',
 };
