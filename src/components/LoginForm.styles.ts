@@ -1,0 +1,56 @@
+import { StyleSheet } from 'react-native';
+
+export const styles = StyleSheet.create({
+  formContainer: { gap: 16 },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(244, 63, 94, 0.15)',
+    borderColor: 'rgba(244, 63, 94, 0.4)',
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  errorText: { color: '#f87171', fontSize: 12 },
+  inputGroup: { gap: 6 },
+  label: { fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
+  inputWrapper: { position: 'relative', justifyContent: 'center' },
+  inputIcon: { position: 'absolute', left: 12, zIndex: 1 },
+  input: {
+    height: 50,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingLeft: 40,
+    paddingRight: 12,
+    fontSize: 14,
+  },
+  submitButton: {
+    height: 56,
+    backgroundColor: '#00A3E0',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+    shadowColor: '#00A3E0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+});
+
+export const darkTheme = StyleSheet.create({
+  textSecondary: { color: '#94a3b8' },
+  inputBackground: { backgroundColor: '#0B121C', borderColor: '#334155' },
+  textPrimary: { color: '#ffffff' },
+});
+
+export const lightTheme = StyleSheet.create({
+  textSecondary: { color: '#64748b' },
+  inputBackground: { backgroundColor: '#f8fafc', borderColor: '#cbd5e1' },
+  textPrimary: { color: '#0f172a' },
+});

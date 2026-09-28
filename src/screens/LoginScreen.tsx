@@ -2,22 +2,18 @@ import React, { useState } from 'react';
 import { 
   View, 
   Text, 
-  TextInput, 
   TouchableOpacity, 
   ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CheckCircle2 } from 'lucide-react-native';
+
 import { styles, darkTheme, lightTheme } from './LoginScreen.styles';
-import { 
-  User, 
-  Lock, 
-  ArrowRight, 
-  ShieldCheck, 
-  HardHat, 
-  CheckCircle2,
-  AlertCircle
-} from 'lucide-react-native';
-import { CmpLogo } from './CmpLogo';
+import { LoginHeader } from '../components/LoginHeader';
+import { LoginForm } from '../components/LoginForm';
+import { MicrosoftLoginButton } from '../components/MicrosoftLoginButton';
+import { LoginFooter } from '../components/LoginFooter';
+
 import { Operador, VisualContrastMode, NetworkState } from '../types/mining';
 
 interface LoginScreenProps {
@@ -79,17 +75,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   return (
     <SafeAreaView style={[styles.safeArea, themeStyles.background]}>
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        {/* Top Header / Branding Bar */}
-        <View style={[styles.header, themeStyles.borderBottom]}>
-          <CmpLogo variant={isNight ? 'dark' : 'auto'} />
-          <View style={styles.headerRight}>
-            <Text style={styles.terminalText}>Terminal Cabina MLC</Text>
-            <View style={styles.flotaContainer}>
-              <HardHat size={14} color="#f59e0b" />
-              <Text style={styles.flotaText}>Flota de Apoyo</Text>
-            </View>
-          </View>
-        </View>
+        {/* Extracted Header Component */}
+        <LoginHeader contrastMode={contrastMode} />
 
         {/* Main Login Card */}
         <View style={styles.mainContent}>
@@ -138,58 +125,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </View>
             </View>
 
-            {/* Standard Form */}
-            <View style={styles.formContainer}>
-              {errorMsg && (
-                <View style={styles.errorBox}>
-                  <AlertCircle size={16} color="#f87171" />
-                  <Text style={styles.errorText}>{errorMsg}</Text>
-                </View>
-              )}
-
-              {/* Email Field */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, themeStyles.textSecondary]}>Correo Corporativo:</Text>
-                <View style={styles.inputWrapper}>
-                  <View style={styles.inputIcon}>
-                    <User size={20} color="#94a3b8" />
-                  </View>
-                  <TextInput
-                    style={[styles.input, themeStyles.inputBackground, themeStyles.textPrimary]}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="nombre.apellido@cmp.cl"
-                    placeholderTextColor="#94a3b8"
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                  />
-                </View>
-              </View>
-
-              {/* Password Field */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, themeStyles.textSecondary]}>Contraseña / PIN de Operador:</Text>
-                <View style={styles.inputWrapper}>
-                  <View style={styles.inputIcon}>
-                    <Lock size={20} color="#94a3b8" />
-                  </View>
-                  <TextInput
-                    style={[styles.input, themeStyles.inputBackground, themeStyles.textPrimary]}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="Ingresa tu clave de cabina"
-                    placeholderTextColor="#94a3b8"
-                    secureTextEntry
-                  />
-                </View>
-              </View>
-
-              {/* Primary Action Button */}
-              <TouchableOpacity style={styles.submitButton} onPress={handleStandardLogin}>
-                <Text style={styles.submitButtonText}>Continuar al Turno</Text>
-                <ArrowRight size={20} color="#fff" />
-              </TouchableOpacity>
-            </View>
+            {/* Extracted Form Component */}
+            <LoginForm 
+              email={email}
+              setEmail={setEmail}
+              password={password}
+              setPassword={setPassword}
+              errorMsg={errorMsg}
+              onSubmit={handleStandardLogin}
+              contrastMode={contrastMode}
+            />
 
             {/* Divider */}
             <View style={styles.dividerContainer}>
@@ -199,26 +144,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </View>
             </View>
 
-            {/* Microsoft Sign-In Button */}
-            <TouchableOpacity 
-              style={[styles.msButton, themeStyles.msButtonTheme]} 
-              onPress={() => {
-                // Mock Microsoft Login
-                handleStandardLogin();
-              }}
-            >
-              <View style={styles.msLogo}>
-                <View style={styles.msLogoRow}>
-                  <View style={[styles.msLogoSquare, { backgroundColor: '#F25022' }]} />
-                  <View style={[styles.msLogoSquare, { backgroundColor: '#7FBA00' }]} />
-                </View>
-                <View style={styles.msLogoRow}>
-                  <View style={[styles.msLogoSquare, { backgroundColor: '#00A4EF' }]} />
-                  <View style={[styles.msLogoSquare, { backgroundColor: '#FFB900' }]} />
-                </View>
-              </View>
-              <Text style={[styles.msButtonText, themeStyles.textPrimary]}>Iniciar Sesión con Microsoft</Text>
-            </TouchableOpacity>
+            {/* Extracted Microsoft Button Component */}
+            <MicrosoftLoginButton 
+              contrastMode={contrastMode} 
+              onPress={handleStandardLogin} 
+            />
           </View>
 
           {/* Offline Support Notice */}
@@ -233,14 +163,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </View>
         </View>
 
-        {/* Footer Info */}
-        <View style={[styles.footer, themeStyles.borderTop]}>
-          <View style={styles.footerRow}>
-            <ShieldCheck size={14} color="#00A3E0" />
-            <Text style={styles.footerText}>Gestión de Riesgo en los Procesos (GRP)</Text>
-          </View>
-          <Text style={styles.footerText}>Mina Los Colorados · CMP</Text>
-        </View>
+        {/* Extracted Footer Component */}
+        <LoginFooter contrastMode={contrastMode} />
       </ScrollView>
     </SafeAreaView>
   );
