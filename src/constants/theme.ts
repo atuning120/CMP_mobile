@@ -9,7 +9,8 @@ export interface ThemeColors {
   success: string;
   danger: string;
   warning: string;
-  
+  white: string;
+
   cardAlt: string;
   transparentPrimary: string;
 }
@@ -25,7 +26,8 @@ export const lightTheme: ThemeColors = {
   success: '#1e8e3e',
   danger: '#d93025',
   warning: '#f9ab00',
-  
+  white: '#FFFFFF',
+
   cardAlt: '#f1f3f4',
   transparentPrimary: 'rgba(26, 115, 232, 0.1)',
 };
@@ -37,10 +39,11 @@ export const darkTheme: ThemeColors = {
   textSecondary: '#9aa0a6',
   textTertiary: '#bdc1c6',
   border: '#3c4043',
-  primary: '#1A73E8', 
+  primary: '#1A73E8',
   success: '#81c995',
   danger: '#f28b82',
   warning: '#fde293',
+  white: '#FFFFFF',
 
   cardAlt: '#303134',
   transparentPrimary: 'rgba(26, 115, 232, 0.2)',

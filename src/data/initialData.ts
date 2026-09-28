@@ -3,12 +3,12 @@ import { Operador } from '../types/mining';
 export const INITIAL_OPERADORES: Operador[] = [
   {
     id_operador: 1,
-    nombre: 'Carlos',
+    nombre: 'Cristian',
     apellido: 'Núñez',
     rut: '15.123.456-7',
     telefono: '+56 9 1234 5678',
     estado: 'En Faena',
-    email: 'cnunez@contratistacmp.cl',
+    email: 'cnunez@ejemplo.cl',
     empresa: 'Servicio Movimiento de Material MLC',
     rol: 'Operador de Maquinaria',
   },
@@ -19,7 +19,7 @@ export const INITIAL_OPERADORES: Operador[] = [
     rut: '16.987.654-3',
     telefono: '+56 9 8765 4321',
     estado: 'En Faena',
-    email: 'mlopez@contratistacmp.cl',
+    email: 'mlopez@ejemplo.cl',
     empresa: 'Servicio Movimiento de Material MLC',
     rol: 'Operador de Maquinaria',
   }

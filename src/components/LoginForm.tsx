@@ -1,8 +1,8 @@
+import { AlertCircle, ArrowRight, Lock, User } from 'lucide-react-native';
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, useColorScheme } from 'react-native';
-import { User, Lock, ArrowRight, AlertCircle } from 'lucide-react-native';
+import { Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { darkTheme, lightTheme } from '../constants/theme';
 import { styles } from './LoginForm.styles';
-import { lightTheme, darkTheme } from '../constants/theme';
 
 interface LoginFormProps {
   email: string;
@@ -28,7 +28,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     <View style={styles.formContainer}>
       {errorMsg && (
         <View style={[
-          styles.errorBox, 
+          styles.errorBox,
           { backgroundColor: 'rgba(244, 63, 94, 0.15)', borderColor: 'rgba(244, 63, 94, 0.4)' }
         ]}>
           <AlertCircle size={16} color={theme.danger} />
@@ -45,7 +45,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           </View>
           <TextInput
             style={[
-              styles.input, 
+              styles.input,
               { backgroundColor: theme.cardAlt, borderColor: colorScheme === 'dark' ? '#334155' : theme.border, color: theme.text }
             ]}
             value={email}
@@ -67,7 +67,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           </View>
           <TextInput
             style={[
-              styles.input, 
+              styles.input,
               { backgroundColor: theme.cardAlt, borderColor: colorScheme === 'dark' ? '#334155' : theme.border, color: theme.text }
             ]}
             value={password}
@@ -80,11 +80,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       </View>
 
       {/* Primary Action Button */}
-      <TouchableOpacity 
-        style={[styles.submitButton, { backgroundColor: theme.primary, shadowColor: theme.primary }]} 
+      <TouchableOpacity
+        style={[styles.submitButton, { backgroundColor: theme.primary, shadowColor: theme.primary }]}
         onPress={onSubmit}
       >
-        <Text style={styles.submitButtonText}>Continuar al Turno</Text>
+        <Text style={styles.submitButtonText}>Iniciar Sesión</Text>
         <ArrowRight size={20} color="#fff" />
       </TouchableOpacity>
     </View>

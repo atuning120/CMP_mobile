@@ -92,9 +92,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             {/* Card Title */}
             <View style={styles.titleContainer}>
               <Text style={[styles.title, { color: theme.text }]}>Inicio de Sesión</Text>
-              <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-                Registro individual de operador en cabina de faena.
-              </Text>
             </View>
 
             {/* Quick Operator Selection */}
@@ -159,18 +156,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
             {/* Extracted Microsoft Button Component */}
             <MicrosoftLoginButton onPress={handleStandardLogin} />
+            {/* Offline Support Notice */}
+            <View style={styles.offlineNotice}>
+              <View style={styles.offlineLeft}>
+                <CheckCircle2 size={14} color={theme.success} />
+                <Text style={[styles.offlineText, { color: theme.text }]}>Soporte Offline-First</Text>
+              </View>
+              <Text style={[styles.networkStatusText, { color: theme.text }]}>
+                {networkState === 'online' ? '🟢 Conectado' : '🟠 Modo Local'}
+              </Text>
+            </View>
           </View>
 
-          {/* Offline Support Notice */}
-          <View style={styles.offlineNotice}>
-            <View style={styles.offlineLeft}>
-              <CheckCircle2 size={14} color={theme.success} />
-              <Text style={[styles.offlineText, { color: theme.textSecondary }]}>Soporte Offline-First</Text>
-            </View>
-            <Text style={[styles.networkStatusText, { color: theme.textSecondary }]}>
-              {networkState === 'online' ? '🟢 Conectado' : '🟠 Modo Local'}
-            </Text>
-          </View>
         </ImageBackground>
 
         {/* Extracted Footer Component */}

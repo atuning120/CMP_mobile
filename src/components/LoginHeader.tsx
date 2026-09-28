@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, useColorScheme, Appearance, TouchableOpacity } from 'react-native';
 import { HardHat, Moon, Sun } from 'lucide-react-native';
+import React from 'react';
+import { Appearance, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { darkTheme, lightTheme } from '../constants/theme';
 import { CmpLogo } from './CmpLogo';
 import { styles } from './LoginHeader.styles';
-import { lightTheme, darkTheme } from '../constants/theme';
 
 export const LoginHeader: React.FC = () => {
   const colorScheme = useColorScheme();
@@ -18,14 +18,14 @@ export const LoginHeader: React.FC = () => {
     <View style={[styles.header, { borderBottomColor: theme.border }]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <CmpLogo variant={isDark ? 'dark' : 'auto'} />
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={toggleTheme}
-          style={{ 
-            padding: 8, 
-            borderRadius: 20, 
-            backgroundColor: theme.cardAlt, 
-            borderWidth: 1, 
-            borderColor: theme.border 
+          style={{
+            padding: 8,
+            borderRadius: 20,
+            backgroundColor: theme.cardAlt,
+            borderWidth: 1,
+            borderColor: theme.border
           }}
         >
           {isDark ? (
@@ -36,10 +36,9 @@ export const LoginHeader: React.FC = () => {
         </TouchableOpacity>
       </View>
       <View style={styles.headerRight}>
-        <Text style={[styles.terminalText, { color: theme.textSecondary }]}>Terminal Cabina MLC</Text>
         <View style={styles.flotaContainer}>
           <HardHat size={14} color={theme.warning} />
-          <Text style={[styles.flotaText, { color: theme.warning }]}>Flota de Apoyo</Text>
+          <Text style={[styles.flotaText, { color: theme.warning }]}>Sistema en Cabina MLC</Text>
         </View>
       </View>
     </View>
