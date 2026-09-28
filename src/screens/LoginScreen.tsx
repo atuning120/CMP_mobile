@@ -3,36 +3,39 @@ import {
   View, 
   Text, 
   TouchableOpacity, 
-  ScrollView
+  ScrollView,
+  useColorScheme
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CheckCircle2 } from 'lucide-react-native';
 
-import { styles, darkTheme, lightTheme } from './LoginScreen.styles';
+import { styles } from './LoginScreen.styles';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginForm } from '../components/LoginForm';
 import { MicrosoftLoginButton } from '../components/MicrosoftLoginButton';
 import { LoginFooter } from '../components/LoginFooter';
 
-import { Operador, VisualContrastMode, NetworkState } from '../types/mining';
+import { Operador, NetworkState } from '../types/mining';
+import { lightTheme, darkTheme } from '../constants/theme';
 
 interface LoginScreenProps {
   onLoginSuccess: (operador: Operador) => void;
   operadoresDisponibles: Operador[];
-  contrastMode: VisualContrastMode;
   networkState: NetworkState;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onLoginSuccess,
   operadoresDisponibles,
-  contrastMode,
   networkState,
 }) => {
   const [email, setEmail] = useState<string>('cnunez@contratistacmp.cl');
   const [password, setPassword] = useState<string>('••••••••');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedQuickOp, setSelectedQuickOp] = useState<Operador>(operadoresDisponibles[0]);
+
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
   const handleStandardLogin = () => {
     if (!email.trim()) {
@@ -69,29 +72,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setErrorMsg(null);
   };
 
-  const isNight = contrastMode === 'night';
-  const themeStyles = isNight ? darkTheme : lightTheme;
-
   return (
-    <SafeAreaView style={[styles.safeArea, themeStyles.background]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         {/* Extracted Header Component */}
-        <LoginHeader contrastMode={contrastMode} />
+        <LoginHeader />
 
         {/* Main Login Card */}
         <View style={styles.mainContent}>
-          <View style={[styles.card, themeStyles.cardBackground, themeStyles.cardBorder]}>
+          <View style={[
+            styles.card, 
+            { backgroundColor: theme.card, borderColor: theme.border, shadowColor: colorScheme === 'dark' ? '#000' : '#000' }
+          ]}>
             {/* Card Title */}
             <View style={styles.titleContainer}>
-              <Text style={[styles.title, themeStyles.textPrimary]}>Inicio de Sesión</Text>
-              <Text style={[styles.subtitle, themeStyles.textSecondary]}>
+              <Text style={[styles.title, { color: theme.text }]}>Inicio de Sesión</Text>
+              <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
                 Registro individual de operador en cabina de faena.
               </Text>
             </View>
 
             {/* Quick Operator Selection */}
             <View style={styles.quickSelectSection}>
-              <Text style={[styles.label, themeStyles.textSecondary]}>
+              <Text style={[styles.label, { color: theme.textSecondary }]}>
                 Operador en Turno (Acceso Rápido):
               </Text>
               <View style={styles.quickSelectGrid}>
@@ -103,19 +106,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                       onPress={() => handleQuickSelect(op)}
                       style={[
                         styles.quickOpButton,
-                        isSelected ? styles.quickOpSelected : themeStyles.quickOpUnselected,
+                        {
+                          backgroundColor: isSelected ? theme.transparentPrimary : (colorScheme === 'dark' ? 'rgba(15, 23, 42, 0.6)' : '#f8fafc'),
+                          borderColor: isSelected ? theme.primary : (colorScheme === 'dark' ? '#1e293b' : '#e2e8f0'),
+                        }
                       ]}
                     >
-                      <View style={[styles.avatar, isSelected ? styles.avatarSelected : styles.avatarUnselected]}>
-                        <Text style={styles.avatarText}>
+                      <View style={[
+                        styles.avatar, 
+                        { backgroundColor: isSelected ? theme.primary : '#334155' }
+                      ]}>
+                        <Text style={[styles.avatarText, { color: '#fff' }]}>
                           {op.nombre[0]}{op.apellido[0]}
                         </Text>
                       </View>
                       <View style={styles.quickOpInfo}>
-                        <Text style={[styles.quickOpName, isSelected ? styles.textWhite : themeStyles.textPrimary]} numberOfLines={1}>
+                        <Text style={[styles.quickOpName, { color: isSelected ? theme.text : theme.text }]} numberOfLines={1}>
                           {op.nombre} {op.apellido}
                         </Text>
-                        <Text style={[styles.quickOpRut, isSelected ? styles.textWhiteOpacity : themeStyles.textTertiary]} numberOfLines={1}>
+                        <Text style={[styles.quickOpRut, { color: isSelected ? theme.primary : theme.textTertiary }]} numberOfLines={1}>
                           {op.rut}
                         </Text>
                       </View>
@@ -133,38 +142,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               setPassword={setPassword}
               errorMsg={errorMsg}
               onSubmit={handleStandardLogin}
-              contrastMode={contrastMode}
             />
 
             {/* Divider */}
             <View style={styles.dividerContainer}>
-              <View style={[styles.dividerLine, themeStyles.borderBottom]} />
-              <View style={[styles.dividerTextWrapper, themeStyles.cardBackground]}>
-                <Text style={styles.dividerText}>O accede con Microsoft</Text>
+              <View style={[styles.dividerLine, { borderTopColor: theme.border }]} />
+              <View style={[styles.dividerTextWrapper, { backgroundColor: theme.card }]}>
+                <Text style={[styles.dividerText, { color: theme.textSecondary }]}>O accede con Microsoft</Text>
               </View>
             </View>
 
             {/* Extracted Microsoft Button Component */}
-            <MicrosoftLoginButton 
-              contrastMode={contrastMode} 
-              onPress={handleStandardLogin} 
-            />
+            <MicrosoftLoginButton onPress={handleStandardLogin} />
           </View>
 
           {/* Offline Support Notice */}
           <View style={styles.offlineNotice}>
             <View style={styles.offlineLeft}>
-              <CheckCircle2 size={14} color="#34d399" />
-              <Text style={styles.offlineText}>Soporte Offline-First</Text>
+              <CheckCircle2 size={14} color={theme.success} />
+              <Text style={[styles.offlineText, { color: theme.textSecondary }]}>Soporte Offline-First</Text>
             </View>
-            <Text style={styles.networkStatusText}>
+            <Text style={[styles.networkStatusText, { color: theme.textSecondary }]}>
               {networkState === 'online' ? '🟢 Conectado' : '🟠 Modo Local'}
             </Text>
           </View>
         </View>
 
         {/* Extracted Footer Component */}
-        <LoginFooter contrastMode={contrastMode} />
+        <LoginFooter />
       </ScrollView>
     </SafeAreaView>
   );

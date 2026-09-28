@@ -1,24 +1,20 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, useColorScheme } from 'react-native';
 import { ShieldCheck } from 'lucide-react-native';
-import { styles, darkTheme, lightTheme } from './LoginFooter.styles';
-import { VisualContrastMode } from '../types/mining';
+import { styles } from './LoginFooter.styles';
+import { lightTheme, darkTheme } from '../constants/theme';
 
-interface LoginFooterProps {
-  contrastMode: VisualContrastMode;
-}
-
-export const LoginFooter: React.FC<LoginFooterProps> = ({ contrastMode }) => {
-  const isNight = contrastMode === 'night';
-  const themeStyles = isNight ? darkTheme : lightTheme;
+export const LoginFooter: React.FC = () => {
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
   return (
-    <View style={[styles.footer, themeStyles.borderTop]}>
+    <View style={[styles.footer, { borderTopColor: theme.border }]}>
       <View style={styles.footerRow}>
-        <ShieldCheck size={14} color="#00A3E0" />
-        <Text style={styles.footerText}>Gestión de Riesgo en los Procesos (GRP)</Text>
+        <ShieldCheck size={14} color={theme.primary} />
+        <Text style={[styles.footerText, { color: theme.textSecondary }]}>Gestión de Riesgo en los Procesos (GRP)</Text>
       </View>
-      <Text style={styles.footerText}>Mina Los Colorados · CMP</Text>
+      <Text style={[styles.footerText, { color: theme.textSecondary }]}>Mina Los Colorados · CMP</Text>
     </View>
   );
 };

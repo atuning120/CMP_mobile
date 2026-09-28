@@ -13,17 +13,8 @@ export const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: 'monospace',
     textTransform: 'uppercase',
-    color: '#94a3b8',
     marginBottom: 2,
   },
   flotaContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  flotaText: { fontSize: 12, fontWeight: 'bold', color: '#f59e0b' },
-});
-
-export const darkTheme = StyleSheet.create({
-  borderBottom: { borderBottomColor: '#1e293b' },
-});
-
-export const lightTheme = StyleSheet.create({
-  borderBottom: { borderBottomColor: '#e2e8f0' },
+  flotaText: { fontSize: 12, fontWeight: 'bold' },
 });
