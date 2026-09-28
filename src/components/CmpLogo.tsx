@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View } from 'react-native';
+import { styles } from './CmpLogo.styles';
 
 export const CmpLogo = ({ variant = 'auto' }: { variant?: 'auto' | 'dark' | 'light' }) => {
   const isDark = variant === 'dark';
@@ -11,17 +12,3 @@ export const CmpLogo = ({ variant = 'auto' }: { variant?: 'auto' | 'dark' | 'lig
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 4,
-  },
-  text: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0f172a',
-  },
-  textDark: {
-    color: '#ffffff',
-  },
-});

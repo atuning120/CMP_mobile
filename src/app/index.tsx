@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, useColorScheme } from 'react-native';
+import { View, useColorScheme } from 'react-native';
+import { styles } from './index.styles';
 import { LoginScreen } from '../components/LoginScreen';
 import { INITIAL_OPERADORES } from '../data/initialData';
 import { Operador } from '../types/mining';
@@ -23,10 +24,4 @@ export default function HomeScreen() {
       />
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
+};
