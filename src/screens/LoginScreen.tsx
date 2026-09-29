@@ -31,8 +31,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   operadoresDisponibles,
   networkState,
 }) => {
-  const [email, setEmail] = useState<string>('cnunez@contratistacmp.cl');
-  const [password, setPassword] = useState<string>('••••••••');
+  //password hardcodeada. ESTO ES SOLO PARA PRUEBAS
+  const [email, setEmail] = useState<string>('pedro.gomez@cmp.cl');
+  const [password, setPassword] = useState<string>('miPassword123');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedQuickOp, setSelectedQuickOp] = useState<Operador>(operadoresDisponibles[0]);
 
@@ -100,8 +101,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const handleQuickSelect = (op: Operador) => {
     setSelectedQuickOp(op);
     setEmail(op.email);
-    //password hardcodeada. ESTO ES SOLO PARA PRUEBAS
-    setPassword('miPassword123');
+    setPassword('••••••••');
     setErrorMsg(null);
   };
 
