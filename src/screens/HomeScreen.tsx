@@ -1,10 +1,9 @@
-import React from 'react';
-import { View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { styles } from './HomeScreen.styles';
-import { LoginScreen } from './LoginScreen';
+import { View } from 'react-native';
 import { INITIAL_OPERADORES } from '../data/initialData';
 import { Operador } from '../types/mining';
+import { styles } from './HomeScreen.styles';
+import { LoginScreen } from './LoginScreen';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -13,6 +12,7 @@ export default function HomeScreen() {
     console.log('Login successful:', operador);
     // Navigate to the workzone screen
     router.replace('/workzone');
+    
   };
 
   return (
