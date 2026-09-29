@@ -1,5 +1,5 @@
-import { AlertCircle, ArrowRight, Lock, User } from 'lucide-react-native';
-import React from 'react';
+import { AlertCircle, ArrowRight, Lock, User, Eye, EyeOff } from 'lucide-react-native';
+import React, { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { darkTheme, lightTheme } from '../constants/theme';
 import { styles } from './LoginForm.styles';
@@ -23,6 +23,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <View style={styles.formContainer}>
@@ -74,8 +75,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             onChangeText={setPassword}
             placeholder="Ingresa tu clave de cabina"
             placeholderTextColor={theme.textTertiary}
-            secureTextEntry
+            secureTextEntry={!showPassword}
           />
+          <TouchableOpacity 
+            style={styles.passwordIcon} 
+            onPress={() => setShowPassword(!showPassword)}
+            activeOpacity={0.7}
+          >
+            {showPassword ? (
+              <EyeOff size={20} color={theme.textTertiary} />
+            ) : (
+              <Eye size={20} color={theme.textTertiary} />
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
