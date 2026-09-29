@@ -9,6 +9,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Constants from 'expo-constants';
 
 import { LoginFooter } from '../components/LoginFooter';
 import { LoginForm } from '../components/LoginForm';
@@ -38,38 +39,69 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
-  const handleStandardLogin = () => {
-    if (!email.trim()) {
-      setErrorMsg('Por favor ingresa tu correo corporativo.');
+  const handleStandardLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      setErrorMsg('Por favor ingresa tu correo corporativo y contraseña.');
       return;
     }
 
-    const matched = operadoresDisponibles.find(
-      (op) => op.email.toLowerCase() === email.toLowerCase()
-    );
+    setErrorMsg(null);
 
-    if (matched) {
-      onLoginSuccess(matched);
-    } else {
-      const customOp: Operador = {
-        id_operador: 105,
-        nombre: email.split('@')[0],
-        apellido: 'Operador',
-        rut: '16.789.012-3',
-        telefono: '+56 9 8899 7766',
-        estado: 'En Faena',
-        email,
-        empresa: 'Servicio Movimiento de Material MLC',
-        rol: 'Operador de Maquinaria',
-      };
-      onLoginSuccess(customOp);
+    try {
+      // Determine the backend IP dynamically from Expo or fallback to Android Emulator default
+      const debuggerHost = Constants.expoConfig?.hostUri;
+      const backendIp = debuggerHost ? debuggerHost.split(':')[0] : '10.0.2.2';
+      const backendUrl = `http://${backendIp}:3000/auth/login/operador`;
+
+      console.log('Intentando conectar al backend:', backendUrl);
+
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || 'Credenciales inválidas o error de servidor');
+      }
+
+      const data = await response.json();
+      console.log('Login successful, token received:', data.accessToken);
+
+      const matched = operadoresDisponibles.find(
+        (op) => op.email.toLowerCase() === email.toLowerCase()
+      );
+
+      if (matched) {
+        onLoginSuccess(matched);
+      } else {
+        const customOp: Operador = {
+          id_operador: 105,
+          nombre: email.split('@')[0],
+          apellido: 'Operador',
+          rut: '16.789.012-3',
+          telefono: '+56 9 8899 7766',
+          estado: 'En Faena',
+          email,
+          empresa: 'Servicio Movimiento de Material MLC',
+          rol: 'Operador de Maquinaria',
+        };
+        onLoginSuccess(customOp);
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setErrorMsg(error.message || 'Error al conectar con el servidor.');
     }
   };
 
   const handleQuickSelect = (op: Operador) => {
     setSelectedQuickOp(op);
     setEmail(op.email);
-    setPassword('••••••••');
+    //password hardcodeada. ESTO ES SOLO PARA PRUEBAS
+    setPassword('miPassword123');
     setErrorMsg(null);
   };
 

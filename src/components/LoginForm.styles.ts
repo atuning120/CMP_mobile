@@ -15,12 +15,13 @@ export const styles = StyleSheet.create({
   label: { fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
   inputWrapper: { position: 'relative', justifyContent: 'center' },
   inputIcon: { position: 'absolute', left: 12, zIndex: 1 },
+  passwordIcon: { position: 'absolute', right: 12, zIndex: 1, padding: 4 },
   input: {
     height: 50,
     borderWidth: 1,
     borderRadius: 12,
     paddingLeft: 40,
-    paddingRight: 12,
+    paddingRight: 40,
     fontSize: 14,
   },
   submitButton: {

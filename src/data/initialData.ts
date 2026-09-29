@@ -8,7 +8,7 @@ export const INITIAL_OPERADORES: Operador[] = [
     rut: '15.123.456-7',
     telefono: '+56 9 1234 5678',
     estado: 'En Faena',
-    email: 'cnunez@ejemplo.cl',
+    email: 'pedro.gomez@cmp.cl',
     empresa: 'Servicio Movimiento de Material MLC',
     rol: 'Operador de Maquinaria',
   },
