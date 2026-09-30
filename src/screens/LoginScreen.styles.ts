@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 export const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   scrollContainer: { flexGrow: 1, justifyContent: 'space-between' },
-  
+
   mainContent: {
     flex: 1,
     padding: 16,
@@ -19,9 +19,9 @@ export const styles = StyleSheet.create({
     elevation: 5,
   },
   titleContainer: { marginBottom: 24 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 4 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 4, alignContent: 'center' },
   subtitle: { fontSize: 14 },
-  
+
   label: { fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
 
   quickSelectSection: { marginBottom: 20 },
@@ -46,12 +46,12 @@ export const styles = StyleSheet.create({
   quickOpInfo: { flex: 1 },
   quickOpName: { fontSize: 12, fontWeight: 'bold' },
   quickOpRut: { fontSize: 10, fontFamily: 'monospace' },
-  
+
   dividerContainer: { marginVertical: 24, alignItems: 'center', justifyContent: 'center' },
   dividerLine: { position: 'absolute', width: '100%', borderTopWidth: 1 },
   dividerTextWrapper: { paddingHorizontal: 10 },
   dividerText: { fontSize: 11, textTransform: 'uppercase' },
-  
+
   offlineNotice: {
     flexDirection: 'row',
     justifyContent: 'space-between',
