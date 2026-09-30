@@ -353,6 +353,7 @@ const styles = StyleSheet.create({
     minHeight: 80,
   },
   footerBtn: {
+    flex: 1,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -364,6 +365,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   footerBtnConfirm: {
+    flex: 1,
     flexDirection: 'row',
     paddingVertical: 12,
     paddingHorizontal: 24,
