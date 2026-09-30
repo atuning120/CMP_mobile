@@ -9,9 +9,10 @@ interface AppBottomSheetModalProps {
   visible: boolean;
   onClose: () => void;
   title: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   iconBadgeColor?: string;
   headerTop?: React.ReactNode;
+  subtitle?: string;
   children: React.ReactNode;
   footer: React.ReactNode;
   scrollContentStyle?: StyleProp<ViewStyle>;
@@ -24,6 +25,7 @@ export const AppBottomSheetModal: React.FC<AppBottomSheetModalProps> = ({
   icon,
   iconBadgeColor,
   headerTop,
+  subtitle,
   children,
   footer,
   scrollContentStyle,
@@ -47,14 +49,19 @@ export const AppBottomSheetModal: React.FC<AppBottomSheetModalProps> = ({
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: theme.border, backgroundColor: theme.card }]}>
               <View style={styles.headerLeft}>
-                <View style={[styles.iconBadge, { backgroundColor: iconBadgeColor || (theme.primary + '15') }]}>
-                  {icon}
-                </View>
+                {icon && (
+                  <View style={[styles.iconBadge, { backgroundColor: iconBadgeColor || (theme.primary + '15') }]}>
+                    {icon}
+                  </View>
+                )}
                 <View style={{ flexShrink: 1, justifyContent: 'center' }}>
                   {headerTop && <View style={{ marginBottom: 4 }}>{headerTop}</View>}
                   <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>
                     {title}
                   </Text>
+                  {subtitle && (
+                    <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2 }}>{subtitle}</Text>
+                  )}
                 </View>
               </View>
               <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.cardAlt }]}>

@@ -40,4 +40,5 @@ export interface UseTurnoActualResult {
   error: Error | null;
   refetch: () => void;
   estadosCatalogo: EstadoOperacional[];
+  updateEstadoActual: (nuevoEstado: EstadoOperacional) => void;
 }
