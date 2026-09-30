@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 
+import { saveSecureSession, attemptOfflineLogin } from '../services/authStorage';
+
 import { LoginFooter } from '../components/LoginFooter';
 import { LoginForm } from '../components/LoginForm';
 import { LoginHeader } from '../components/LoginHeader';
@@ -48,13 +50,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     setErrorMsg(null);
 
+    // Flujo Offline Explicito
+    if (networkState === 'offline') {
+      console.log('Modo offline detectado, intentando login local...');
+      const cachedOperador = await attemptOfflineLogin(email, password);
+      if (cachedOperador) {
+        console.log('Login offline exitoso');
+        onLoginSuccess(cachedOperador);
+      } else {
+        setErrorMsg('Credenciales inválidas o no hay sesión guardada para modo offline.');
+      }
+      return;
+    }
+
     try {
       // Determine the backend IP dynamically from Expo or fallback to Android Emulator default
       const debuggerHost = Constants.expoConfig?.hostUri;
       const backendIp = debuggerHost ? debuggerHost.split(':')[0] : '10.0.2.2';
       const backendUrl = `http://${backendIp}:3000/auth/login/operador`;
 
-      console.log('Intentando conectar al backend:', backendUrl);
+      console.log('Intentando conectar al backend (Online):', backendUrl);
 
       const response = await fetch(backendUrl, {
         method: 'POST',
@@ -72,14 +87,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       const data = await response.json();
       console.log('Login successful, token received:', data.accessToken);
 
+      let finalOp: Operador;
       const matched = operadoresDisponibles.find(
         (op) => op.email.toLowerCase() === email.toLowerCase()
       );
 
       if (matched) {
-        onLoginSuccess(matched);
+        finalOp = matched;
       } else {
-        const customOp: Operador = {
+        finalOp = {
           id_operador: 105,
           nombre: email.split('@')[0],
           apellido: 'Operador',
@@ -90,10 +106,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           empresa: 'Servicio Movimiento de Material MLC',
           rol: 'Operador de Maquinaria',
         };
-        onLoginSuccess(customOp);
       }
+
+      // Guardamos la sesión de manera segura para futuros logins offline
+      await saveSecureSession(email, password, data.accessToken, finalOp);
+      
+      onLoginSuccess(finalOp);
     } catch (error: any) {
       console.error('Login error:', error);
+      
+      // Si falló por un error de red (no del servidor), intentamos offline
+      if (error.message === 'Failed to fetch' || error.message.includes('Network request failed')) {
+        console.log('Fallo de red detectado, intentando login local...');
+        const cachedOperador = await attemptOfflineLogin(email, password);
+        if (cachedOperador) {
+          console.log('Login offline de respaldo exitoso');
+          onLoginSuccess(cachedOperador);
+          return;
+        }
+      }
+
       setErrorMsg(error.message || 'Error al conectar con el servidor.');
     }
   };
