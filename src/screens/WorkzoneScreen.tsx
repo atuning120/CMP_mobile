@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -11,12 +11,14 @@ import { MachineStatusCard } from '../components/workzone/MachineStatusCard';
 import { ActionCard } from '../components/workzone/ActionCard';
 import { StateChangeBanner } from '../components/workzone/StateChangeBanner';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
+import { StartShiftModal } from '../components/workzone/StartShiftModal';
 
 export default function WorkzoneScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const { turno, isLoading, error, refetch, estadosCatalogo } = useTurnoActual();
+  const [isStartShiftModalVisible, setIsStartShiftModalVisible] = useState(false);
 
   const handleLogout = () => {
     router.replace('/');
@@ -74,8 +76,8 @@ export default function WorkzoneScreen() {
             title="Inicio de Turno"
             subtitle="Turno ya en curso"
             badgeText="PASO 1"
-            disabled={false} // Siempre deshabilitado porque ya hay turno
-            onPress={() => { }}
+            disabled={false}
+            onPress={() => setIsStartShiftModalVisible(true)}
           />
           <ActionCard
             icon={Square}
@@ -116,6 +118,15 @@ export default function WorkzoneScreen() {
         {renderContent()}
       </ImageBackground>
       <LoginFooter />
+
+      <StartShiftModal 
+        visible={isStartShiftModalVisible} 
+        onClose={() => setIsStartShiftModalVisible(false)} 
+        onConfirm={() => {
+          setIsStartShiftModalVisible(false);
+          console.log('Turno Iniciado');
+        }} 
+      />
     </SafeAreaView>
   );
 }
