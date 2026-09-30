@@ -7,9 +7,10 @@ import { styles } from './MachineStatusCard.styles';
 
 interface Props {
   turno: TurnoActual;
+  variant?: 'default' | 'compact';
 }
 
-export const MachineStatusCard: React.FC<Props> = ({ turno }) => {
+export const MachineStatusCard: React.FC<Props> = ({ turno, variant = 'default' }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const [duracion, setDuracion] = useState('0h 0m');
@@ -33,40 +34,42 @@ export const MachineStatusCard: React.FC<Props> = ({ turno }) => {
     }, [turno.estadoOperacionalActual.inicio])
   );
 
+  const isCompact = variant === 'compact';
+
   return (
-    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <View style={styles.topSection}>
-        <View style={[styles.badge, { backgroundColor: theme.primary }]}>
-          <Text style={styles.badgeText}>{turno.maquina.codigoCorto}</Text>
+    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }, isCompact && styles.cardCompact]}>
+      <View style={[styles.topSection, isCompact && styles.topSectionCompact]}>
+        <View style={[styles.badge, isCompact && styles.badgeCompact, { backgroundColor: theme.primary }]}>
+          <Text style={[styles.badgeText, isCompact && styles.badgeTextCompact]}>{turno.maquina.codigoCorto}</Text>
         </View>
         <View style={styles.machineInfo}>
           <Text
-            style={[styles.machineName, { color: theme.text }]}
+            style={[styles.machineName, isCompact && styles.machineNameCompact, { color: theme.text }]}
             numberOfLines={1}
             ellipsizeMode="tail"
           >
             {turno.maquina.nombreCompleto}
           </Text>
-          <Text style={[styles.secondaryText, { color: theme.textSecondary }]}>
+          <Text style={[styles.secondaryText, isCompact && styles.secondaryTextCompact, { color: theme.textSecondary }]}>
             Área: {turno.area.nombre} · Horóm. Inicial: <Text style={{ color: theme.warning, fontWeight: 'bold' }}>{turno.horometroInicial}h</Text>
           </Text>
         </View>
-        <View style={[styles.statusPill, { backgroundColor: theme.success + '20', borderColor: theme.success }]}>
-          <Text style={[styles.statusPillText, { color: theme.success }]}>En Operación</Text>
+        <View style={[styles.statusPill, isCompact && styles.statusPillCompact, { backgroundColor: theme.success + '20', borderColor: theme.success }]}>
+          <Text style={[styles.statusPillText, isCompact && styles.statusPillTextCompact, { color: theme.success }]}>En Operación</Text>
         </View>
       </View>
-      <View style={[styles.divider, { backgroundColor: theme.border }]} />
+      <View style={[styles.divider, isCompact && styles.dividerCompact, { backgroundColor: theme.border }]} />
       <View style={styles.bottomSection}>
         <View style={styles.stateBlock}>
           <Text style={[styles.label, { color: theme.textTertiary }]}>ESTADO OPERACIONAL ACTUAL</Text>
           <View style={styles.stateValueContainer}>
-            <View style={[styles.dot, { backgroundColor: theme.success }]} />
-            <Text style={[styles.stateName, { color: theme.warning }]}>{turno.estadoOperacionalActual.estado.nombre}</Text>
+            <View style={[styles.dot, isCompact && styles.dotCompact, { backgroundColor: theme.success }]} />
+            <Text style={[styles.stateName, isCompact && styles.stateNameCompact, { color: theme.warning }]}>{turno.estadoOperacionalActual.estado.nombre}</Text>
           </View>
         </View>
         <View style={styles.durationBlock}>
           <Text style={[styles.label, { color: theme.textTertiary }]}>DURACIÓN</Text>
-          <Text style={[styles.durationValue, { color: theme.warning }]}>{duracion}</Text>
+          <Text style={[styles.durationValue, isCompact && styles.durationValueCompact, { color: theme.warning }]}>{duracion}</Text>
         </View>
       </View>
     </View>

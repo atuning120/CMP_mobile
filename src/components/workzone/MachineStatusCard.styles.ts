@@ -89,4 +89,50 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  cardCompact: {
+    padding: 12,
+    marginVertical: 0,
+    borderWidth: 0,
+    borderRadius: 12,
+  },
+  topSectionCompact: {
+    marginBottom: 8,
+  },
+  badgeCompact: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  badgeTextCompact: {
+    fontSize: 11,
+  },
+  machineNameCompact: {
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  secondaryTextCompact: {
+    fontSize: 11,
+  },
+  statusPillCompact: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  statusPillTextCompact: {
+    fontSize: 10,
+  },
+  dividerCompact: {
+    marginVertical: 8,
+  },
+  dotCompact: {
+    width: 6,
+    height: 6,
+    marginRight: 6,
+  },
+  stateNameCompact: {
+    fontSize: 14,
+  },
+  durationValueCompact: {
+    fontSize: 14,
+  },
 });

@@ -17,6 +17,7 @@ import { LoginFooter } from '../components/LoginFooter';
 import { LoginForm } from '../components/LoginForm';
 import { LoginHeader } from '../components/LoginHeader';
 import { MicrosoftLoginButton } from '../components/MicrosoftLoginButton';
+import { ProfileChip } from '../components/ProfileChip';
 import { styles } from './LoginScreen.styles';
 
 import { darkTheme, lightTheme } from '../constants/theme';
@@ -167,34 +168,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 {operadoresDisponibles.slice(0, 2).map((op) => {
                   const isSelected = selectedQuickOp?.id_operador === op.id_operador;
                   return (
-                    <TouchableOpacity
+                    <ProfileChip
                       key={op.id_operador}
+                      nombre={op.nombre}
+                      apellido={op.apellido}
+                      rut={op.rut}
+                      isSelected={isSelected}
                       onPress={() => handleQuickSelect(op)}
-                      style={[
-                        styles.quickOpButton,
-                        {
-                          backgroundColor: isSelected ? theme.transparentPrimary : (colorScheme === 'dark' ? 'rgba(15, 23, 42, 0.6)' : '#f8fafc'),
-                          borderColor: isSelected ? theme.primary : (colorScheme === 'dark' ? '#1e293b' : '#e2e8f0'),
-                        }
-                      ]}
-                    >
-                      <View style={[
-                        styles.avatar,
-                        { backgroundColor: isSelected ? theme.primary : '#334155' }
-                      ]}>
-                        <Text style={[styles.avatarText, { color: '#fff' }]}>
-                          {op.nombre[0]}{op.apellido[0]}
-                        </Text>
-                      </View>
-                      <View style={styles.quickOpInfo}>
-                        <Text style={[styles.quickOpName, { color: isSelected ? theme.text : theme.text }]} numberOfLines={1}>
-                          {op.nombre} {op.apellido}
-                        </Text>
-                        <Text style={[styles.quickOpRut, { color: isSelected ? theme.primary : theme.textTertiary }]} numberOfLines={1}>
-                          {op.rut}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
+                      style={{ flex: 1, padding: 10 }}
+                    />
                   );
                 })}
               </View>

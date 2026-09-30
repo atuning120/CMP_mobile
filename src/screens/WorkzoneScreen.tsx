@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Play, Square, Camera } from 'lucide-react-native';
+import { Play, Square, Camera, LogOut } from 'lucide-react-native';
 import { lightTheme, darkTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
@@ -10,12 +10,17 @@ import { useTurnoActual } from '../hooks/useTurnoActual';
 import { MachineStatusCard } from '../components/workzone/MachineStatusCard';
 import { ActionCard } from '../components/workzone/ActionCard';
 import { StateChangeBanner } from '../components/workzone/StateChangeBanner';
+import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
 
 export default function WorkzoneScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const { turno, isLoading, error, refetch, estadosCatalogo } = useTurnoActual();
+
+  const handleLogout = () => {
+    router.replace('/');
+  };
 
   useEffect(() => {
     if (!isLoading && !error && turno === null) {
@@ -61,7 +66,7 @@ export default function WorkzoneScreen() {
 
     return (
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <MachineStatusCard turno={turno} />
+        <TurnoSummaryDropdown turno={turno} onLogout={handleLogout} />
         <View style={styles.actionsContainer}>
           <ActionCard
             icon={Play}
