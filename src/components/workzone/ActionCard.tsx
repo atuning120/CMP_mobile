@@ -32,7 +32,16 @@ export const ActionCard: React.FC<Props> = ({
     <TouchableOpacity
       style={[
         styles.card,
-        { backgroundColor: theme.card, borderColor: theme.border },
+        {
+          backgroundColor: theme.card,
+          borderColor: colorScheme === 'dark' ? iconColor + '50' : iconColor + '60',
+          borderWidth: 4,
+          shadowColor: iconColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: colorScheme === 'dark' ? 0.3 : 0.15,
+          shadowRadius: 8,
+          elevation: 4,
+        },
         disabled && { opacity: 0.5 },
         style
       ]}

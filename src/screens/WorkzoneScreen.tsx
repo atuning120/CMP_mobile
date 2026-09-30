@@ -74,7 +74,7 @@ export default function WorkzoneScreen() {
             title="Inicio de Turno"
             subtitle="Turno ya en curso"
             badgeText="PASO 1"
-            disabled={true} // Siempre deshabilitado porque ya hay turno
+            disabled={false} // Siempre deshabilitado porque ya hay turno
             onPress={() => { }}
           />
           <ActionCard
@@ -84,6 +84,7 @@ export default function WorkzoneScreen() {
             subtitle="Registrar horómetro final y liquidar horas."
             badgeText="PASO FINAL"
             onPress={() => console.log('Navegar a OP-05')}
+            disabled={false}
             style={{ marginHorizontal: 8 }}
           />
           <ActionCard

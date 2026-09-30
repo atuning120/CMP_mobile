@@ -20,7 +20,7 @@ interface Props {
 }
 
 export const TurnoSummaryDropdown: React.FC<Props> = ({ turno, onLogout }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
@@ -41,7 +41,7 @@ export const TurnoSummaryDropdown: React.FC<Props> = ({ turno, onLogout }) => {
       </View>
 
       {isOpen && turno && (
-        <Animated.View 
+        <Animated.View
           entering={FadeIn.duration(200)}
           exiting={FadeOut.duration(200)}
           layout={Layout.springify()}
