@@ -14,7 +14,7 @@ interface AppBottomSheetModalProps {
   headerTop?: React.ReactNode;
   subtitle?: string;
   children: React.ReactNode;
-  footer: React.ReactNode;
+  footer?: React.ReactNode;
   scrollContentStyle?: StyleProp<ViewStyle>;
 }
 
@@ -78,9 +78,11 @@ export const AppBottomSheetModal: React.FC<AppBottomSheetModalProps> = ({
             </KeyboardAvoidingView>
 
             {/* Footer */}
-            <View style={[styles.footer, { borderTopColor: theme.border, backgroundColor: theme.card }]}>
-              {footer}
-            </View>
+            {footer && (
+              <View style={[styles.footer, { borderTopColor: theme.border, backgroundColor: theme.card }]}>
+                {footer}
+              </View>
+            )}
           </SafeAreaView>
         </Animated.View>
       </Animated.View>
