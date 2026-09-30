@@ -99,7 +99,7 @@ export default function WorkzoneScreen() {
             title="Evidencias"
             subtitle="Subir fotos de inspección, cancha o falla mecánica."
             badgeText={`${turno.cantidadEvidencias} FOTO${turno.cantidadEvidencias === 1 ? '' : 'S'}`}
-            onPress={() => console.log('Navegar a OP-10')}
+            onPress={() => router.push('/evidencias')}
           />
         </View>
 
