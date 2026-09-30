@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Play, Square, Camera } from 'lucide-react-native';
@@ -61,6 +61,7 @@ export default function WorkzoneScreen() {
 
     return (
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <MachineStatusCard turno={turno} />
         <View style={styles.actionsContainer}>
           <ActionCard
             icon={Play}
@@ -94,8 +95,6 @@ export default function WorkzoneScreen() {
           estadosCatalogo={estadosCatalogo}
           onPress={() => console.log('Abrir modal OP-03')}
         />
-
-        <MachineStatusCard turno={turno} />
       </ScrollView>
     );
   };
@@ -103,9 +102,13 @@ export default function WorkzoneScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top', 'left', 'right']}>
       <LoginHeader />
-      <View style={styles.mainContent}>
+      <ImageBackground
+        source={require('../../assets/images/Mina_fondo.jpg')}
+        style={styles.mainContent}
+        imageStyle={{ opacity: colorScheme === 'dark' ? 0.3 : 0.9 }}
+      >
         {renderContent()}
-      </View>
+      </ImageBackground>
       <LoginFooter />
     </SafeAreaView>
   );

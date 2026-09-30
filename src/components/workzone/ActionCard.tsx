@@ -43,8 +43,8 @@ export const ActionCard: React.FC<Props> = ({
       <View style={styles.badgeContainer}>
         <Text style={[styles.badgeText, { color: theme.textTertiary }]}>{badgeText}</Text>
       </View>
-      <View style={[styles.iconCircle, { borderColor: iconColor }]}>
-        <Icon size={24} color={iconColor} />
+      <View style={[styles.iconContainer, { backgroundColor: iconColor }]}>
+        <Icon size={24} color="#FFFFFF" />
       </View>
       <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>{title}</Text>
       <Text style={[styles.subtitle, { color: theme.textSecondary }]} numberOfLines={3}>{subtitle}</Text>
