@@ -12,6 +12,7 @@ import { ActionCard } from '../components/workzone/ActionCard';
 import { StateChangeBanner } from '../components/workzone/StateChangeBanner';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
 import { StartShiftModal } from '../components/workzone/StartShiftModal';
+import { EndShiftModal } from '../components/workzone/EndShiftModal';
 
 export default function WorkzoneScreen() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function WorkzoneScreen() {
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const { turno, isLoading, error, refetch, estadosCatalogo } = useTurnoActual();
   const [isStartShiftModalVisible, setIsStartShiftModalVisible] = useState(false);
+  const [isEndShiftModalVisible, setIsEndShiftModalVisible] = useState(false);
 
   const handleLogout = () => {
     router.replace('/');
@@ -85,7 +87,7 @@ export default function WorkzoneScreen() {
             title="Cierre de Turno"
             subtitle="Registrar horómetro final y liquidar horas."
             badgeText="PASO FINAL"
-            onPress={() => console.log('Navegar a OP-05')}
+            onPress={() => setIsEndShiftModalVisible(true)}
             disabled={false}
             style={{ marginHorizontal: 8 }}
           />
@@ -126,6 +128,16 @@ export default function WorkzoneScreen() {
           setIsStartShiftModalVisible(false);
           console.log('Turno Iniciado');
         }} 
+      />
+
+      <EndShiftModal
+        visible={isEndShiftModalVisible}
+        onClose={() => setIsEndShiftModalVisible(false)}
+        onConfirm={() => {
+          setIsEndShiftModalVisible(false);
+          console.log('Turno Cerrado y Liquidado');
+        }}
+        turno={turno}
       />
     </SafeAreaView>
   );

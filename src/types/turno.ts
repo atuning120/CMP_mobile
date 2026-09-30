@@ -29,6 +29,7 @@ export interface TurnoActual {
   horometroInicial: number;
   estado: 'EN_CURSO' | 'CERRADO' | 'CERRADO_AUTO';
   estadoOperacionalActual: TurnoEstadoActual;
+  historialEstados: { estado: EstadoOperacional; inicio: string; fin: string | null }[];
   cantidadEvidencias: number;
   fechaInicio: string; // ISO 8601
 }
