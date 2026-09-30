@@ -40,9 +40,9 @@ export const darkTheme: ThemeColors = {
   textTertiary: '#bdc1c6',
   border: '#3c4043',
   primary: '#1A73E8',
-  success: '#81c995',
-  danger: '#f28b82',
-  warning: '#fde293',
+  success: '#1e8e3e',
+  danger: '#d93025',
+  warning: '#f9ab00',
   white: '#FFFFFF',
 
   cardAlt: '#303134',

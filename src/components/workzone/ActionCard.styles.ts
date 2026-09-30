@@ -19,11 +19,10 @@ export const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: 'bold',
   },
-  iconCircle: {
+  iconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,

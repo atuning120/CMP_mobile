@@ -32,7 +32,16 @@ export const ActionCard: React.FC<Props> = ({
     <TouchableOpacity
       style={[
         styles.card,
-        { backgroundColor: theme.card, borderColor: theme.border },
+        {
+          backgroundColor: theme.card,
+          borderColor: colorScheme === 'dark' ? iconColor + '50' : iconColor + '60',
+          borderWidth: 4,
+          shadowColor: iconColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: colorScheme === 'dark' ? 0.3 : 0.15,
+          shadowRadius: 8,
+          elevation: 4,
+        },
         disabled && { opacity: 0.5 },
         style
       ]}
@@ -43,8 +52,8 @@ export const ActionCard: React.FC<Props> = ({
       <View style={styles.badgeContainer}>
         <Text style={[styles.badgeText, { color: theme.textTertiary }]}>{badgeText}</Text>
       </View>
-      <View style={[styles.iconCircle, { borderColor: iconColor }]}>
-        <Icon size={24} color={iconColor} />
+      <View style={[styles.iconContainer, { backgroundColor: iconColor }]}>
+        <Icon size={24} color="#FFFFFF" />
       </View>
       <Text style={[styles.title, { color: theme.text }]} numberOfLines={2}>{title}</Text>
       <Text style={[styles.subtitle, { color: theme.textSecondary }]} numberOfLines={3}>{subtitle}</Text>
