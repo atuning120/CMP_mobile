@@ -12,13 +12,17 @@ import { ActionCard } from '../components/workzone/ActionCard';
 import { StateChangeBanner } from '../components/workzone/StateChangeBanner';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
 import { StartShiftModal } from '../components/workzone/StartShiftModal';
+import { EndShiftModal } from '../components/workzone/EndShiftModal';
+import { ChangeStateModal } from '../components/workzone/ChangeStateModal';
 
 export default function WorkzoneScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
-  const { turno, isLoading, error, refetch, estadosCatalogo } = useTurnoActual();
+  const { turno, isLoading, error, refetch, estadosCatalogo, updateEstadoActual } = useTurnoActual();
   const [isStartShiftModalVisible, setIsStartShiftModalVisible] = useState(false);
+  const [isEndShiftModalVisible, setIsEndShiftModalVisible] = useState(false);
+  const [isChangeStateModalVisible, setIsChangeStateModalVisible] = useState(false);
 
   const handleLogout = () => {
     router.replace('/');
@@ -85,7 +89,7 @@ export default function WorkzoneScreen() {
             title="Cierre de Turno"
             subtitle="Registrar horómetro final y liquidar horas."
             badgeText="PASO FINAL"
-            onPress={() => console.log('Navegar a OP-05')}
+            onPress={() => setIsEndShiftModalVisible(true)}
             disabled={false}
             style={{ marginHorizontal: 8 }}
           />
@@ -101,7 +105,7 @@ export default function WorkzoneScreen() {
 
         <StateChangeBanner
           estadosCatalogo={estadosCatalogo}
-          onPress={() => console.log('Abrir modal OP-03')}
+          onPress={() => setIsChangeStateModalVisible(true)}
         />
       </ScrollView>
     );
@@ -126,6 +130,27 @@ export default function WorkzoneScreen() {
           setIsStartShiftModalVisible(false);
           console.log('Turno Iniciado');
         }} 
+      />
+
+      <EndShiftModal
+        visible={isEndShiftModalVisible}
+        onClose={() => setIsEndShiftModalVisible(false)}
+        onConfirm={() => {
+          setIsEndShiftModalVisible(false);
+          console.log('Turno Cerrado y Liquidado');
+        }}
+        turno={turno}
+      />
+
+      <ChangeStateModal
+        visible={isChangeStateModalVisible}
+        onClose={() => setIsChangeStateModalVisible(false)}
+        estadosCatalogo={estadosCatalogo}
+        estadoActual={turno?.estadoOperacionalActual || null}
+        onStateChange={(estado) => {
+          updateEstadoActual(estado);
+          setTimeout(() => setIsChangeStateModalVisible(false), 400); // Dar feedback visual antes de cerrar
+        }}
       />
     </SafeAreaView>
   );

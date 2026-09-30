@@ -28,6 +28,18 @@ const MOCK_TURNO: TurnoActual = {
     estado: MOCK_CATALOGO[1], // Colación
     inicio: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // Hace 45 minutos
   },
+  historialEstados: [
+    {
+      estado: MOCK_CATALOGO[0], // Producción
+      inicio: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // Hace 3 horas
+      fin: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // Fin hace 45 min
+    },
+    {
+      estado: MOCK_CATALOGO[1], // Colación
+      inicio: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // Hace 45 minutos
+      fin: null, // Actual
+    }
+  ],
   cantidadEvidencias: 2,
   fechaInicio: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // Hace 3 horas
 };
@@ -53,6 +65,38 @@ export const useTurnoActual = (): UseTurnoActualResult => {
     }, 1000);
   }, []);
 
+  const updateEstadoActual = useCallback((nuevoEstado: EstadoOperacional) => {
+    setTurno(prev => {
+      if (!prev) return prev;
+      
+      const nuevoTurnoEstadoActual = {
+        id: Math.floor(Math.random() * 1000) + 300,
+        estado: nuevoEstado,
+        inicio: new Date().toISOString()
+      };
+
+      // Mover el actual al historial
+      const historialModificado = [...prev.historialEstados];
+      if (historialModificado.length > 0) {
+        const ultimo = historialModificado[historialModificado.length - 1];
+        if (ultimo.fin === null) {
+          ultimo.fin = new Date().toISOString();
+        }
+      }
+      historialModificado.push({
+        estado: nuevoEstado,
+        inicio: nuevoTurnoEstadoActual.inicio,
+        fin: null
+      });
+
+      return {
+        ...prev,
+        estadoOperacionalActual: nuevoTurnoEstadoActual,
+        historialEstados: historialModificado
+      };
+    });
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => fetchTurno(), 0);
     return () => clearTimeout(timer);
@@ -63,6 +107,7 @@ export const useTurnoActual = (): UseTurnoActualResult => {
     isLoading,
     error,
     refetch: fetchTurno,
-    estadosCatalogo: MOCK_CATALOGO
+    estadosCatalogo: MOCK_CATALOGO,
+    updateEstadoActual
   };
 };
