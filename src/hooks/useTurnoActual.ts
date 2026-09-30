@@ -46,7 +46,7 @@ export const useTurnoActual = (): UseTurnoActualResult => {
       try {
         setTurno(MOCK_TURNO);
         setIsLoading(false);
-      } catch (err) {
+      } catch {
         setError(new Error('Error al cargar el turno'));
         setIsLoading(false);
       }
@@ -54,7 +54,8 @@ export const useTurnoActual = (): UseTurnoActualResult => {
   }, []);
 
   useEffect(() => {
-    fetchTurno();
+    const timer = setTimeout(() => fetchTurno(), 0);
+    return () => clearTimeout(timer);
   }, [fetchTurno]);
 
   return {

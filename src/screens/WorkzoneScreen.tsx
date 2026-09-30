@@ -23,7 +23,7 @@ export default function WorkzoneScreen() {
       // Como aún no existe esa pantalla en este mock, usamos '/iniciar-turno'
       // O podemos redirigir al home (login) si falla
       console.log('No hay turno, redirigiendo a iniciar turno...');
-      router.replace('/iniciar-turno');
+      //router.replace('/iniciar-turno');
     }
   }, [turno, isLoading, error, router]);
 
@@ -61,8 +61,6 @@ export default function WorkzoneScreen() {
 
     return (
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <MachineStatusCard turno={turno} />
-
         <View style={styles.actionsContainer}>
           <ActionCard
             icon={Play}
@@ -96,6 +94,8 @@ export default function WorkzoneScreen() {
           estadosCatalogo={estadosCatalogo}
           onPress={() => console.log('Abrir modal OP-03')}
         />
+
+        <MachineStatusCard turno={turno} />
       </ScrollView>
     );
   };

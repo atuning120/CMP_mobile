@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { Operador } from '../types/mining';
 
 const SECURE_STORE_PREFIX = 'cmp_secure_';
@@ -58,8 +59,6 @@ export const clearSecureSession = async () => {
   }
 };
 
-import Constants from 'expo-constants';
-
 /**
  * Obtiene el token guardado para futuras peticiones a la API.
  */
@@ -71,7 +70,7 @@ export const getStoredToken = async (): Promise<string | null> => {
       return sessionData.token;
     }
     return null;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
