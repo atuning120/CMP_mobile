@@ -8,6 +8,7 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 
 import { saveSecureSession, attemptOfflineLogin } from '../services/authStorage';
@@ -41,6 +42,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  const router = useRouter();
+
+  const handleMicrosoftLogin = () => {
+    router.push('/ship-supervisor');
+  };
 
   const handleStandardLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -200,7 +206,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </View>
 
             {/* Extracted Microsoft Button Component */}
-            <MicrosoftLoginButton onPress={handleStandardLogin} />
+            <MicrosoftLoginButton onPress={handleMicrosoftLogin} />
             {/* Offline Support Notice */}
             <View style={styles.offlineNotice}>
               <View style={styles.offlineLeft}>
