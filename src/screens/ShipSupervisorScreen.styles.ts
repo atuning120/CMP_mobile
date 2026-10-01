@@ -70,11 +70,16 @@ export const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
-    borderRadius: 8,
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  tabIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
   },
   tabText: {
     fontSize: 14,
@@ -82,8 +87,7 @@ export const styles = StyleSheet.create({
   },
   tabCounter: {
     fontSize: 11,
-    fontWeight: 'normal',
-    opacity: 0.8,
+    fontWeight: '600',
   },
   tabContentCard: {
     paddingTop: 16,
