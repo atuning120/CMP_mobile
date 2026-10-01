@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, useColorScheme, TextInput } from 'react-native';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
-import { CheckCircle, MapPin, Truck, Wrench, ChevronDown, AlertCircle, Gauge } from 'lucide-react-native';
+import { CheckCircle, MapPin, Truck, Wrench, ChevronDown, AlertCircle, Gauge, RefreshCw } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { EquipoDataForm, EquipoFormState, PlantillaEquipo } from './EquipoDataForm';
 import { styles } from './ReemplazoEquipoModal.styles';
@@ -26,6 +26,9 @@ const MOCK_ZONAS = [
   { id_area: 2, id_zona: 3, nombre: 'Botadero Norte' },
   { id_area: 3, id_zona: 4, nombre: 'Chancador Primario' },
 ];
+
+const MOCK_MOTIVOS = ['Aumento de Capacidad / Flota', 'Reemplazo por Falla', 'Mantención Programada'];
+const MOCK_MAQUINAS_RETIRAR = ['CAEX-204 - Caterpillar 793F', 'CAEX-205 - Komatsu 930E', 'EX-02 - CAT 349D2 L'];
 
 
 const INITIAL_EQUIPO_STATE: EquipoFormState = {
@@ -54,6 +57,8 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
   const [destinoZonaId, setDestinoZonaId] = useState<number | null>(null);
   const [motivo, setMotivo] = useState<string>('');
   const [observaciones, setObservaciones] = useState<string>('');
+  const [activeDropdown, setActiveDropdown] = useState<'maquina' | 'zona' | 'motivo' | null>(null);
+  const [maquinaRetirar, setMaquinaRetirar] = useState(MOCK_MAQUINAS_RETIRAR[0]);
 
   // Validaciones
   const isEquipoValid = (eq: EquipoFormState) => {
@@ -127,9 +132,9 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
     <AppBottomSheetModal
       visible={visible}
       onClose={onClose}
-      title="Modificación / Reemplazo de Equipo"
+      title="Reemplazo de Equipo"
       subtitle={`Registra la salida y sustitución de ${numEquipos} equipo${numEquipos > 1 ? 's' : ''}`}
-      icon={<CheckCircle size={22} color={theme.warning} />}
+      icon={<RefreshCw size={22} color={theme.warning} />}
       iconBadgeColor={theme.warning + '15'}
       headerTop={headerTop}
       footer={renderFooter()}
@@ -139,7 +144,8 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
       <View style={[styles.section, styles.capsuleSection, {
         backgroundColor: theme.danger + '08',
         borderColor: theme.danger + '60',
-        borderWidth: 1.5
+        borderWidth: 1.5,
+        zIndex: 10
       }]}>
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
@@ -148,16 +154,32 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
           </View>
         </View>
         <View style={[styles.cardsRow, { gap: 16 }]}>
-          <View style={[styles.fieldCol, { flex: 2 }]}>
+          <View style={[styles.fieldCol, { flex: 2, zIndex: 10 }]}>
             <Text style={[styles.label, { color: theme.textSecondary, fontSize: 10, letterSpacing: 0.5 }]}>MÁQUINA A RETIRAR:</Text>
-            <TouchableOpacity style={[styles.dropdownSelector, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
+            <TouchableOpacity
+              style={[styles.dropdownSelector, { backgroundColor: theme.cardAlt, borderColor: activeDropdown === 'maquina' ? theme.primary : theme.border }]}
+              onPress={() => setActiveDropdown(activeDropdown === 'maquina' ? null : 'maquina')}
+            >
               <View style={styles.dropdownSelectorInner}>
-                <Text style={[styles.dropdownText, { color: theme.text }]} numberOfLines={1}>CAEX-204 - Caterpillar 793F...</Text>
+                <Text style={[styles.dropdownText, { color: theme.text }]} numberOfLines={1}>{maquinaRetirar}</Text>
               </View>
               <ChevronDown size={18} color={theme.textSecondary} />
             </TouchableOpacity>
+            {activeDropdown === 'maquina' && (
+              <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
+                {MOCK_MAQUINAS_RETIRAR.map((m, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.dropdownOption, idx < MOCK_MAQUINAS_RETIRAR.length - 1 && styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
+                    onPress={() => { setMaquinaRetirar(m); setActiveDropdown(null); }}
+                  >
+                    <Text style={[styles.dropdownText, { color: maquinaRetirar === m ? theme.primary : theme.text }]}>{m}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
-          <View style={[styles.fieldCol, { flex: 1.5 }]}>
+          <View style={[styles.fieldCol, { flex: 1.5, zIndex: 9 }]}>
             <Text style={[styles.label, { color: theme.textSecondary, fontSize: 10, letterSpacing: 0.5 }]}>HORÓMETRO SALIDA:</Text>
             <View style={[styles.input, { backgroundColor: theme.cardAlt, borderColor: theme.border, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
               <Gauge size={16} color={theme.textSecondary} />
@@ -171,7 +193,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
         </View>
       </View>
 
-      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
+      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border, zIndex: 9 }]}>
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>¿CUÁNTOS EQUIPOS ENTRAN A OPERAR EN ESTA ACCIÓN?</Text>
         <View style={styles.cardsRow}>
           <TouchableOpacity
@@ -198,7 +220,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
         </View>
       </View>
 
-      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
+      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border, zIndex: 8 }]}>
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
             <Truck size={16} color={successColor} />
@@ -247,7 +269,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
         </View>
       </View>
 
-      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
+      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border, zIndex: 7 }]}>
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
             <Wrench size={16} color={theme.warning} />
@@ -255,9 +277,12 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
           </View>
         </View>
 
-        <View style={styles.fieldFull}>
+        <View style={[styles.fieldFull, { zIndex: 10 }]}>
           <Text style={[styles.label, { color: theme.textSecondary }]}>UBICACIÓN / FASE DESTINO EN MINA:</Text>
-          <TouchableOpacity style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: theme.border }]}>
+          <TouchableOpacity
+            style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: activeDropdown === 'zona' ? theme.primary : theme.border }]}
+            onPress={() => setActiveDropdown(activeDropdown === 'zona' ? null : 'zona')}
+          >
             <View style={styles.dropdownSelectorInner}>
               <MapPin size={16} color={theme.textSecondary} />
               <Text style={[styles.dropdownText, { color: theme.text }]}>
@@ -266,11 +291,28 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
             </View>
             <ChevronDown size={20} color={theme.textSecondary} />
           </TouchableOpacity>
+          {activeDropdown === 'zona' && (
+            <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              {MOCK_ZONAS.map((z, idx) => (
+                <TouchableOpacity
+                  key={z.id_zona}
+                  style={[styles.dropdownOption, idx < MOCK_ZONAS.length - 1 && styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
+                  onPress={() => { setDestinoZonaId(z.id_zona); setActiveDropdown(null); }}
+                >
+                  <MapPin size={16} color={destinoZonaId === z.id_zona ? theme.primary : theme.textSecondary} />
+                  <Text style={[styles.dropdownText, { color: destinoZonaId === z.id_zona ? theme.primary : theme.text }]}>{z.nombre}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
-        <View style={styles.fieldFull}>
+        <View style={[styles.fieldFull, { zIndex: 9 }]}>
           <Text style={[styles.label, { color: theme.textSecondary }]}>MOTIVO / JUSTIFICACIÓN DEL JEFE DE TURNO:</Text>
-          <TouchableOpacity style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: theme.border }]}>
+          <TouchableOpacity
+            style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: activeDropdown === 'motivo' ? theme.primary : theme.border }]}
+            onPress={() => setActiveDropdown(activeDropdown === 'motivo' ? null : 'motivo')}
+          >
             <View style={styles.dropdownSelectorInner}>
               <Text style={[styles.dropdownText, { color: theme.text }]}>
                 {motivo || 'Aumento de Capacidad / Flota de Producción Planta'}
@@ -278,9 +320,22 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
             </View>
             <ChevronDown size={20} color={theme.textSecondary} />
           </TouchableOpacity>
+          {activeDropdown === 'motivo' && (
+            <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              {MOCK_MOTIVOS.map((m, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.dropdownOption, idx < MOCK_MOTIVOS.length - 1 && styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
+                  onPress={() => { setMotivo(m); setActiveDropdown(null); }}
+                >
+                  <Text style={[styles.dropdownText, { color: motivo === m ? theme.primary : theme.text }]}>{m}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
-        <View style={styles.fieldFull}>
+        <View style={[styles.fieldFull, { zIndex: 8 }]}>
           <TextInput
             style={[styles.textarea, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
             value={observaciones}

@@ -19,6 +19,9 @@ const MOCK_MAQUINAS = [
   { id: 'RX-01', tipo: 'Retroexcavadora', modelo: 'CAT 420F2 4WD', horometro: '3120.1' },
 ];
 
+const MOCK_AREAS = ['Área 55 (Carguío de Trenes)', 'Área 56 (Chancador Secundario)', 'Área 57 (Botadero Norte)'];
+const MOCK_ZONAS = ['Vía Férrea 1 - Espolón Sur', 'Fase 4 - Banco 320', 'Fase 4 - Rampa Sur'];
+
 export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
@@ -26,6 +29,9 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
   const [selectedMaquina, setSelectedMaquina] = useState('CF-01');
   const [horometro, setHorometro] = useState('');
   const [instrucciones, setInstrucciones] = useState('');
+  const [activeDropdown, setActiveDropdown] = useState<'area' | 'zona' | null>(null);
+  const [area, setArea] = useState(MOCK_AREAS[0]);
+  const [zona, setZona] = useState(MOCK_ZONAS[0]);
 
   const handleHorometroChange = (text: string) => {
     let formattedText = text.replace(',', '.');
@@ -103,23 +109,55 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
       </View>
 
       {/* Área y Zona */}
-      <View style={{ marginBottom: 16 }}>
+      <View style={{ marginBottom: 16, zIndex: 9 }}>
         <Text style={[styles.sectionTitle, { color: theme.textTertiary }]}>ÁREA DE OPERACIÓN PRINCIPAL:</Text>
-        <TouchableOpacity style={[styles.dropdown, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
-          <Text style={[styles.dropdownText, { color: theme.text }]} numberOfLines={1}>Área 55 (Carguío de Trenes) (Prioridad)</Text>
+        <TouchableOpacity 
+          style={[styles.dropdown, { backgroundColor: theme.cardAlt, borderColor: activeDropdown === 'area' ? theme.primary : theme.border }]}
+          onPress={() => setActiveDropdown(activeDropdown === 'area' ? null : 'area')}
+        >
+          <Text style={[styles.dropdownText, { color: theme.text }]} numberOfLines={1}>{area}</Text>
           <ChevronDown size={20} color={theme.textSecondary} />
         </TouchableOpacity>
+        {activeDropdown === 'area' && (
+          <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
+            {MOCK_AREAS.map((a, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.dropdownOption, idx < MOCK_AREAS.length - 1 && styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
+                onPress={() => { setArea(a); setActiveDropdown(null); }}
+              >
+                <Text style={[styles.dropdownText, { color: area === a ? theme.primary : theme.text }]}>{a}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
-      <View style={{ marginBottom: 24 }}>
+      <View style={{ marginBottom: 24, zIndex: 8 }}>
         <Text style={[styles.sectionTitle, { color: theme.textTertiary }]}>ZONA DE TRABAJO ESPECÍFICA:</Text>
-        <TouchableOpacity style={[styles.dropdown, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
-          <Text style={[styles.dropdownText, { color: theme.text }]} numberOfLines={1}>Vía Férrea 1 - Espolón Sur</Text>
+        <TouchableOpacity 
+          style={[styles.dropdown, { backgroundColor: theme.cardAlt, borderColor: activeDropdown === 'zona' ? theme.primary : theme.border }]}
+          onPress={() => setActiveDropdown(activeDropdown === 'zona' ? null : 'zona')}
+        >
+          <Text style={[styles.dropdownText, { color: theme.text }]} numberOfLines={1}>{zona}</Text>
           <ChevronDown size={20} color={theme.textSecondary} />
         </TouchableOpacity>
+        {activeDropdown === 'zona' && (
+          <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
+            {MOCK_ZONAS.map((z, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.dropdownOption, idx < MOCK_ZONAS.length - 1 && styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
+                onPress={() => { setZona(z); setActiveDropdown(null); }}
+              >
+                <Text style={[styles.dropdownText, { color: zona === z ? theme.primary : theme.text }]}>{z}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Horómetro */}
-      <View style={[styles.horometroContainer, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
+      <View style={[styles.horometroContainer, { backgroundColor: theme.cardAlt, borderColor: theme.border, zIndex: 7 }]}>
         <Text style={[styles.sectionTitle, { color: theme.textTertiary, textAlign: 'center', marginBottom: 16 }]}>
           HORÓMETRO INICIAL EN CABINA
         </Text>
@@ -145,7 +183,8 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
       </View>
 
       {/* Evidencias */}
-      <Text style={[styles.sectionTitle, { color: theme.textTertiary, marginTop: 16 }]}>EVIDENCIA FOTOGRÁFICA DE PRE-USO (OPCIONAL):</Text>
+      <View style={{ zIndex: 6 }}>
+        <Text style={[styles.sectionTitle, { color: theme.textTertiary, marginTop: 16 }]}>EVIDENCIA FOTOGRÁFICA DE PRE-USO (OPCIONAL):</Text>
       <TouchableOpacity style={[styles.evidenciaBtn, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
         <View style={[styles.evidenciaIconBadge, { backgroundColor: theme.primary + '15' }]}>
           <Camera size={26} color={theme.primary} />
@@ -154,11 +193,13 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
           <Text style={[styles.evidenciaTitle, { color: theme.text }]}>Adjuntar Foto de Evidencia</Text>
           <Text style={[styles.evidenciaSub, { color: theme.textSecondary }]}>Toca aquí para abrir la cámara (Opcional)</Text>
         </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
 
       {/* Instrucciones */}
-      <Text style={[styles.sectionTitle, { color: theme.textTertiary, marginTop: 16 }]}>INSTRUCCIONES / DESCRIPCIÓN DEL TRABAJO:</Text>
-      <TextInput
+      <View style={{ zIndex: 5 }}>
+        <Text style={[styles.sectionTitle, { color: theme.textTertiary, marginTop: 16 }]}>INSTRUCCIONES / DESCRIPCIÓN DEL TRABAJO:</Text>
+        <TextInput
         style={[styles.textArea, { backgroundColor: theme.cardAlt, borderColor: theme.border, color: theme.text }]}
         multiline
         scrollEnabled={false}
@@ -171,7 +212,8 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
       />
       <Text style={{ textAlign: 'right', fontSize: 10, color: theme.textTertiary, marginTop: 6, fontWeight: '500' }}>
         {instrucciones.length}/250
-      </Text>
+        </Text>
+      </View>
     </AppBottomSheetModal>
   );
 };
@@ -228,6 +270,28 @@ const styles = StyleSheet.create({
   dropdownText: {
     fontSize: 14,
     flex: 1,
+  },
+  dropdownOptionsContainer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    borderWidth: 1,
+    borderRadius: 8,
+    marginTop: 4,
+    overflow: 'hidden',
+    zIndex: 9999,
+    elevation: 9999,
+  },
+  dropdownOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dropdownOptionBorder: {
+    borderBottomWidth: 1,
   },
   horometroContainer: {
     borderWidth: 1,

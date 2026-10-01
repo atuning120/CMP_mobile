@@ -42,6 +42,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
   const [zona, setZona] = useState('');
   const [operador, setOperador] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  const [activeDropdown, setActiveDropdown] = useState<'estado' | 'zona' | 'operador' | null>(null);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -126,7 +127,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
       <View style={[styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
 
         {/* Fila 1 */}
-        <View style={styles.row}>
+        <View style={[styles.row, { zIndex: 10 }]}>
           <View style={[styles.fieldCol, { flex: 1 }]}>
             <Text style={[styles.label, { color: theme.textSecondary }]}>CÓDIGO INTERNO (TAG) *</Text>
             <TextInput
@@ -146,11 +147,14 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
         </View>
 
         {/* Fila 2 */}
-        <View style={styles.fieldFull}>
+        <View style={[styles.fieldFull, { zIndex: 9 }]}>
           <Text style={[styles.label, { color: theme.textSecondary }]}>ESTADO OPERACIONAL *</Text>
           <TouchableOpacity
-            style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: theme.border }]}
-            onPress={() => setEstadoOperativo(prev => prev === 'OPERATIVO' ? 'FUERA_DE_SERVICIO' : 'OPERATIVO')}
+            style={[
+              styles.dropdownSelector, 
+              { backgroundColor: theme.background, borderColor: activeDropdown === 'estado' ? theme.primary : theme.border }
+            ]}
+            onPress={() => setActiveDropdown(activeDropdown === 'estado' ? null : 'estado')}
           >
             <View style={styles.dropdownSelectorInner}>
               <Activity size={16} color={estadoOperativo === 'OPERATIVO' ? theme.success : theme.danger} />
@@ -160,10 +164,28 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
             </View>
             <ChevronDown size={18} color={theme.textSecondary} />
           </TouchableOpacity>
+          {activeDropdown === 'estado' && (
+            <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <TouchableOpacity
+                style={[styles.dropdownOption, styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
+                onPress={() => { setEstadoOperativo('OPERATIVO'); setActiveDropdown(null); }}
+              >
+                <Activity size={16} color={theme.success} />
+                <Text style={[styles.dropdownOptionText, { color: estadoOperativo === 'OPERATIVO' ? theme.primary : theme.text }]}>Operativo (En Servicio)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.dropdownOption}
+                onPress={() => { setEstadoOperativo('FUERA_DE_SERVICIO'); setActiveDropdown(null); }}
+              >
+                <Activity size={16} color={theme.danger} />
+                <Text style={[styles.dropdownOptionText, { color: estadoOperativo === 'FUERA_DE_SERVICIO' ? theme.primary : theme.text }]}>Fuera de Servicio (Detenido)</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Fila 3 */}
-        <View style={styles.fieldFull}>
+        <View style={[styles.fieldFull, { zIndex: 8 }]}>
           <Text style={[styles.label, { color: theme.textSecondary }]}>MODELO DE LA MÁQUINA*</Text>
           <TextInput
             style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
@@ -173,7 +195,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
         </View>
 
         {/* Fila 4 */}
-        <View style={styles.row}>
+        <View style={[styles.row, { zIndex: 7 }]}>
           <View style={[styles.fieldCol, { flex: 1 }]}>
             <Text style={[styles.label, { color: theme.textSecondary }]}>N° CHASIS / SERIE (VIN)</Text>
             <TextInput
@@ -196,15 +218,14 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
         </View>
 
         {/* Fila 5 */}
-        <View style={styles.fieldFull}>
+        <View style={[styles.fieldFull, { zIndex: 6 }]}>
           <Text style={[styles.label, { color: theme.textSecondary }]}>UBICACIÓN / ZONA EN PLANTA</Text>
           <TouchableOpacity
-            style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: theme.border }]}
-            onPress={() => {
-              const currentIdx = MOCK_ZONAS.findIndex(z => z.nombre === zona);
-              const nextIdx = (currentIdx + 1) % MOCK_ZONAS.length;
-              setZona(MOCK_ZONAS[nextIdx].nombre);
-            }}
+            style={[
+              styles.dropdownSelector, 
+              { backgroundColor: theme.background, borderColor: activeDropdown === 'zona' ? theme.primary : theme.border }
+            ]}
+            onPress={() => setActiveDropdown(activeDropdown === 'zona' ? null : 'zona')}
           >
             <View style={styles.dropdownSelectorInner}>
               <MapPin size={16} color={theme.textSecondary} />
@@ -214,18 +235,35 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
             </View>
             <ChevronDown size={18} color={theme.textSecondary} />
           </TouchableOpacity>
+          {activeDropdown === 'zona' && (
+            <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              {MOCK_ZONAS.map((z, idx) => (
+                <TouchableOpacity
+                  key={z.id_zona}
+                  style={[
+                    styles.dropdownOption,
+                    idx < MOCK_ZONAS.length - 1 && styles.dropdownOptionBorder,
+                    { borderBottomColor: theme.border }
+                  ]}
+                  onPress={() => { setZona(z.nombre); setActiveDropdown(null); }}
+                >
+                  <MapPin size={16} color={zona === z.nombre ? theme.primary : theme.textSecondary} />
+                  <Text style={[styles.dropdownOptionText, { color: zona === z.nombre ? theme.primary : theme.text }]}>{z.nombre}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Fila 6 */}
-        <View style={styles.fieldFull}>
+        <View style={[styles.fieldFull, { zIndex: 5 }]}>
           <Text style={[styles.label, { color: theme.textSecondary }]}>OPERADOR RESPONSABLE</Text>
           <TouchableOpacity
-            style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: theme.border }]}
-            onPress={() => {
-              const currentIdx = MOCK_OPERADORES.findIndex(o => o.nombre === operador);
-              const nextIdx = (currentIdx + 1) % MOCK_OPERADORES.length;
-              setOperador(MOCK_OPERADORES[nextIdx].nombre);
-            }}
+            style={[
+              styles.dropdownSelector, 
+              { backgroundColor: theme.background, borderColor: activeDropdown === 'operador' ? theme.primary : theme.border }
+            ]}
+            onPress={() => setActiveDropdown(activeDropdown === 'operador' ? null : 'operador')}
           >
             <View style={styles.dropdownSelectorInner}>
               <User size={16} color={theme.textSecondary} />
@@ -235,10 +273,30 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
             </View>
             <ChevronDown size={18} color={theme.textSecondary} />
           </TouchableOpacity>
+          {activeDropdown === 'operador' && (
+            <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              {MOCK_OPERADORES.map((o, idx) => (
+                <TouchableOpacity
+                  key={o.id}
+                  style={[
+                    styles.dropdownOption,
+                    idx < MOCK_OPERADORES.length - 1 && styles.dropdownOptionBorder,
+                    { borderBottomColor: theme.border }
+                  ]}
+                  onPress={() => { setOperador(o.nombre); setActiveDropdown(null); }}
+                >
+                  <User size={16} color={operador === o.nombre ? theme.primary : theme.textSecondary} />
+                  <Text style={[styles.dropdownOptionText, { color: operador === o.nombre ? theme.primary : theme.text }]}>
+                    {o.nombre} {o.rut ? `(${o.rut})` : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Fila 7 */}
-        <View style={styles.fieldFull}>
+        <View style={[styles.fieldFull, { zIndex: 4 }]}>
           <Text style={[styles.label, { color: theme.textSecondary }]}>NOTAS Y OBSERVACIONES DE TERRENO</Text>
           <TextInput
             style={[styles.textarea, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}

@@ -6,7 +6,8 @@ import { darkTheme, lightTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
-import { PlusCircle, Truck, History, ShieldAlert, RefreshCw } from 'lucide-react-native';
+import { PlusCircle, Truck, History, ShieldAlert, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { AppBottomSheetModal } from '../components/common/AppBottomSheetModal';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
 import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
@@ -30,6 +31,8 @@ export const ShipSupervisorScreen = () => {
   const [isModificacionModalVisible, setIsModificacionModalVisible] = useState(false);
   const [isEditarModalVisible, setIsEditarModalVisible] = useState(false);
   const [maquinaAEditar, setMaquinaAEditar] = useState<MaquinaFlota | null>(null);
+  const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false);
+  const [maquinaAToggle, setMaquinaAToggle] = useState<MaquinaFlota | null>(null);
 
   const { maquinas, contadorFlota, isLoading, actualizarMaquina } = useFlotaResumen();
 
@@ -46,15 +49,9 @@ export const ShipSupervisorScreen = () => {
     setIsEditarModalVisible(true);
   };
 
-  const handleHabilitar = (maquina: MaquinaFlota) => {
-    Alert.alert(
-      "Habilitar Máquina",
-      `¿Confirmas que la máquina ${maquina.codigo} está lista para operar?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Habilitar", onPress: () => console.log('TODO: conectar con backend para habilitar') }
-      ]
-    );
+  const handleToggleEstado = (maquina: MaquinaFlota) => {
+    setMaquinaAToggle(maquina);
+    setIsConfirmModalVisible(true);
   };
 
   const filteredMaquinas = useMemo(() => {
@@ -148,7 +145,7 @@ export const ShipSupervisorScreen = () => {
               maquina={maquina}
               onSustituir={handleSustituir}
               onEditar={handleEditar}
-              onHabilitar={handleHabilitar}
+              onToggleEstado={handleToggleEstado}
             />
           ))
         )}
@@ -247,6 +244,60 @@ export const ShipSupervisorScreen = () => {
         maquina={maquinaAEditar}
         onSave={(maquinaActualizada) => actualizarMaquina(maquinaActualizada)}
       />
+
+      <AppBottomSheetModal
+        visible={isConfirmModalVisible}
+        onClose={() => { setIsConfirmModalVisible(false); setMaquinaAToggle(null); }}
+        title={maquinaAToggle?.estadoOperativo === 'OPERATIVO' ? "Confirmar Deshabilitación" : "Confirmar Habilitación"}
+        icon={<AlertTriangle size={22} color={theme.warning} />}
+        iconBadgeColor={theme.warning + '15'}
+        footer={
+          <>
+            <TouchableOpacity
+              style={{ flex: 1, backgroundColor: theme.cardAlt, padding: 12, borderRadius: 8, alignItems: 'center' }}
+              onPress={() => { setIsConfirmModalVisible(false); setMaquinaAToggle(null); }}
+            >
+              <Text style={{ color: theme.text, fontWeight: 'bold' }}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                flex: 1, 
+                backgroundColor: maquinaAToggle?.estadoOperativo === 'OPERATIVO' ? theme.danger : theme.success, 
+                padding: 12, 
+                borderRadius: 8, 
+                alignItems: 'center', 
+                flexDirection: 'row', 
+                justifyContent: 'center', 
+                gap: 8
+              }}
+              onPress={() => {
+                if (maquinaAToggle) {
+                  const isOperativo = maquinaAToggle.estadoOperativo === 'OPERATIVO';
+                  actualizarMaquina({
+                    ...maquinaAToggle,
+                    estadoOperativo: isOperativo ? 'FUERA_DE_SERVICIO' : 'OPERATIVO',
+                    fallaActiva: isOperativo ? 'Deshabilitado manualmente por Jefe de Turno' : null,
+                  });
+                  // TODO: conectar con el endpoint real de cambio de estado operacional cuando el backend lo exponga
+                }
+                setIsConfirmModalVisible(false);
+                setMaquinaAToggle(null);
+              }}
+            >
+              <CheckCircle size={18} color="#FFF" />
+              <Text style={{ color: '#FFF', fontWeight: 'bold' }}>
+                {maquinaAToggle?.estadoOperativo === 'OPERATIVO' ? 'Deshabilitar' : 'Habilitar'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        }
+      >
+        <Text style={{ color: theme.textSecondary, fontSize: 16, lineHeight: 24, textAlign: 'center', marginVertical: 16 }}>
+          {maquinaAToggle?.estadoOperativo === 'OPERATIVO' 
+            ? `¿Estás seguro de que deseas deshabilitar el equipo ${maquinaAToggle.codigo}? Pasará a estado "Fuera de Servicio".`
+            : `¿Confirmas que el equipo ${maquinaAToggle?.codigo} está reparado y listo para operar?`}
+        </Text>
+      </AppBottomSheetModal>
     </SafeAreaView>
   );
 };
