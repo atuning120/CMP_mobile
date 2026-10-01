@@ -137,6 +137,28 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  dropdownOptionsContainer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    borderWidth: 1,
+    borderRadius: 8,
+    marginTop: 4,
+    overflow: 'hidden',
+    zIndex: 9999,
+    elevation: 9999,
+  },
+  dropdownOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dropdownOptionBorder: {
+    borderBottomWidth: 1,
+  },
   authBlock: {
     flexDirection: 'row',
     justifyContent: 'space-between',
