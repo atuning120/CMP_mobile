@@ -35,7 +35,7 @@ export const ShipSupervisorScreen = () => {
   };
 
   const handleSustituir = (maquina: MaquinaFlota) => {
-    Alert.alert("Sustituir Máquina", `Flujo de reemplazo para ${maquina.codigo} en desarrollo.`);
+    setIsModificacionModalVisible(true);
   };
 
   const handleEditar = (maquina: MaquinaFlota) => {
