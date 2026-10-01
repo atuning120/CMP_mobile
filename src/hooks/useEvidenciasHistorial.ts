@@ -57,32 +57,27 @@ export const useEvidenciasHistorial = (operadorId: number): UseEvidenciasHistori
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchEvidencias = async () => {
-    setIsLoading(true);
-    setError(null);
-    
+  const loadData = async () => {
     try {
       // TODO: reemplazar por GET /evidencias?operadorId=... cuando el backend exponga el join con REPORTE_TURNO y TURNO_UBICACION
-      // await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network latency
-      
-      // Simulating API call
-      setTimeout(() => {
-        setEvidencias(MOCK_EVIDENCIAS);
-        setIsLoading(false);
-      }, 800);
-      
+      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network latency
+      setEvidencias(MOCK_EVIDENCIAS);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Error al cargar evidencias'));
+    } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEvidencias();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadData();
   }, [operadorId]);
 
   const refetch = () => {
-    fetchEvidencias();
+    setIsLoading(true);
+    setError(null);
+    loadData();
   };
 
   return { evidencias, isLoading, error, refetch };

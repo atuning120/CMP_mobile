@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useColorScheme, ScrollView } from 'react-native';
-import { Play, Truck, Coffee, Clock, Fuel, Wrench, CheckCircle } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { Play, Truck, Coffee, Clock, Wrench } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { EstadoOperacional, TurnoEstadoActual } from '../../types/turno';
