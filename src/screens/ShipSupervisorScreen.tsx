@@ -6,11 +6,12 @@ import { darkTheme, lightTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
-import { Sparkles, PlusCircle } from 'lucide-react-native';
+import { Sparkles, PlusCircle, Truck, History, ShieldAlert } from 'lucide-react-native';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
 import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
 import { useFlotaResumen, MaquinaFlota } from '../hooks/useFlotaResumen';
+import { IncorporacionEquipoModal } from '../components/supervisor/IncorporacionEquipoModal';
 import { styles } from './ShipSupervisorScreen.styles';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
@@ -23,6 +24,7 @@ export const ShipSupervisorScreen = () => {
   const [activeTab, setActiveTab] = useState<TabOption>('FLOTA');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterOption>('Todos');
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   const { maquinas, contadorFlota, isLoading } = useFlotaResumen();
 
@@ -68,29 +70,50 @@ export const ShipSupervisorScreen = () => {
   const renderTabs = () => (
     <View style={[styles.tabsContainer, { backgroundColor: theme.cardAlt }]}>
       <TouchableOpacity 
-        style={[styles.tab, activeTab === 'FLOTA' && { borderBottomColor: theme.warning, borderBottomWidth: 3 }]}
+        style={[styles.tab, activeTab === 'FLOTA' && { backgroundColor: theme.card }]}
         onPress={() => setActiveTab('FLOTA')}
+        activeOpacity={0.7}
       >
-        <Text style={[styles.tabText, { color: activeTab === 'FLOTA' ? theme.warning : theme.textSecondary }]}>
-          Flota <Text style={styles.tabCounter}>({contadorFlota} eq)</Text>
+        <View style={styles.tabIconRow}>
+          <Truck size={16} color={activeTab === 'FLOTA' ? theme.warning : theme.textSecondary} />
+          <Text style={[styles.tabText, { color: activeTab === 'FLOTA' ? '#FFFFFF' : theme.textSecondary }]}>
+            Flota
+          </Text>
+        </View>
+        <Text style={[styles.tabCounter, { color: activeTab === 'FLOTA' ? theme.textSecondary : theme.textTertiary }]}>
+          {contadorFlota} equipos
         </Text>
       </TouchableOpacity>
       
       <TouchableOpacity 
-        style={[styles.tab, activeTab === 'HISTORIAL' && { borderBottomColor: theme.warning, borderBottomWidth: 3 }]}
+        style={[styles.tab, activeTab === 'HISTORIAL' && { backgroundColor: theme.card }]}
         onPress={() => setActiveTab('HISTORIAL')}
+        activeOpacity={0.7}
       >
-        <Text style={[styles.tabText, { color: activeTab === 'HISTORIAL' ? theme.warning : theme.textSecondary }]}>
-          Historial <Text style={styles.tabCounter}>(3 camb)</Text>
+        <View style={styles.tabIconRow}>
+          <History size={16} color={activeTab === 'HISTORIAL' ? theme.primary : theme.textSecondary} />
+          <Text style={[styles.tabText, { color: activeTab === 'HISTORIAL' ? '#FFFFFF' : theme.textSecondary }]}>
+            Historial
+          </Text>
+        </View>
+        <Text style={[styles.tabCounter, { color: activeTab === 'HISTORIAL' ? theme.textSecondary : theme.textTertiary }]}>
+          3 cambios
         </Text>
       </TouchableOpacity>
       
       <TouchableOpacity 
-        style={[styles.tab, activeTab === 'ALERTAS' && { borderBottomColor: theme.warning, borderBottomWidth: 3 }]}
+        style={[styles.tab, activeTab === 'ALERTAS' && { backgroundColor: theme.card }]}
         onPress={() => setActiveTab('ALERTAS')}
+        activeOpacity={0.7}
       >
-        <Text style={[styles.tabText, { color: activeTab === 'ALERTAS' ? theme.warning : theme.textSecondary }]}>
-          Alertas <Text style={styles.tabCounter}>(4 evts)</Text>
+        <View style={styles.tabIconRow}>
+          <ShieldAlert size={16} color={activeTab === 'ALERTAS' ? theme.danger : theme.textSecondary} />
+          <Text style={[styles.tabText, { color: activeTab === 'ALERTAS' ? '#FFFFFF' : theme.textSecondary }]}>
+            Alertas
+          </Text>
+        </View>
+        <Text style={[styles.tabCounter, { color: activeTab === 'ALERTAS' ? theme.textSecondary : theme.textTertiary }]}>
+          4 eventos
         </Text>
       </TouchableOpacity>
     </View>
@@ -175,6 +198,7 @@ export const ShipSupervisorScreen = () => {
                 }
               ]}
               activeOpacity={0.7}
+              onPress={() => setIsModalVisible(true)}
             >
               <View style={styles.actionHeaderRow}>
                 <View style={[styles.iconBadge, { backgroundColor: theme.primary + '20' }]}>
@@ -196,6 +220,11 @@ export const ShipSupervisorScreen = () => {
       </ImageBackground>
 
       <LoginFooter />
+
+      <IncorporacionEquipoModal 
+        visible={isModalVisible} 
+        onClose={() => setIsModalVisible(false)} 
+      />
     </SafeAreaView>
   );
 };

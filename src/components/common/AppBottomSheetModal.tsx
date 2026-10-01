@@ -16,6 +16,7 @@ interface AppBottomSheetModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   scrollContentStyle?: StyleProp<ViewStyle>;
+  modalStyle?: StyleProp<ViewStyle>;
 }
 
 export const AppBottomSheetModal: React.FC<AppBottomSheetModalProps> = ({
@@ -29,6 +30,7 @@ export const AppBottomSheetModal: React.FC<AppBottomSheetModalProps> = ({
   children,
   footer,
   scrollContentStyle,
+  modalStyle,
 }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
@@ -45,7 +47,7 @@ export const AppBottomSheetModal: React.FC<AppBottomSheetModalProps> = ({
           exiting={SlideOutDown.duration(200)}
           style={{ flexShrink: 1, width: '100%', alignItems: 'center' }}
         >
-          <SafeAreaView style={[styles.modalContent, { backgroundColor: theme.card }]} edges={['top', 'bottom']}>
+          <SafeAreaView style={[styles.modalContent, { backgroundColor: theme.card }, modalStyle]} edges={['top', 'bottom']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: theme.border, backgroundColor: theme.card }]}>
               <View style={styles.headerLeft}>

@@ -28,19 +28,19 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
           </View>
         </View>
         <View style={[
-          styles.estadoBadge, 
+          styles.estadoBadge,
           { backgroundColor: isOperativo ? theme.success + '20' : theme.danger + '20' }
         ]}>
           {isOperativo ? <View style={[styles.dot, { backgroundColor: theme.success }]} /> : null}
           <Text style={[
-            styles.estadoText, 
+            styles.estadoText,
             { color: isOperativo ? theme.success : theme.danger }
           ]}>
             {isOperativo ? 'Operativo' : 'Fuera Servicio'}
           </Text>
         </View>
       </View>
-      
+
       <Text style={[styles.modelo, { color: theme.textSecondary }]}>{maquina.marcaModelo}</Text>
 
       {/* Alerta */}
@@ -75,32 +75,26 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
             {maquina.horometroActual.toLocaleString('es-CL', { minimumFractionDigits: 1 })} hrs
           </Text>
         </View>
-        <View style={styles.metaItem}>
-          <Fuel size={14} color={theme.textTertiary} />
-          <Text style={[styles.metaText, { color: theme.text }]}>
-            {maquina.combustible ? `${maquina.combustible.porcentaje}% ${maquina.combustible.tipo}` : 'N/A'}
-          </Text>
-        </View>
       </View>
 
       {/* Actions */}
       <View style={[styles.actionsRow, { borderTopColor: theme.border }]}>
         {!isOperativo ? (
           <>
-            <TouchableOpacity 
-              style={[styles.btnAction, { backgroundColor: theme.warning }]} 
+            <TouchableOpacity
+              style={[styles.btnAction, { backgroundColor: theme.warning }]}
               onPress={() => onSustituir(maquina)}
             >
               <RefreshCw size={16} color="#1A1A1A" />
               <Text style={[styles.btnActionText, { color: '#1A1A1A' }]}>Sustituir / Reemplazo</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={[styles.btnIcon, { backgroundColor: theme.cardAlt }]} onPress={() => onEditar(maquina)}>
               <Edit2 size={16} color={theme.text} />
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.btnPill, { backgroundColor: theme.success }]} 
+
+            <TouchableOpacity
+              style={[styles.btnPill, { backgroundColor: theme.success }]}
               onPress={() => onHabilitar(maquina)}
             >
               <Text style={styles.btnPillText}>Habilitar</Text>
