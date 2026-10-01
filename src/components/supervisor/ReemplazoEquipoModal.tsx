@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, useColorScheme, TextInput, ScrollView } from 'react-native';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
-import { PlusCircle, CheckCircle, MapPin, Briefcase, Check, Truck, Wrench, ChevronDown } from 'lucide-react-native';
+import { PlusCircle, CheckCircle, MapPin, Briefcase, Check, Truck, Wrench, ChevronDown, AlertCircle, Gauge } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { EquipoDataForm, EquipoFormState, PlantillaEquipo } from './EquipoDataForm';
-import { styles } from './IncorporacionEquipoModal.styles';
+import { styles } from './ReemplazoEquipoModal.styles';
 
 interface Props {
   visible: boolean;
@@ -46,7 +46,7 @@ const INITIAL_EQUIPO_STATE: EquipoFormState = {
   fuenteDatos: 'NUEVO',
 };
 
-export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
+export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const successColor = colorScheme === 'dark' ? '#81c995' : theme.success;
@@ -133,14 +133,50 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) 
     <AppBottomSheetModal
       visible={visible}
       onClose={onClose}
-      title="Incorporación de Equipo a Planta"
-      subtitle={`Suma ${numEquipos} equipo${numEquipos > 1 ? 's' : ''} nuev${numEquipos > 1 ? 'os' : 'o'} a la flota activa`}
-      icon={<PlusCircle size={22} color={theme.primary} />}
-      iconBadgeColor={theme.primary + '15'}
+      title="Modificación / Reemplazo de Equipo"
+      subtitle={`Registra la salida y sustitución de ${numEquipos} equipo${numEquipos > 1 ? 's' : ''}`}
+      icon={<CheckCircle size={22} color={theme.warning} />}
+      iconBadgeColor={theme.warning + '15'}
       headerTop={headerTop}
       footer={renderFooter()}
       modalStyle={{ width: '95%', maxWidth: 700, maxHeight: '92%' }}
     >
+
+      <View style={[styles.section, styles.capsuleSection, {
+        backgroundColor: theme.danger + '08',
+        borderColor: theme.danger + '60',
+        borderWidth: 1.5
+      }]}>
+        <View style={styles.sectionHeaderRow}>
+          <View style={styles.sectionTitleRow}>
+            <AlertCircle size={18} color={theme.danger} />
+            <Text style={[styles.sectionTitle, { color: theme.danger, marginBottom: 0, fontWeight: 'bold' }]}>2. EQUIPO SALIENTE (FUERA DE SERVICIO)</Text>
+          </View>
+        </View>
+        <View style={[styles.cardsRow, { gap: 16 }]}>
+          <View style={[styles.fieldCol, { flex: 2 }]}>
+            <Text style={[styles.label, { color: theme.textSecondary, fontSize: 10, letterSpacing: 0.5 }]}>MÁQUINA A RETIRAR:</Text>
+            <TouchableOpacity style={[styles.dropdownSelector, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
+              <View style={styles.dropdownSelectorInner}>
+                <Text style={[styles.dropdownText, { color: theme.text }]} numberOfLines={1}>CAEX-204 - Caterpillar 793F...</Text>
+              </View>
+              <ChevronDown size={18} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          <View style={[styles.fieldCol, { flex: 1.5 }]}>
+            <Text style={[styles.label, { color: theme.textSecondary, fontSize: 10, letterSpacing: 0.5 }]}>HORÓMETRO SALIDA:</Text>
+            <View style={[styles.input, { backgroundColor: theme.cardAlt, borderColor: theme.border, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+              <Gauge size={16} color={theme.textSecondary} />
+              <TextInput
+                style={{ flex: 1, color: theme.text, fontSize: 14, fontWeight: '500', padding: 0 }}
+                value="14280,5"
+                placeholderTextColor={theme.textTertiary}
+              />
+            </View>
+          </View>
+        </View>
+      </View>
+
       <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>¿CUÁNTOS EQUIPOS ENTRAN A OPERAR EN ESTA ACCIÓN?</Text>
         <View style={styles.cardsRow}>
@@ -172,7 +208,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) 
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
             <Truck size={16} color={successColor} />
-            <Text style={[styles.sectionTitle, { color: successColor, marginBottom: 0 }]}>2. DATOS DE MAQUINARIA PARA PLANTA</Text>
+            <Text style={[styles.sectionTitle, { color: successColor, marginBottom: 0 }]}>3. DATOS DE MAQUINARIA PARA PLANTA</Text>
           </View>
 
           {/* Custom Tabs */}
@@ -221,7 +257,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) 
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
             <Wrench size={16} color={theme.warning} />
-            <Text style={[styles.sectionTitle, { color: theme.textSecondary, marginBottom: 0 }]}>3. DESTINO EN PLANTA Y OBSERVACIONES</Text>
+            <Text style={[styles.sectionTitle, { color: theme.textSecondary, marginBottom: 0 }]}>4. DESTINO EN PLANTA Y OBSERVACIONES</Text>
           </View>
         </View>
 
