@@ -1,0 +1,202 @@
+import React, { useState, useMemo } from 'react';
+import { View, Text, ImageBackground, useColorScheme, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { darkTheme, lightTheme } from '../constants/theme';
+import { LoginHeader } from '../components/LoginHeader';
+import { LoginFooter } from '../components/LoginFooter';
+import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
+import { Sparkles, PlusCircle } from 'lucide-react-native';
+import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
+import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
+import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
+import { useFlotaResumen, MaquinaFlota } from '../hooks/useFlotaResumen';
+import { styles } from './ShipSupervisorScreen.styles';
+
+type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
+
+export const ShipSupervisorScreen = () => {
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  const router = useRouter();
+  
+  const [activeTab, setActiveTab] = useState<TabOption>('FLOTA');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<FilterOption>('Todos');
+
+  const { maquinas, contadorFlota, isLoading } = useFlotaResumen();
+
+  const handleLogout = () => {
+    router.replace('/');
+  };
+
+  const handleSustituir = (maquina: MaquinaFlota) => {
+    Alert.alert("Sustituir Máquina", `Flujo de reemplazo para ${maquina.codigo} en desarrollo.`);
+  };
+
+  const handleEditar = (maquina: MaquinaFlota) => {
+    Alert.alert("Editar Máquina", `Modificar datos de ${maquina.codigo} en desarrollo.`);
+  };
+
+  const handleHabilitar = (maquina: MaquinaFlota) => {
+    Alert.alert(
+      "Habilitar Máquina", 
+      `¿Confirmas que la máquina ${maquina.codigo} está lista para operar?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Habilitar", onPress: () => console.log('TODO: conectar con backend para habilitar') }
+      ]
+    );
+  };
+
+  const filteredMaquinas = useMemo(() => {
+    return maquinas.filter(m => {
+      const matchesSearch = 
+        m.codigo.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        m.patente.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.marcaModelo.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesFilter = 
+        activeFilter === 'Todos' ? true :
+        activeFilter === 'Operativos' ? m.estadoOperativo === 'OPERATIVO' :
+        activeFilter === 'Fuera de Servicio' ? m.estadoOperativo === 'FUERA_DE_SERVICIO' : true;
+      
+      return matchesSearch && matchesFilter;
+    });
+  }, [maquinas, searchQuery, activeFilter]);
+
+  const renderTabs = () => (
+    <View style={[styles.tabsContainer, { backgroundColor: theme.cardAlt }]}>
+      <TouchableOpacity 
+        style={[styles.tab, activeTab === 'FLOTA' && { borderBottomColor: theme.warning, borderBottomWidth: 3 }]}
+        onPress={() => setActiveTab('FLOTA')}
+      >
+        <Text style={[styles.tabText, { color: activeTab === 'FLOTA' ? theme.warning : theme.textSecondary }]}>
+          Flota <Text style={styles.tabCounter}>({contadorFlota} eq)</Text>
+        </Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={[styles.tab, activeTab === 'HISTORIAL' && { borderBottomColor: theme.warning, borderBottomWidth: 3 }]}
+        onPress={() => setActiveTab('HISTORIAL')}
+      >
+        <Text style={[styles.tabText, { color: activeTab === 'HISTORIAL' ? theme.warning : theme.textSecondary }]}>
+          Historial <Text style={styles.tabCounter}>(3 camb)</Text>
+        </Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={[styles.tab, activeTab === 'ALERTAS' && { borderBottomColor: theme.warning, borderBottomWidth: 3 }]}
+        onPress={() => setActiveTab('ALERTAS')}
+      >
+        <Text style={[styles.tabText, { color: activeTab === 'ALERTAS' ? theme.warning : theme.textSecondary }]}>
+          Alertas <Text style={styles.tabCounter}>(4 evts)</Text>
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderContent = () => {
+    if (activeTab !== 'FLOTA') {
+      return (
+        <View style={styles.placeholderContainer}>
+          <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>Próximamente...</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={{ flex: 1 }}>
+        <FleetSearchBar value={searchQuery} onChangeText={setSearchQuery} />
+        <FleetFilterChips activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+        
+        {isLoading ? (
+          <ActivityIndicator size="large" color={theme.warning} style={{ marginTop: 40 }} />
+        ) : (
+          filteredMaquinas.map(maquina => (
+            <MachineFleetCard 
+              key={maquina.id} 
+              maquina={maquina} 
+              onSustituir={handleSustituir}
+              onEditar={handleEditar}
+              onHabilitar={handleHabilitar}
+            />
+          ))
+        )}
+        
+        {!isLoading && filteredMaquinas.length === 0 && (
+          <Text style={{ textAlign: 'center', marginTop: 40, color: theme.textSecondary }}>No se encontraron máquinas.</Text>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+      <LoginHeader />
+
+      <ImageBackground
+        source={require('../../assets/images/Mina_fondo.jpg')}
+        style={styles.mainContent}
+        imageStyle={{ opacity: colorScheme === 'dark' ? 0.3 : 0.9 }}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <TurnoSummaryDropdown turno={null} onLogout={handleLogout} />
+
+          <View style={styles.buttonsRow}>
+            <TouchableOpacity 
+              style={[
+                styles.actionButton, 
+                { 
+                  backgroundColor: theme.card, 
+                  borderColor: theme.warning,
+                  shadowColor: theme.warning 
+                }
+              ]}
+              activeOpacity={0.7}
+            >
+              <View style={styles.actionHeaderRow}>
+                <View style={[styles.iconBadge, { backgroundColor: theme.warning + '20' }]}>
+                  <Sparkles size={16} color={theme.warning} />
+                </View>
+                <Text style={[styles.actionTopText, { color: theme.warning }]}>DATOS PREVIOS</Text>
+              </View>
+              <Text style={[styles.actionMainText, { color: theme.text }]}>Solo Modificar</Text>
+              <Text style={[styles.actionSubText, { color: theme.textSecondary }]}>Pre-carga modelo & datos</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[
+                styles.actionButton, 
+                { 
+                  backgroundColor: theme.card, 
+                  borderColor: theme.primary,
+                  shadowColor: theme.primary
+                }
+              ]}
+              activeOpacity={0.7}
+            >
+              <View style={styles.actionHeaderRow}>
+                <View style={[styles.iconBadge, { backgroundColor: theme.primary + '20' }]}>
+                  <PlusCircle size={16} color={theme.primary} />
+                </View>
+                <Text style={[styles.actionTopText, { color: theme.primary }]}>CREAR NUEVA</Text>
+              </View>
+              <Text style={[styles.actionMainText, { color: theme.text }]}>Desde Cero</Text>
+              <Text style={[styles.actionSubText, { color: theme.textSecondary }]}>Formulario limpio</Text>
+            </TouchableOpacity>
+          </View>
+
+          {renderTabs()}
+          
+          <View style={styles.tabContentCard}>
+            {renderContent()}
+          </View>
+        </ScrollView>
+      </ImageBackground>
+
+      <LoginFooter />
+    </SafeAreaView>
+  );
+};
+
