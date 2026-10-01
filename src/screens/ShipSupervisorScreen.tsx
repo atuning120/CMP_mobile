@@ -13,6 +13,7 @@ import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
 import { useFlotaResumen, MaquinaFlota } from '../hooks/useFlotaResumen';
 import { IncorporacionEquipoModal } from '../components/supervisor/IncorporacionEquipoModal';
 import { ReemplazoEquipoModal } from '../components/supervisor/ReemplazoEquipoModal';
+import { EditarEquipoModal } from '../components/supervisor/EditarEquipoModal';
 import { styles } from './ShipSupervisorScreen.styles';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
@@ -27,8 +28,10 @@ export const ShipSupervisorScreen = () => {
   const [activeFilter, setActiveFilter] = useState<FilterOption>('Todos');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isModificacionModalVisible, setIsModificacionModalVisible] = useState(false);
+  const [isEditarModalVisible, setIsEditarModalVisible] = useState(false);
+  const [maquinaAEditar, setMaquinaAEditar] = useState<MaquinaFlota | null>(null);
 
-  const { maquinas, contadorFlota, isLoading } = useFlotaResumen();
+  const { maquinas, contadorFlota, isLoading, actualizarMaquina } = useFlotaResumen();
 
   const handleLogout = () => {
     router.replace('/');
@@ -39,7 +42,8 @@ export const ShipSupervisorScreen = () => {
   };
 
   const handleEditar = (maquina: MaquinaFlota) => {
-    Alert.alert("Editar Máquina", `Modificar datos de ${maquina.codigo} en desarrollo.`);
+    setMaquinaAEditar(maquina);
+    setIsEditarModalVisible(true);
   };
 
   const handleHabilitar = (maquina: MaquinaFlota) => {
@@ -232,6 +236,16 @@ export const ShipSupervisorScreen = () => {
       <ReemplazoEquipoModal
         visible={isModificacionModalVisible}
         onClose={() => setIsModificacionModalVisible(false)}
+      />
+
+      <EditarEquipoModal
+        visible={isEditarModalVisible}
+        onClose={() => {
+          setIsEditarModalVisible(false);
+          setMaquinaAEditar(null);
+        }}
+        maquina={maquinaAEditar}
+        onSave={(maquinaActualizada) => actualizarMaquina(maquinaActualizada)}
       />
     </SafeAreaView>
   );
