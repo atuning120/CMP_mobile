@@ -6,13 +6,14 @@ import { darkTheme, lightTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
-import { Sparkles, PlusCircle, Truck, History, ShieldAlert } from 'lucide-react-native';
+import { PlusCircle, Truck, History, ShieldAlert, RefreshCw } from 'lucide-react-native';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
 import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
 import { useFlotaResumen, MaquinaFlota } from '../hooks/useFlotaResumen';
 import { IncorporacionEquipoModal } from '../components/supervisor/IncorporacionEquipoModal';
 import { ReemplazoEquipoModal } from '../components/supervisor/ReemplazoEquipoModal';
+import { EditarEquipoModal } from '../components/supervisor/EditarEquipoModal';
 import { styles } from './ShipSupervisorScreen.styles';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
@@ -27,8 +28,10 @@ export const ShipSupervisorScreen = () => {
   const [activeFilter, setActiveFilter] = useState<FilterOption>('Todos');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isModificacionModalVisible, setIsModificacionModalVisible] = useState(false);
+  const [isEditarModalVisible, setIsEditarModalVisible] = useState(false);
+  const [maquinaAEditar, setMaquinaAEditar] = useState<MaquinaFlota | null>(null);
 
-  const { maquinas, contadorFlota, isLoading } = useFlotaResumen();
+  const { maquinas, contadorFlota, isLoading, actualizarMaquina } = useFlotaResumen();
 
   const handleLogout = () => {
     router.replace('/');
@@ -39,7 +42,8 @@ export const ShipSupervisorScreen = () => {
   };
 
   const handleEditar = (maquina: MaquinaFlota) => {
-    Alert.alert("Editar Máquina", `Modificar datos de ${maquina.codigo} en desarrollo.`);
+    setMaquinaAEditar(maquina);
+    setIsEditarModalVisible(true);
   };
 
   const handleHabilitar = (maquina: MaquinaFlota) => {
@@ -183,11 +187,11 @@ export const ShipSupervisorScreen = () => {
             >
               <View style={styles.actionHeaderRow}>
                 <View style={[styles.iconBadge, { backgroundColor: theme.warning + '20' }]}>
-                  <Sparkles size={16} color={theme.warning} />
+                  <RefreshCw size={16} color={theme.warning} />
                 </View>
-                <Text style={[styles.actionTopText, { color: theme.warning }]}>DATOS PREVIOS</Text>
+                <Text style={[styles.actionTopText, { color: theme.warning }]}>Relevo faena</Text>
               </View>
-              <Text style={[styles.actionMainText, { color: theme.text }]}>Solo Modificar</Text>
+              <Text style={[styles.actionMainText, { color: theme.text }]}>Reemplazar (1 o 2)</Text>
               <Text style={[styles.actionSubText, { color: theme.textSecondary }]}>Pre-carga modelo & datos</Text>
             </TouchableOpacity>
 
@@ -232,6 +236,16 @@ export const ShipSupervisorScreen = () => {
       <ReemplazoEquipoModal
         visible={isModificacionModalVisible}
         onClose={() => setIsModificacionModalVisible(false)}
+      />
+
+      <EditarEquipoModal
+        visible={isEditarModalVisible}
+        onClose={() => {
+          setIsEditarModalVisible(false);
+          setMaquinaAEditar(null);
+        }}
+        maquina={maquinaAEditar}
+        onSave={(maquinaActualizada) => actualizarMaquina(maquinaActualizada)}
       />
     </SafeAreaView>
   );

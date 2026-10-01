@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
-import { AlertTriangle, User, MapPin, Clock, Fuel, RefreshCw, Edit2 } from 'lucide-react-native';
+import { AlertTriangle, User, MapPin, Clock, RefreshCw, Edit2 } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { MaquinaFlota } from '../../hooks/useFlotaResumen';
 import { styles } from './MachineFleetCard.styles';

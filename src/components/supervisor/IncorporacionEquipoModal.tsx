@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, useColorScheme, TextInput, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, useColorScheme, TextInput } from 'react-native';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
-import { PlusCircle, CheckCircle, MapPin, Briefcase, Check, Truck, Wrench, ChevronDown } from 'lucide-react-native';
+import { PlusCircle, CheckCircle, MapPin, Truck, Wrench, ChevronDown } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { EquipoDataForm, EquipoFormState, PlantillaEquipo } from './EquipoDataForm';
 import { styles } from './IncorporacionEquipoModal.styles';
@@ -27,12 +27,7 @@ const MOCK_ZONAS = [
   { id_area: 3, id_zona: 4, nombre: 'Chancador Primario' },
 ];
 
-const MOCK_MOTIVOS = [
-  'Aumento de Capacidad / Flota de Producción',
-  'Reemplazo Temporal por Falla',
-  'Prueba Técnica de Equipo',
-  'Requerimiento Especial de Gerencia',
-];
+
 
 const INITIAL_EQUIPO_STATE: EquipoFormState = {
   codigo: '',

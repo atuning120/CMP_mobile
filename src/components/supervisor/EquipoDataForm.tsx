@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, useColorScheme, Switch } from 'react-native';
-import { PackageOpen, Sparkles, PlusCircle, Copy, Zap } from 'lucide-react-native';
+import { Sparkles, PlusCircle, Copy, Zap } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { styles } from './EquipoDataForm.styles';
 
@@ -33,12 +33,6 @@ interface Props {
   plantillas: PlantillaEquipo[];
 }
 
-// Mocks locales de operadores para el dropdown (idealmente vendrían de un hook)
-const MOCK_OPERADORES = [
-  { id: '1', nombre: 'Cristian Núñez', rut: '15.123.456-7', turno: 'Turno A - Día' },
-  { id: '2', nombre: 'María López', rut: '16.987.654-3', turno: 'Turno B - Noche' },
-  { id: '3', nombre: 'Carlos Díaz', rut: '14.555.222-1', turno: 'Turno A - Día' },
-];
 
 export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, plantillas }) => {
   const colorScheme = useColorScheme();

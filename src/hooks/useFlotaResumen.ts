@@ -21,6 +21,7 @@ export interface UseFlotaResumenResult {
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
+  actualizarMaquina: (maquina: MaquinaFlota) => void;
 }
 
 const MOCK_FLOTA: MaquinaFlota[] = [
@@ -90,7 +91,11 @@ export const useFlotaResumen = (): UseFlotaResumenResult => {
     loadData();
   };
 
+  const actualizarMaquina = (maquinaActualizada: MaquinaFlota) => {
+    setMaquinas(prev => prev.map(m => m.id === maquinaActualizada.id ? maquinaActualizada : m));
+  };
+
   const contadorFlota = useMemo(() => maquinas.length, [maquinas]);
 
-  return { maquinas, contadorFlota, isLoading, error, refetch };
+  return { maquinas, contadorFlota, isLoading, error, refetch, actualizarMaquina };
 };
