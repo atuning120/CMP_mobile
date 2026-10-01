@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
 import { AlertTriangle, User, MapPin, Clock, Fuel, RefreshCw, Edit2 } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
