@@ -20,7 +20,7 @@ export const ShipSupervisorScreen = () => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const router = useRouter();
-  
+
   const [activeTab, setActiveTab] = useState<TabOption>('FLOTA');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterOption>('Todos');
@@ -42,7 +42,7 @@ export const ShipSupervisorScreen = () => {
 
   const handleHabilitar = (maquina: MaquinaFlota) => {
     Alert.alert(
-      "Habilitar Máquina", 
+      "Habilitar Máquina",
       `¿Confirmas que la máquina ${maquina.codigo} está lista para operar?`,
       [
         { text: "Cancelar", style: "cancel" },
@@ -53,23 +53,23 @@ export const ShipSupervisorScreen = () => {
 
   const filteredMaquinas = useMemo(() => {
     return maquinas.filter(m => {
-      const matchesSearch = 
-        m.codigo.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchesSearch =
+        m.codigo.toLowerCase().includes(searchQuery.toLowerCase()) ||
         m.patente.toLowerCase().includes(searchQuery.toLowerCase()) ||
         m.marcaModelo.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesFilter = 
+
+      const matchesFilter =
         activeFilter === 'Todos' ? true :
-        activeFilter === 'Operativos' ? m.estadoOperativo === 'OPERATIVO' :
-        activeFilter === 'Fuera de Servicio' ? m.estadoOperativo === 'FUERA_DE_SERVICIO' : true;
-      
+          activeFilter === 'Operativos' ? m.estadoOperativo === 'OPERATIVO' :
+            activeFilter === 'Fuera de Servicio' ? m.estadoOperativo === 'FUERA_DE_SERVICIO' : true;
+
       return matchesSearch && matchesFilter;
     });
   }, [maquinas, searchQuery, activeFilter]);
 
   const renderTabs = () => (
     <View style={[styles.tabsContainer, { backgroundColor: theme.cardAlt }]}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.tab, activeTab === 'FLOTA' && { backgroundColor: theme.card }]}
         onPress={() => setActiveTab('FLOTA')}
         activeOpacity={0.7}
@@ -84,8 +84,8 @@ export const ShipSupervisorScreen = () => {
           {contadorFlota} equipos
         </Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         style={[styles.tab, activeTab === 'HISTORIAL' && { backgroundColor: theme.card }]}
         onPress={() => setActiveTab('HISTORIAL')}
         activeOpacity={0.7}
@@ -100,8 +100,8 @@ export const ShipSupervisorScreen = () => {
           3 cambios
         </Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         style={[styles.tab, activeTab === 'ALERTAS' && { backgroundColor: theme.card }]}
         onPress={() => setActiveTab('ALERTAS')}
         activeOpacity={0.7}
@@ -132,21 +132,21 @@ export const ShipSupervisorScreen = () => {
       <View style={{ flex: 1 }}>
         <FleetSearchBar value={searchQuery} onChangeText={setSearchQuery} />
         <FleetFilterChips activeFilter={activeFilter} onFilterChange={setActiveFilter} />
-        
+
         {isLoading ? (
           <ActivityIndicator size="large" color={theme.warning} style={{ marginTop: 40 }} />
         ) : (
           filteredMaquinas.map(maquina => (
-            <MachineFleetCard 
-              key={maquina.id} 
-              maquina={maquina} 
+            <MachineFleetCard
+              key={maquina.id}
+              maquina={maquina}
               onSustituir={handleSustituir}
               onEditar={handleEditar}
               onHabilitar={handleHabilitar}
             />
           ))
         )}
-        
+
         {!isLoading && filteredMaquinas.length === 0 && (
           <Text style={{ textAlign: 'center', marginTop: 40, color: theme.textSecondary }}>No se encontraron máquinas.</Text>
         )}
@@ -167,13 +167,13 @@ export const ShipSupervisorScreen = () => {
           <TurnoSummaryDropdown turno={null} onLogout={handleLogout} />
 
           <View style={styles.buttonsRow}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
-                styles.actionButton, 
-                { 
-                  backgroundColor: theme.card, 
+                styles.actionButton,
+                {
+                  backgroundColor: theme.card,
                   borderColor: theme.warning,
-                  shadowColor: theme.warning 
+                  shadowColor: theme.warning
                 }
               ]}
               activeOpacity={0.7}
@@ -188,11 +188,11 @@ export const ShipSupervisorScreen = () => {
               <Text style={[styles.actionSubText, { color: theme.textSecondary }]}>Pre-carga modelo & datos</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
-                styles.actionButton, 
-                { 
-                  backgroundColor: theme.card, 
+                styles.actionButton,
+                {
+                  backgroundColor: theme.card,
                   borderColor: theme.primary,
                   shadowColor: theme.primary
                 }
@@ -212,7 +212,7 @@ export const ShipSupervisorScreen = () => {
           </View>
 
           {renderTabs()}
-          
+
           <View style={styles.tabContentCard}>
             {renderContent()}
           </View>
@@ -221,9 +221,9 @@ export const ShipSupervisorScreen = () => {
 
       <LoginFooter />
 
-      <IncorporacionEquipoModal 
-        visible={isModalVisible} 
-        onClose={() => setIsModalVisible(false)} 
+      <IncorporacionEquipoModal
+        visible={isModalVisible}
+        onClose={() => setIsModalVisible(false)}
       />
     </SafeAreaView>
   );

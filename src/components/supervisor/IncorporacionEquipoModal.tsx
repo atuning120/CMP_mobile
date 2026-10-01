@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, useColorScheme, TextInput, ScrollView } from 'react-native';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
-import { PlusCircle, CheckCircle, MapPin, Briefcase } from 'lucide-react-native';
+import { PlusCircle, CheckCircle, MapPin, Briefcase, Check, Truck, Wrench, ChevronDown } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
-import { EquipoDataForm, EquipoFormState, PlantillaEquipo, EquipoPatio } from './EquipoDataForm';
+import { EquipoDataForm, EquipoFormState, PlantillaEquipo } from './EquipoDataForm';
 import { styles } from './IncorporacionEquipoModal.styles';
 
 interface Props {
@@ -19,11 +19,6 @@ const MOCK_PLANTILLAS: PlantillaEquipo[] = [
   { id: 'p4', nombreCorto: 'Dozer D11T', marcaModelo: 'Caterpillar D11T', horometroSugerido: 0 },
 ];
 
-const MOCK_PATIO: EquipoPatio[] = [
-  { id: 'e1', codigo: 'CAEX-210', patente: 'AB-CD-12', marcaModelo: 'Caterpillar 793F', horometroActual: 4500, combustible: 85, contratista: false },
-  { id: 'e2', codigo: 'CAEX-211', patente: 'EF-GH-34', marcaModelo: 'Caterpillar 793F', horometroActual: 4600, combustible: 90, contratista: false },
-  { id: 'e3', codigo: 'EXCA-05', patente: 'XX-YY-99', marcaModelo: 'Komatsu PC4000', horometroActual: 12000, combustible: 40, contratista: true },
-];
 
 const MOCK_ZONAS = [
   { id_area: 1, id_zona: 1, nombre: 'Fase 4 - Banco 320' },
@@ -67,11 +62,11 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) 
 
   // Validaciones
   const isEquipoValid = (eq: EquipoFormState) => {
-    return eq.codigo.trim() !== '' && 
-           eq.patente.trim() !== '' && 
-           eq.marcaModelo.trim() !== '' && 
-           eq.horometro.trim() !== '' && 
-           eq.operadorId !== '';
+    return eq.codigo.trim() !== '' &&
+      eq.patente.trim() !== '' &&
+      eq.marcaModelo.trim() !== '' &&
+      eq.horometro.trim() !== '' &&
+      eq.operadorId !== '';
   };
 
   const isFormValid = () => {
@@ -95,7 +90,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) 
 
     console.log('Payload de Incorporación:', JSON.stringify(payload, null, 2));
     // TODO: conectar con el endpoint real de incorporación de equipos cuando el backend lo exponga
-    
+
     // Reset and close
     setEquipo1(INITIAL_EQUIPO_STATE);
     setEquipo2(INITIAL_EQUIPO_STATE);
@@ -115,15 +110,15 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) 
 
   const renderFooter = () => (
     <>
-      <TouchableOpacity 
-        style={[styles.btnSecundario, { backgroundColor: theme.cardAlt }]} 
+      <TouchableOpacity
+        style={[styles.btnSecundario, { backgroundColor: theme.cardAlt }]}
         onPress={onClose}
       >
         <Text style={[styles.btnSecundarioText, { color: theme.text }]}>Cancelar</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={[styles.btnPrimario, { backgroundColor: theme.primary, opacity: isFormValid() ? 1 : 0.5 }]} 
+
+      <TouchableOpacity
+        style={[styles.btnPrimario, { backgroundColor: theme.primary, opacity: isFormValid() ? 1 : 0.5 }]}
         onPress={handleSubmit}
         disabled={!isFormValid()}
       >
@@ -145,143 +140,126 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) 
       footer={renderFooter()}
       modalStyle={{ width: '95%', maxWidth: 700, maxHeight: '92%' }}
     >
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>¿CUÁNTOS EQUIPOS ENTRAN A OPERAR EN ESTA ACCIÓN?</Text>
+      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
+        <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>¿CUÁNTOS EQUIPOS ENTRAN A OPERAR EN ESTA ACCIÓN?</Text>
         <View style={styles.cardsRow}>
-          <TouchableOpacity 
-            style={[styles.qtyCard, { backgroundColor: theme.cardAlt, borderColor: theme.border }, numEquipos === 1 && { borderColor: theme.primary, backgroundColor: theme.primary + '10' }]}
+          <TouchableOpacity
+            style={[styles.qtyCard, { backgroundColor: theme.card, borderColor: 'transparent' }, numEquipos === 1 && { borderColor: theme.primary, backgroundColor: theme.primary + '10' }]}
             onPress={() => {
               setNumEquipos(1);
               setActiveTabIdx(0);
             }}
           >
-            <Text style={[styles.qtyTitle, { color: numEquipos === 1 ? theme.primary : theme.text }]}>1 Equipo Entrante</Text>
+            <View style={styles.qtyTitleRow}>
+              <Text style={[styles.qtyTitle, { color: numEquipos === 1 ? theme.primary : theme.text }]}>1 Equipo Entrante</Text>
+            </View>
             <Text style={[styles.qtySubtitle, { color: theme.textSecondary }]}>Ingreso individual a planta</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.qtyCard, { backgroundColor: theme.cardAlt, borderColor: theme.border }, numEquipos === 2 && { borderColor: theme.primary, backgroundColor: theme.primary + '10' }]}
+          <TouchableOpacity
+            style={[styles.qtyCard, { backgroundColor: theme.card, borderColor: 'transparent' }, numEquipos === 2 && { borderColor: theme.warning, backgroundColor: theme.warning + '10' }]}
             onPress={() => setNumEquipos(2)}
           >
-            <Text style={[styles.qtyTitle, { color: numEquipos === 2 ? theme.primary : theme.text }]}>2 Equipos (Dupla)</Text>
+            <View style={styles.qtyTitleRow}>
+              <Text style={[styles.qtyTitle, { color: numEquipos === 2 ? theme.warning : theme.text }]}>2 Equipos (Dupla)</Text>
+            </View>
             <Text style={[styles.qtySubtitle, { color: theme.textSecondary }]}>Incorporar 2 equipos a planta</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>DATOS DE MAQUINARIA PARA PLANTA</Text>
-        
-        {/* Custom Tabs */}
-        <View style={styles.tabsContainer}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTabIdx === 0 && { borderBottomColor: theme.primary, borderBottomWidth: 3 }]}
-            onPress={() => setActiveTabIdx(0)}
-          >
-            <Text style={[styles.tabText, { color: activeTabIdx === 0 ? theme.primary : theme.textSecondary }]}>
-              {equipo1.codigo ? `Equipo #1 (${equipo1.codigo})` : 'Equipo #1'}
-            </Text>
-          </TouchableOpacity>
-          {numEquipos === 2 && (
-            <TouchableOpacity 
-              style={[styles.tab, activeTabIdx === 1 && { borderBottomColor: theme.primary, borderBottomWidth: 3 }]}
-              onPress={() => setActiveTabIdx(1)}
+      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
+        <View style={styles.sectionHeaderRow}>
+          <View style={styles.sectionTitleRow}>
+            <Truck size={16} color={theme.success} />
+            <Text style={[styles.sectionTitle, { color: theme.success, marginBottom: 0 }]}>2. DATOS DE MAQUINARIA PARA PLANTA</Text>
+          </View>
+
+          {/* Custom Tabs */}
+          <View style={[styles.tabsContainer, { backgroundColor: theme.cardAlt, borderWidth: 1, borderColor: theme.border }]}>
+            <TouchableOpacity
+              style={[styles.tab, activeTabIdx === 0 && { backgroundColor: theme.card, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 2, elevation: 2 }]}
+              onPress={() => setActiveTabIdx(0)}
             >
-              <Text style={[styles.tabText, { color: activeTabIdx === 1 ? theme.primary : theme.textSecondary }]}>
-                {equipo2.codigo ? `Equipo #2 (${equipo2.codigo})` : 'Equipo #2'}
+              <Text style={[styles.tabText, { color: activeTabIdx === 0 ? theme.primary : theme.textSecondary }]}>
+                {equipo1.codigo ? `Eq. #1 (${equipo1.codigo})` : 'Equipo #1'}
               </Text>
             </TouchableOpacity>
-          )}
+            {numEquipos === 2 && (
+              <TouchableOpacity
+                style={[styles.tab, activeTabIdx === 1 && { backgroundColor: theme.card, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 2, elevation: 2 }]}
+                onPress={() => setActiveTabIdx(1)}
+              >
+                <Text style={[styles.tabText, { color: activeTabIdx === 1 ? theme.primary : theme.textSecondary }]}>
+                  {equipo2.codigo ? `Eq. #2 (${equipo2.codigo})` : 'Equipo #2'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         <View style={styles.tabContent}>
           {activeTabIdx === 0 ? (
-            <EquipoDataForm 
+            <EquipoDataForm
               equipoIdx={0}
               state={equipo1}
               onChange={setEquipo1}
               plantillas={MOCK_PLANTILLAS}
-              equiposPatio={MOCK_PATIO}
             />
           ) : (
-            <EquipoDataForm 
+            <EquipoDataForm
               equipoIdx={1}
               state={equipo2}
               onChange={setEquipo2}
               plantillas={MOCK_PLANTILLAS}
-              equiposPatio={MOCK_PATIO}
             />
           )}
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>DESTINO EN PLANTA Y OBSERVACIONES</Text>
-        
-        <View style={styles.fieldFull}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>UBICACIÓN / FASE DESTINO EN MINA *</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
-            {MOCK_ZONAS.map(z => (
-              <TouchableOpacity
-                key={z.id_zona}
-                style={[
-                  styles.chip,
-                  { backgroundColor: theme.cardAlt, borderColor: theme.border },
-                  destinoZonaId === z.id_zona && { backgroundColor: theme.primary + '20', borderColor: theme.primary }
-                ]}
-                onPress={() => setDestinoZonaId(z.id_zona)}
-              >
-                <MapPin size={14} color={destinoZonaId === z.id_zona ? theme.primary : theme.textSecondary} style={{ marginRight: 6 }} />
-                <Text style={[styles.chipText, { color: destinoZonaId === z.id_zona ? theme.primary : theme.text }]}>
-                  {z.nombre}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
+        <View style={styles.sectionHeaderRow}>
+          <View style={styles.sectionTitleRow}>
+            <Wrench size={16} color={theme.warning} />
+            <Text style={[styles.sectionTitle, { color: theme.textSecondary, marginBottom: 0 }]}>3. DESTINO EN PLANTA Y OBSERVACIONES</Text>
+          </View>
         </View>
 
         <View style={styles.fieldFull}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>MOTIVO / JUSTIFICACIÓN DEL JEFE DE TURNO *</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
-            {MOCK_MOTIVOS.map((m, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={[
-                  styles.chip,
-                  { backgroundColor: theme.cardAlt, borderColor: theme.border },
-                  motivo === m && { backgroundColor: theme.primary + '20', borderColor: theme.primary }
-                ]}
-                onPress={() => setMotivo(m)}
-              >
-                <Briefcase size={14} color={motivo === m ? theme.primary : theme.textSecondary} style={{ marginRight: 6 }} />
-                <Text style={[styles.chipText, { color: motivo === m ? theme.primary : theme.text }]}>
-                  {m}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>UBICACIÓN / FASE DESTINO EN MINA:</Text>
+          <TouchableOpacity style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <View style={styles.dropdownSelectorInner}>
+              <MapPin size={16} color={theme.textSecondary} />
+              <Text style={[styles.dropdownText, { color: theme.text }]}>
+                {destinoZonaId ? MOCK_ZONAS.find(z => z.id_zona === destinoZonaId)?.nombre : 'Fase 4 - Banco 320 (Rampa Sur)'}
+              </Text>
+            </View>
+            <ChevronDown size={20} color={theme.textSecondary} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.fieldFull}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>OBSERVACIONES (OPCIONAL)</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>MOTIVO / JUSTIFICACIÓN DEL JEFE DE TURNO:</Text>
+          <TouchableOpacity style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: theme.border }]}>
+            <View style={styles.dropdownSelectorInner}>
+              <Text style={[styles.dropdownText, { color: theme.text }]}>
+                {motivo || 'Aumento de Capacidad / Flota de Producción Planta'}
+              </Text>
+            </View>
+            <ChevronDown size={20} color={theme.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.fieldFull}>
           <TextInput
-            style={[styles.textarea, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
+            style={[styles.textarea, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
             value={observaciones}
             onChangeText={setObservaciones}
-            placeholder="Añade algún comentario adicional..."
+            placeholder="Incorporación autorizada de maquinaria adicional para reforzar frente de carguío y cumplir meta diaria de tonelaje."
             placeholderTextColor={theme.textTertiary}
             multiline
             numberOfLines={3}
             textAlignVertical="top"
           />
-        </View>
-
-        <View style={[styles.authBlock, { backgroundColor: theme.cardAlt }]}>
-          <Text style={[styles.authText, { color: theme.textSecondary }]}>
-            Autoriza: <Text style={{ fontWeight: 'bold', color: theme.text }}>Cristian Núñez (15.123.456-7)</Text>
-          </Text>
-          <Text style={[styles.authText, { color: theme.textSecondary }]}>
-            Hora: {new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
-          </Text>
         </View>
 
       </View>

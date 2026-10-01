@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, useColorScheme, Switch } from 'react-native';
-import { PackageOpen, Sparkles, PlusCircle } from 'lucide-react-native';
+import { PackageOpen, Sparkles, PlusCircle, Copy, Zap } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { styles } from './EquipoDataForm.styles';
 
-export type FuenteDatos = 'NUEVO' | 'PLANTILLA' | 'PATIO';
+export type FuenteDatos = 'NUEVO' | 'PLANTILLA';
 
 export interface EquipoFormState {
   codigo: string;
@@ -25,22 +25,12 @@ export interface PlantillaEquipo {
   horometroSugerido: number;
 }
 
-export interface EquipoPatio {
-  id: string;
-  codigo: string;
-  patente: string;
-  marcaModelo: string;
-  horometroActual: number;
-  combustible: number;
-  contratista: boolean;
-}
 
 interface Props {
   equipoIdx: number;
   state: EquipoFormState;
   onChange: (newState: EquipoFormState) => void;
   plantillas: PlantillaEquipo[];
-  equiposPatio: EquipoPatio[];
 }
 
 // Mocks locales de operadores para el dropdown (idealmente vendrían de un hook)
@@ -50,7 +40,7 @@ const MOCK_OPERADORES = [
   { id: '3', nombre: 'Carlos Díaz', rut: '14.555.222-1', turno: 'Turno A - Día' },
 ];
 
-export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, plantillas, equiposPatio }) => {
+export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, plantillas }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
@@ -67,55 +57,58 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
     });
   };
 
-  const handleApplyPatio = (equipo: EquipoPatio) => {
-    onChange({
-      ...state,
-      codigo: equipo.codigo,
-      patente: equipo.patente,
-      marcaModelo: equipo.marcaModelo,
-      horometro: equipo.horometroActual.toString(),
-      combustible: equipo.combustible.toString(),
-      contratista: equipo.contratista,
-      fuenteDatos: 'PATIO',
-    });
-  };
 
   return (
     <View style={styles.container}>
       {/* Fuente de Datos Selector */}
       <View style={styles.sourceSelectorRow}>
         <TouchableOpacity
-          style={[styles.sourceBtn, state.fuenteDatos === 'NUEVO' && { backgroundColor: theme.primary, borderColor: theme.primary }]}
+          style={[
+            styles.sourceBtn,
+            { backgroundColor: theme.cardAlt, borderColor: theme.border },
+            state.fuenteDatos === 'NUEVO' && { backgroundColor: theme.primary + '10', borderColor: theme.primary }
+          ]}
           onPress={() => updateField('fuenteDatos', 'NUEVO')}
         >
-          <PlusCircle size={14} color={state.fuenteDatos === 'NUEVO' ? '#FFF' : theme.textSecondary} />
-          <Text style={[styles.sourceBtnText, { color: state.fuenteDatos === 'NUEVO' ? '#FFF' : theme.textSecondary }]}>Desde Cero</Text>
+          <PlusCircle size={20} color={state.fuenteDatos === 'NUEVO' ? theme.primary : theme.textSecondary} />
+          <Text style={[styles.sourceBtnText, { color: state.fuenteDatos === 'NUEVO' ? theme.primary : theme.textSecondary }]}>Desde Cero</Text>
+          <Text style={[styles.sourceBtnSubtitle, { color: state.fuenteDatos === 'NUEVO' ? theme.primary : theme.textTertiary }]}>
+            (Formulario Limpio)
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.sourceBtn, state.fuenteDatos === 'PLANTILLA' && { backgroundColor: theme.warning, borderColor: theme.warning }]}
+          style={[
+            styles.sourceBtn,
+            { backgroundColor: theme.cardAlt, borderColor: theme.border },
+            state.fuenteDatos === 'PLANTILLA' && { backgroundColor: theme.primary + '10', borderColor: theme.primary }
+          ]}
           onPress={() => updateField('fuenteDatos', 'PLANTILLA')}
         >
-          <Sparkles size={14} color={state.fuenteDatos === 'PLANTILLA' ? '#1A1A1A' : theme.textSecondary} />
-          <Text style={[styles.sourceBtnText, { color: state.fuenteDatos === 'PLANTILLA' ? '#1A1A1A' : theme.textSecondary }]}>Datos Previos</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.sourceBtn, state.fuenteDatos === 'PATIO' && { backgroundColor: theme.success, borderColor: theme.success }]}
-          onPress={() => updateField('fuenteDatos', 'PATIO')}
-        >
-          <PackageOpen size={14} color={state.fuenteDatos === 'PATIO' ? '#FFF' : theme.textSecondary} />
-          <Text style={[styles.sourceBtnText, { color: state.fuenteDatos === 'PATIO' ? '#FFF' : theme.textSecondary }]}>Reserva Patio ({equiposPatio.length})</Text>
+          <Sparkles size={20} color={state.fuenteDatos === 'PLANTILLA' ? theme.primary : theme.textSecondary} />
+          <Text style={[styles.sourceBtnText, { color: state.fuenteDatos === 'PLANTILLA' ? theme.primary : theme.textSecondary }]}>Datos Previos</Text>
+          <Text style={[styles.sourceBtnSubtitle, { color: state.fuenteDatos === 'PLANTILLA' ? theme.primary : theme.textTertiary }]}>
+            (Solo Modificar)
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Vistas dinámicas según fuente de datos */}
       {state.fuenteDatos === 'PLANTILLA' && (
-        <View style={[styles.sourceDataContainer, { backgroundColor: theme.cardAlt }]}>
-          <Text style={[styles.sourceTitle, { color: theme.textSecondary }]}>Plantillas rápidas faena:</Text>
+        <View style={[styles.sourceDataContainer, { backgroundColor: theme.cardAlt, borderWidth: 1, borderColor: theme.border }]}>
+          <View style={styles.plantillaHeaderRow}>
+            <View style={styles.plantillaHeaderTitleRow}>
+              <Copy size={16} color={theme.primary} />
+              <Text style={[styles.sourceTitle, { color: theme.textSecondary, marginBottom: 0 }]}>
+                Plantillas rápidas faena (1 toque para rellenar):
+              </Text>
+            </View>
+          </View>
+
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
             {plantillas.map(p => (
-              <TouchableOpacity key={p.id} style={[styles.chip, { backgroundColor: theme.card }]} onPress={() => handleApplyPlantilla(p)}>
+              <TouchableOpacity key={p.id} style={[styles.plantillaChip, { backgroundColor: theme.card, borderColor: 'transparent' }]} onPress={() => handleApplyPlantilla(p)}>
+                <Zap size={14} color={theme.primary} />
                 <Text style={[styles.chipText, { color: theme.text }]}>{p.nombreCorto}</Text>
               </TouchableOpacity>
             ))}
@@ -123,18 +116,7 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
         </View>
       )}
 
-      {state.fuenteDatos === 'PATIO' && (
-        <View style={[styles.sourceDataContainer, { backgroundColor: theme.cardAlt }]}>
-          <Text style={[styles.sourceTitle, { color: theme.textSecondary }]}>Equipos disponibles en patio:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
-            {equiposPatio.map(e => (
-              <TouchableOpacity key={e.id} style={[styles.chip, { backgroundColor: theme.card }]} onPress={() => handleApplyPatio(e)}>
-                <Text style={[styles.chipText, { color: theme.text }]}>{e.codigo} ({e.marcaModelo})</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
+
 
       {/* Formulario de Campos */}
       <View style={styles.formSection}>
@@ -185,33 +167,20 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
             />
           </View>
           <View style={styles.fieldCol}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>COMBUSTIBLE (%)</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>N° CHASIS / SERIE (VIN)</Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
-              value={state.combustible}
-              onChangeText={(v) => updateField('combustible', v.replace(/[^0-9]/g, ''))}
-              keyboardType="numeric"
-              placeholder="100"
-              maxLength={3}
+              value={state.chasis}
+              onChangeText={(v) => updateField('chasis', v)}
+              placeholder="Opcional"
               placeholderTextColor={theme.textTertiary}
             />
           </View>
         </View>
 
-        <View style={styles.fieldFull}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>N° CHASIS / SERIE (VIN)</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
-            value={state.chasis}
-            onChangeText={(v) => updateField('chasis', v)}
-            placeholder="Opcional"
-            placeholderTextColor={theme.textTertiary}
-          />
-        </View>
-
-        <View style={styles.fieldFull}>
+        {/* <View style={styles.fieldFull}>
           <Text style={[styles.label, { color: theme.textSecondary }]}>OPERADOR ASIGNADO A CABINA (EQUIPO #{equipoIdx + 1}):</Text>
-          {/* Usamos un selector horizontal temporalmente o botones para el mock */}
+          {/* Usamos un selector horizontal temporalmente o botones para el mock 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {MOCK_OPERADORES.map(op => (
               <TouchableOpacity
@@ -230,7 +199,7 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
               </TouchableOpacity>
             ))}
           </ScrollView>
-        </View>
+        </View> */}
 
         <View style={styles.switchRow}>
           <Text style={[styles.switchLabel, { color: theme.text }]}>Equipo Contratista / Arriendo</Text>

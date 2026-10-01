@@ -16,11 +16,30 @@ export const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
+  capsuleSection: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 1,
+  },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '800',
     letterSpacing: 0.5,
-    marginBottom: 12,
+    flexShrink: 1,
   },
   cardsRow: {
     flexDirection: 'row',
@@ -31,32 +50,36 @@ export const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 2,
+    position: 'relative',
+  },
+  qtyTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
   },
   qtyTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    marginBottom: 4,
   },
   qtySubtitle: {
     fontSize: 11,
   },
   tabsContainer: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333', // fallback, overriden by theming later if needed or left subtle
+    borderRadius: 8,
+    padding: 4,
   },
   tab: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
   },
   tabContent: {
-    paddingTop: 8,
   },
   fieldFull: {
     width: '100%',
@@ -85,6 +108,25 @@ export const styles = StyleSheet.create({
     padding: 12,
     fontSize: 14,
     minHeight: 80,
+  },
+  dropdownSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  dropdownSelectorInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  dropdownText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   authBlock: {
     flexDirection: 'row',

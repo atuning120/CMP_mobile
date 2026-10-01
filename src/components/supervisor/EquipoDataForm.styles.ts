@@ -2,27 +2,28 @@ import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
   container: {
-    paddingTop: 16,
   },
   sourceSelectorRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
+    gap: 12,
+    marginBottom: 24,
   },
   sourceBtn: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'transparent',
-    gap: 6,
   },
   sourceBtnText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 'bold',
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  sourceBtnSubtitle: {
+    fontSize: 11,
   },
   sourceDataContainer: {
     padding: 12,
@@ -31,11 +32,40 @@ export const styles = StyleSheet.create({
   },
   sourceTitle: {
     fontSize: 12,
-    marginBottom: 8,
     fontWeight: '600',
+  },
+  plantillaHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  plantillaHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  restaurarText: {
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   chipsScroll: {
     gap: 8,
+    paddingBottom: 8,
+  },
+  plantillaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   chip: {
     paddingHorizontal: 12,
