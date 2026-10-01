@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, useColorScheme } from 'react-native';
-import { Camera, FileText, CheckCircle, TrendingUp, FileCheck } from 'lucide-react-native';
+import { Camera, TrendingUp, FileCheck } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { TurnoActual } from '../../types/turno';

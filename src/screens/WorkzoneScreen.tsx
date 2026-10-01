@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Play, Square, Camera, LogOut } from 'lucide-react-native';
+import { Play, Square, Camera } from 'lucide-react-native';
 import { lightTheme, darkTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { useTurnoActual } from '../hooks/useTurnoActual';
-import { MachineStatusCard } from '../components/workzone/MachineStatusCard';
 import { ActionCard } from '../components/workzone/ActionCard';
 import { StateChangeBanner } from '../components/workzone/StateChangeBanner';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
@@ -99,7 +98,7 @@ export default function WorkzoneScreen() {
             title="Evidencias"
             subtitle="Subir fotos de inspección, cancha o falla mecánica."
             badgeText={`${turno.cantidadEvidencias} FOTO${turno.cantidadEvidencias === 1 ? '' : 'S'}`}
-            onPress={() => console.log('Navegar a OP-10')}
+            onPress={() => router.push('/evidencias')}
           />
         </View>
 
