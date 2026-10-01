@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ImageBackground, useColorScheme, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, ImageBackground, useColorScheme, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { darkTheme, lightTheme } from '../constants/theme';
@@ -7,14 +7,128 @@ import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
 import { Sparkles, PlusCircle } from 'lucide-react-native';
+import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
+import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
+import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
+import { useFlotaResumen, MaquinaFlota } from '../hooks/useFlotaResumen';
+import { styles } from './ShipSupervisorScreen.styles';
+
+type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
 export const ShipSupervisorScreen = () => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const router = useRouter();
+  
+  const [activeTab, setActiveTab] = useState<TabOption>('FLOTA');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<FilterOption>('Todos');
+
+  const { maquinas, contadorFlota, isLoading } = useFlotaResumen();
 
   const handleLogout = () => {
     router.replace('/');
+  };
+
+  const handleSustituir = (maquina: MaquinaFlota) => {
+    Alert.alert("Sustituir Máquina", `Flujo de reemplazo para ${maquina.codigo} en desarrollo.`);
+  };
+
+  const handleEditar = (maquina: MaquinaFlota) => {
+    Alert.alert("Editar Máquina", `Modificar datos de ${maquina.codigo} en desarrollo.`);
+  };
+
+  const handleHabilitar = (maquina: MaquinaFlota) => {
+    Alert.alert(
+      "Habilitar Máquina", 
+      `¿Confirmas que la máquina ${maquina.codigo} está lista para operar?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Habilitar", onPress: () => console.log('TODO: conectar con backend para habilitar') }
+      ]
+    );
+  };
+
+  const filteredMaquinas = useMemo(() => {
+    return maquinas.filter(m => {
+      const matchesSearch = 
+        m.codigo.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        m.patente.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.marcaModelo.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesFilter = 
+        activeFilter === 'Todos' ? true :
+        activeFilter === 'Operativos' ? m.estadoOperativo === 'OPERATIVO' :
+        activeFilter === 'Fuera de Servicio' ? m.estadoOperativo === 'FUERA_DE_SERVICIO' : true;
+      
+      return matchesSearch && matchesFilter;
+    });
+  }, [maquinas, searchQuery, activeFilter]);
+
+  const renderTabs = () => (
+    <View style={[styles.tabsContainer, { backgroundColor: theme.cardAlt }]}>
+      <TouchableOpacity 
+        style={[styles.tab, activeTab === 'FLOTA' && { borderBottomColor: theme.warning, borderBottomWidth: 3 }]}
+        onPress={() => setActiveTab('FLOTA')}
+      >
+        <Text style={[styles.tabText, { color: activeTab === 'FLOTA' ? theme.warning : theme.textSecondary }]}>
+          Flota <Text style={styles.tabCounter}>({contadorFlota} eq)</Text>
+        </Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={[styles.tab, activeTab === 'HISTORIAL' && { borderBottomColor: theme.warning, borderBottomWidth: 3 }]}
+        onPress={() => setActiveTab('HISTORIAL')}
+      >
+        <Text style={[styles.tabText, { color: activeTab === 'HISTORIAL' ? theme.warning : theme.textSecondary }]}>
+          Historial <Text style={styles.tabCounter}>(3 camb)</Text>
+        </Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity 
+        style={[styles.tab, activeTab === 'ALERTAS' && { borderBottomColor: theme.warning, borderBottomWidth: 3 }]}
+        onPress={() => setActiveTab('ALERTAS')}
+      >
+        <Text style={[styles.tabText, { color: activeTab === 'ALERTAS' ? theme.warning : theme.textSecondary }]}>
+          Alertas <Text style={styles.tabCounter}>(4 evts)</Text>
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderContent = () => {
+    if (activeTab !== 'FLOTA') {
+      return (
+        <View style={styles.placeholderContainer}>
+          <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>Próximamente...</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={{ flex: 1 }}>
+        <FleetSearchBar value={searchQuery} onChangeText={setSearchQuery} />
+        <FleetFilterChips activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+        
+        {isLoading ? (
+          <ActivityIndicator size="large" color={theme.warning} style={{ marginTop: 40 }} />
+        ) : (
+          filteredMaquinas.map(maquina => (
+            <MachineFleetCard 
+              key={maquina.id} 
+              maquina={maquina} 
+              onSustituir={handleSustituir}
+              onEditar={handleEditar}
+              onHabilitar={handleHabilitar}
+            />
+          ))
+        )}
+        
+        {!isLoading && filteredMaquinas.length === 0 && (
+          <Text style={{ textAlign: 'center', marginTop: 40, color: theme.textSecondary }}>No se encontraron máquinas.</Text>
+        )}
+      </View>
+    );
   };
 
   return (
@@ -72,6 +186,12 @@ export const ShipSupervisorScreen = () => {
               <Text style={[styles.actionSubText, { color: theme.textSecondary }]}>Formulario limpio</Text>
             </TouchableOpacity>
           </View>
+
+          {renderTabs()}
+          
+          <View style={styles.tabContentCard}>
+            {renderContent()}
+          </View>
         </ScrollView>
       </ImageBackground>
 
@@ -80,72 +200,3 @@ export const ShipSupervisorScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  mainContent: {
-    flex: 1,
-  },
-  scrollContainer: {
-    padding: 16,
-    flexGrow: 1,
-  },
-  buttonsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  actionButton: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1.5,
-    borderBottomWidth: 4,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    elevation: 6,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  actionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  iconBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionTopText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  actionMainText: {
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-  actionSubText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  card: {
-    padding: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-});
