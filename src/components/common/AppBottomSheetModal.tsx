@@ -13,6 +13,7 @@ interface AppBottomSheetModalProps {
   iconBadgeColor?: string;
   headerTop?: React.ReactNode;
   subtitle?: string;
+  headerRight?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
   scrollContentStyle?: StyleProp<ViewStyle>;
@@ -27,6 +28,7 @@ export const AppBottomSheetModal: React.FC<AppBottomSheetModalProps> = ({
   iconBadgeColor,
   headerTop,
   subtitle,
+  headerRight,
   children,
   footer,
   scrollContentStyle,
@@ -66,9 +68,12 @@ export const AppBottomSheetModal: React.FC<AppBottomSheetModalProps> = ({
                   )}
                 </View>
               </View>
-              <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.cardAlt }]}>
-                <X size={20} color={theme.textSecondary} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                {headerRight}
+                <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.cardAlt }]}>
+                  <X size={20} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flexShrink: 1 }}>

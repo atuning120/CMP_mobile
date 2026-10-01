@@ -43,6 +43,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
   const [operador, setOperador] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (maquina && visible) {
       setCodigo(maquina.codigo);
