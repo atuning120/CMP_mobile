@@ -43,8 +43,8 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
   const [operador, setOperador] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (maquina && visible) {
       setCodigo(maquina.codigo);
       setPatente(maquina.patente);
@@ -57,6 +57,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
       setOperador(maquina.operadorAsignado || '');
       setObservaciones(maquina.fallaActiva || '');
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [maquina, visible]);
 
   const isValid = codigo.trim() !== '' && patente.trim() !== '' && marcaModelo.trim() !== '' && horometro.trim() !== '';
