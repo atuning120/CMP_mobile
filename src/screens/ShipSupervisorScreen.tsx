@@ -12,6 +12,7 @@ import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFi
 import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
 import { useFlotaResumen, MaquinaFlota } from '../hooks/useFlotaResumen';
 import { IncorporacionEquipoModal } from '../components/supervisor/IncorporacionEquipoModal';
+import { ReemplazoEquipoModal } from '../components/supervisor/ReemplazoEquipoModal';
 import { styles } from './ShipSupervisorScreen.styles';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
@@ -25,6 +26,7 @@ export const ShipSupervisorScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterOption>('Todos');
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isModificacionModalVisible, setIsModificacionModalVisible] = useState(false);
 
   const { maquinas, contadorFlota, isLoading } = useFlotaResumen();
 
@@ -76,7 +78,7 @@ export const ShipSupervisorScreen = () => {
       >
         <View style={styles.tabIconRow}>
           <Truck size={16} color={activeTab === 'FLOTA' ? theme.warning : theme.textSecondary} />
-          <Text style={[styles.tabText, { color: activeTab === 'FLOTA' ? '#FFFFFF' : theme.textSecondary }]}>
+          <Text style={[styles.tabText, { color: activeTab === 'FLOTA' ? theme.text : theme.textSecondary }]}>
             Flota
           </Text>
         </View>
@@ -92,7 +94,7 @@ export const ShipSupervisorScreen = () => {
       >
         <View style={styles.tabIconRow}>
           <History size={16} color={activeTab === 'HISTORIAL' ? theme.primary : theme.textSecondary} />
-          <Text style={[styles.tabText, { color: activeTab === 'HISTORIAL' ? '#FFFFFF' : theme.textSecondary }]}>
+          <Text style={[styles.tabText, { color: activeTab === 'HISTORIAL' ? theme.text : theme.textSecondary }]}>
             Historial
           </Text>
         </View>
@@ -108,7 +110,7 @@ export const ShipSupervisorScreen = () => {
       >
         <View style={styles.tabIconRow}>
           <ShieldAlert size={16} color={activeTab === 'ALERTAS' ? theme.danger : theme.textSecondary} />
-          <Text style={[styles.tabText, { color: activeTab === 'ALERTAS' ? '#FFFFFF' : theme.textSecondary }]}>
+          <Text style={[styles.tabText, { color: activeTab === 'ALERTAS' ? theme.text : theme.textSecondary }]}>
             Alertas
           </Text>
         </View>
@@ -177,6 +179,7 @@ export const ShipSupervisorScreen = () => {
                 }
               ]}
               activeOpacity={0.7}
+              onPress={() => setIsModificacionModalVisible(true)}
             >
               <View style={styles.actionHeaderRow}>
                 <View style={[styles.iconBadge, { backgroundColor: theme.warning + '20' }]}>
@@ -224,6 +227,11 @@ export const ShipSupervisorScreen = () => {
       <IncorporacionEquipoModal
         visible={isModalVisible}
         onClose={() => setIsModalVisible(false)}
+      />
+
+      <ReemplazoEquipoModal
+        visible={isModificacionModalVisible}
+        onClose={() => setIsModificacionModalVisible(false)}
       />
     </SafeAreaView>
   );
