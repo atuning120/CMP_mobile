@@ -9,10 +9,10 @@ interface Props {
   maquina: MaquinaFlota;
   onSustituir: (maquina: MaquinaFlota) => void;
   onEditar: (maquina: MaquinaFlota) => void;
-  onHabilitar: (maquina: MaquinaFlota) => void;
+  onToggleEstado: (maquina: MaquinaFlota) => void;
 }
 
-export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEditar, onHabilitar }) => {
+export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEditar, onToggleEstado }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const isOperativo = maquina.estadoOperativo === 'OPERATIVO';
@@ -79,35 +79,30 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
 
       {/* Actions */}
       <View style={[styles.actionsRow, { borderTopColor: theme.border }]}>
-        {!isOperativo ? (
-          <>
-            <TouchableOpacity
-              style={[styles.btnAction, { backgroundColor: theme.warning }]}
-              onPress={() => onSustituir(maquina)}
-            >
-              <RefreshCw size={16} color="#1A1A1A" />
-              <Text style={[styles.btnActionText, { color: '#1A1A1A' }]}>Sustituir / Reemplazo</Text>
-            </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.btnAction, 
+            { backgroundColor: isOperativo ? theme.cardAlt : theme.warning, opacity: isOperativo ? 0.6 : 1 }
+          ]}
+          onPress={() => !isOperativo && onSustituir(maquina)}
+          disabled={isOperativo}
+          activeOpacity={0.7}
+        >
+          {/* Solo se permite reemplazo de equipos fuera de servicio */}
+          <RefreshCw size={16} color={isOperativo ? theme.textSecondary : "#1A1A1A"} />
+          <Text style={[styles.btnActionText, { color: isOperativo ? theme.textSecondary : "#1A1A1A" }]}>Sustituir / Reemplazo</Text>
+        </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.btnIcon, { backgroundColor: theme.cardAlt }]} onPress={() => onEditar(maquina)}>
-              <Edit2 size={16} color={theme.text} />
-            </TouchableOpacity>
+        <TouchableOpacity style={[styles.btnIcon, { backgroundColor: theme.cardAlt }]} onPress={() => onEditar(maquina)}>
+          <Edit2 size={16} color={theme.text} />
+        </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.btnPill, { backgroundColor: theme.success }]}
-              onPress={() => onHabilitar(maquina)}
-            >
-              <Text style={styles.btnPillText}>Habilitar</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <View style={{ flex: 1 }} />
-            <TouchableOpacity style={[styles.btnIcon, { backgroundColor: theme.cardAlt }]} onPress={() => onEditar(maquina)}>
-              <Edit2 size={16} color={theme.text} />
-            </TouchableOpacity>
-          </>
-        )}
+        <TouchableOpacity
+          style={[styles.btnPill, { backgroundColor: isOperativo ? theme.danger : theme.success }]}
+          onPress={() => onToggleEstado(maquina)}
+        >
+          <Text style={styles.btnPillText}>{isOperativo ? 'Deshabilitar' : 'Habilitar'}</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
