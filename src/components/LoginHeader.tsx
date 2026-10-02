@@ -1,14 +1,20 @@
-import { HardHat, Moon, Sun } from 'lucide-react-native';
+import { useNetInfo } from '@react-native-community/netinfo';
+import { HardHat, Moon, Sun, Wifi, WifiOff } from 'lucide-react-native';
 import React from 'react';
 import { Appearance, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { darkTheme, lightTheme } from '../constants/theme';
 import { CmpLogo } from './CmpLogo';
 import { styles } from './LoginHeader.styles';
 
-export const LoginHeader: React.FC = () => {
+export interface LoginHeaderProps {
+  showConnectionStatus?: boolean;
+}
+
+export const LoginHeader: React.FC<LoginHeaderProps> = ({ showConnectionStatus = false }) => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const theme = isDark ? darkTheme : lightTheme;
+  const netInfo = useNetInfo();
 
   const toggleTheme = () => {
     Appearance.setColorScheme(isDark ? 'light' : 'dark');
@@ -40,6 +46,23 @@ export const LoginHeader: React.FC = () => {
           <HardHat size={14} color={theme.warning} />
           <Text style={[styles.flotaText, { color: theme.warning }]}>Sistema en Cabina MLC</Text>
         </View>
+        {showConnectionStatus && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4, gap: 4 }}>
+            {netInfo.isConnected ? (
+              <>
+                <Wifi size={12} color={theme.success} />
+                <Text style={{ color: theme.success, fontSize: 10, fontWeight: '500' }}>
+                  Conectado {netInfo.type === 'wifi' ? '(WiFi)' : netInfo.type === 'cellular' ? '(Móvil)' : ''}
+                </Text>
+              </>
+            ) : (
+              <>
+                <WifiOff size={12} color={theme.danger} />
+                <Text style={{ color: theme.danger, fontSize: 10, fontWeight: '500' }}>Sin conexión</Text>
+              </>
+            )}
+          </View>
+        )}
       </View>
     </View>
   );
