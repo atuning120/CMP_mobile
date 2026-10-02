@@ -11,6 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 
+import { useNetInfo } from '@react-native-community/netinfo';
+
 import { saveSecureSession, attemptOfflineLogin } from '../services/authStorage';
 
 import { LoginFooter } from '../components/LoginFooter';
@@ -43,6 +45,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const router = useRouter();
+  const netInfo = useNetInfo();
 
   const handleMicrosoftLogin = () => {
     router.push('/ship-supervisor');
@@ -147,7 +150,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         {/* Extracted Header Component */}
-        <LoginHeader />
+        <LoginHeader showConnectionStatus />
 
         {/* Main Login Card */}
         <ImageBackground
@@ -214,7 +217,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <Text style={[styles.offlineText, { color: theme.text }]}>Soporte Offline-First</Text>
               </View>
               <Text style={[styles.networkStatusText, { color: theme.text }]}>
-                {networkState === 'online' ? '🟢 Conectado' : '🟠 Modo Local'}
+                {networkState === 'online'
+                  ? `🟢 Conectado ${netInfo.type === 'wifi' ? '(WiFi)' : netInfo.type === 'cellular' ? '(Móvil)' : ''}`
+                  : '🟠 Modo Local'}
               </Text>
             </View>
           </View>

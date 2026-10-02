@@ -122,7 +122,7 @@ export default function EvidenciasScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top', 'left', 'right']}>
-      <LoginHeader />
+      <LoginHeader showConnectionStatus />
       <ImageBackground
         source={require('../../assets/images/Mina_fondo.jpg')}
         style={styles.container}

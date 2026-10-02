@@ -159,7 +159,7 @@ export const ShipSupervisorScreen = () => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
-      <LoginHeader />
+      <LoginHeader showConnectionStatus />
 
       <ImageBackground
         source={require('../../assets/images/Mina_fondo.jpg')}
