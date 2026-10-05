@@ -38,7 +38,15 @@
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "La app usa la cámara para registrar fotos de evidencia del turno (inspección, fallas, cancha).",
+          "photosPermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

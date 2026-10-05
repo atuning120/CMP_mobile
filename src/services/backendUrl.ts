@@ -8,19 +8,22 @@ export const getBackendBaseUrl = () => {
 };
 
 const TIMEOUT_MS = 15000;
+// Las fotos pueden tardar más en subir con mala señal
+export const TIMEOUT_SUBIDA_MS = 60000;
 
 /**
  * fetch con timeout: en faena la señal puede quedar "conectada" pero sin respuesta,
  * y sin límite la pantalla quedaría esperando indefinidamente.
  */
-export const fetchBackend = async (path: string, init: RequestInit = {}): Promise<Response> => {
+export const fetchBackend = async (path: string, init: RequestInit = {}, timeoutMs = TIMEOUT_MS): Promise<Response> => {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(`${getBackendBaseUrl()}${path}`, {
       ...init,
       signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', ...init.headers },
+      // FormData (subida de fotos) define su propio Content-Type con el boundary del multipart
+      headers: { ...(typeof init.body === 'string' ? { 'Content-Type': 'application/json' } : {}), ...init.headers },
     });
   } finally {
     clearTimeout(timer);

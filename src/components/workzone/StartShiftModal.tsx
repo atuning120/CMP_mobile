@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, useColorScheme, ActivityIndicator } from 'react-native';
-import { Camera, CheckCircle, ClipboardCheck } from 'lucide-react-native';
+import { CheckCircle, ClipboardCheck } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { SearchableSelect } from '../common/SearchableSelect';
+import { FotoEvidenciaField } from '../common/FotoEvidenciaField';
+import { FOTOS_HABILITADAS } from '../../constants/features';
 import { useMaquinasActivas } from '../../hooks/useMaquinasActivas';
 import { useAreasActivas } from '../../hooks/useAreasActivas';
 import { useZonasPorArea } from '../../hooks/useZonasPorArea';
-import { Area, IniciarTurnoDatos, ZonaTrabajo } from '../../types/turno';
+import { Area, FotoCapturada, IniciarTurnoDatos, ZonaTrabajo } from '../../types/turno';
 
 interface Props {
   visible: boolean;
@@ -30,6 +32,7 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [instrucciones, setInstrucciones] = useState('');
+  const [foto, setFoto] = useState<FotoCapturada | null>(null);
   const { areas, isLoading: isLoadingAreas, error: areasError, refetch: refetchAreas } = useAreasActivas(visible);
   const [areaSeleccionada, setAreaSeleccionada] = useState<Area | null>(null);
   const [zonaSeleccionada, setZonaSeleccionada] = useState<ZonaTrabajo | null>(null);
@@ -67,16 +70,20 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
   };
 
   const handleConfirm = async () => {
-    if (!canSubmit || selectedMaquina === null || areaSeleccionada === null) return;
+    const maquina = maquinas.find((m) => m.id === selectedMaquina);
+    if (!canSubmit || !maquina || areaSeleccionada === null) return;
     setIsSubmitting(true);
     setSubmitError('');
     try {
       await onConfirm({
-        idMaquina: selectedMaquina,
+        maquina,
         horometroInicial: numericHorometro,
-        idArea: areaSeleccionada.id,
-        idZona: zonaSeleccionada?.id ?? null,
+        area: areaSeleccionada,
+        zona: zonaSeleccionada,
+        instrucciones,
+        foto,
       });
+      setFoto(null);
       setSelectedMaquina(null);
       setAreaSeleccionada(null);
       setZonaSeleccionada(null);
@@ -226,19 +233,19 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
         </View>
       </View>
 
-      {/* Evidencias */}
-      <View>
-        <Text style={[styles.sectionTitle, { color: theme.textTertiary, marginTop: 16 }]}>EVIDENCIA FOTOGRÁFICA DE PRE-USO (OPCIONAL):</Text>
-      <TouchableOpacity style={[styles.evidenciaBtn, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
-        <View style={[styles.evidenciaIconBadge, { backgroundColor: theme.primary + '15' }]}>
-          <Camera size={26} color={theme.primary} />
+      {/* Evidencias (desactivadas hasta integrar Cloudinary) */}
+      {FOTOS_HABILITADAS && (
+        <View>
+          <Text style={[styles.sectionTitle, { color: theme.textTertiary, marginTop: 16 }]}>EVIDENCIA FOTOGRÁFICA DE PRE-USO (OPCIONAL):</Text>
+          <FotoEvidenciaField
+            foto={foto}
+            onChange={setFoto}
+            titulo="Adjuntar Foto de Evidencia"
+            subtitulo="Toca aquí para abrir la cámara (Opcional)"
+            disabled={isSubmitting}
+          />
         </View>
-        <View style={{ alignItems: 'center' }}>
-          <Text style={[styles.evidenciaTitle, { color: theme.text }]}>Adjuntar Foto de Evidencia</Text>
-          <Text style={[styles.evidenciaSub, { color: theme.textSecondary }]}>Toca aquí para abrir la cámara (Opcional)</Text>
-        </View>
-        </TouchableOpacity>
-      </View>
+      )}
 
       {/* Instrucciones */}
       <View>
@@ -327,35 +334,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 12,
     width: 200,
-  },
-  evidenciaBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    borderStyle: 'dashed',
-    gap: 12,
-    marginBottom: 8,
-  },
-  evidenciaIconBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  evidenciaTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  evidenciaSub: {
-    fontSize: 12,
-    textAlign: 'center',
   },
   textArea: {
     borderWidth: 1,

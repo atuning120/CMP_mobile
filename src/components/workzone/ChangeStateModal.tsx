@@ -13,22 +13,24 @@ interface ChangeStateModalProps {
   onStateChange: (estado: EstadoOperacional) => void;
 }
 
-const getStateConfig = (nombre: string, theme: any) => {
-  const normalized = nombre.toLowerCase();
-  if (normalized.includes('producción')) {
-    return { title: 'OPERANDO EN PRODUCCIÓN', sub: 'Carguío, empuje o...', icon: Play, color: theme.success };
-  } else if (normalized.includes('traslado')) {
-    return { title: 'TRASLADO ENTRE ÁREAS', sub: 'Tránsito de maquinaria en...', icon: Truck, color: theme.primary };
-  } else if (normalized.includes('colación')) {
-    return { title: 'COLACIÓN / DESCANSO', sub: 'Pausa de colación...', icon: Coffee, color: theme.warning };
-  } else if (normalized.includes('espera')) {
-    return { title: 'ESPERA OPERACIONAL', sub: 'Espera de tolva, tren, o...', icon: Clock, color: theme.warning };
-  } else if (normalized.includes('falla')) {
-    return { title: 'FALLA MECÁNICA / PANA', sub: 'Detención por avería o...', icon: Wrench, color: theme.danger };
-  } else {
-    // Default
-    return { title: nombre.toUpperCase(), sub: 'Registro manual...', icon: Clock, color: theme.textSecondary };
-  }
+const CATEGORIA_LABEL: Record<EstadoOperacional['categoria'], string> = {
+  PRODUCTIVO: 'Horas efectivas',
+  DEMORA: 'Demora operacional',
+  MANTENCION: 'Mantención / falla',
+};
+
+// Ícono y color según el nombre (si calza con un estado conocido) o, si no, según su categoría
+const getStateConfig = (estado: EstadoOperacional, theme: any) => {
+  const normalized = estado.nombre.toLowerCase();
+  // Los nombres del catálogo vienen como "Categoría / Detalle": se muestra el detalle
+  const title = (estado.nombre.split('/').pop() ?? estado.nombre).trim().toUpperCase();
+  const sub = CATEGORIA_LABEL[estado.categoria] ?? 'Registro manual';
+  if (normalized.includes('traslado')) return { title, sub, icon: Truck, color: estado.categoria === 'PRODUCTIVO' ? theme.success : theme.primary };
+  if (normalized.includes('colación') || normalized.includes('descanso')) return { title, sub, icon: Coffee, color: theme.warning };
+  if (normalized.includes('espera')) return { title, sub, icon: Clock, color: theme.warning };
+  if (estado.categoria === 'PRODUCTIVO') return { title, sub, icon: Play, color: theme.success };
+  if (estado.categoria === 'MANTENCION') return { title, sub, icon: Wrench, color: theme.danger };
+  return { title, sub, icon: Clock, color: theme.warning };
 };
 
 export const ChangeStateModal: React.FC<ChangeStateModalProps> = ({
@@ -92,7 +94,7 @@ export const ChangeStateModal: React.FC<ChangeStateModalProps> = ({
 
       <View style={styles.gridContainer}>
         {estadosCatalogo.map((estado) => {
-          const config = getStateConfig(estado.nombre, theme);
+          const config = getStateConfig(estado, theme);
           const Icon = config.icon;
           const isActive = estadoActual?.estado.id === estado.id;
           const activeColor = config.color;

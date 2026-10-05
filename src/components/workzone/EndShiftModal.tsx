@@ -1,14 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, useColorScheme, ActivityIndicator } from 'react-native';
-import { Camera, TrendingUp, FileCheck } from 'lucide-react-native';
+import { TrendingUp, FileCheck } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
-import { TurnoActual } from '../../types/turno';
+import { FinalizarTurnoDatos, FotoCapturada, TurnoActual } from '../../types/turno';
+import { FotoEvidenciaField } from '../common/FotoEvidenciaField';
+import { FOTOS_HABILITADAS } from '../../constants/features';
 
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (horometroFinal: number) => Promise<void>;
+  onConfirm: (datos: FinalizarTurnoDatos) => Promise<void>;
   turno: TurnoActual | null;
 }
 
@@ -18,6 +20,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
 
   const [horometro, setHorometro] = useState('');
   const [novedades, setNovedades] = useState('');
+  const [foto, setFoto] = useState<FotoCapturada | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
@@ -79,15 +82,15 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
     onClose();
   };
 
-  // TODO: las novedades aún no se envían al Backend (REPORTE_TURNO tipo FIN)
   const handleConfirm = async () => {
     if (!canSubmit) return;
     setIsSubmitting(true);
     setSubmitError('');
     try {
-      await onConfirm(numericHorometro);
+      await onConfirm({ horometroFinal: numericHorometro, novedades, foto });
       setHorometro('');
       setNovedades('');
+      setFoto(null);
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'No se pudo cerrar el turno.');
     } finally {
@@ -129,7 +132,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
       <View style={[styles.datosGrid, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
         <View style={styles.datoCol}>
           <Text style={[styles.datoLabel, { color: theme.textSecondary }]}>TURNO:</Text>
-          <Text style={[styles.datoValue, { color: theme.warning }]}>#{turno.id}</Text>
+          <Text style={[styles.datoValue, { color: theme.warning }]}>{turno.id !== null ? `#${turno.id}` : 'Por sincronizar'}</Text>
         </View>
         <View style={styles.datoCol}>
           <Text style={[styles.datoLabel, { color: theme.textSecondary }]}>MÁQUINA:</Text>
@@ -206,16 +209,18 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
       </View>
 
       {/* Evidencias */}
-      <Text style={[styles.sectionTitle, { color: theme.textTertiary, marginTop: 16 }]}>FOTO DE RESPALDO FINAL:</Text>
-      <TouchableOpacity style={[styles.evidenciaBtn, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
-        <View style={[styles.evidenciaIconBadge, { backgroundColor: theme.primary + '15' }]}>
-          <Camera size={26} color={theme.primary} />
-        </View>
-        <View style={{ alignItems: 'center' }}>
-          <Text style={[styles.evidenciaTitle, { color: theme.text }]}>Adjuntar Foto</Text>
-          <Text style={[styles.evidenciaSub, { color: theme.textSecondary }]}>Respaldo de la zona o el horometro, etc...</Text>
-        </View>
-      </TouchableOpacity>
+      {FOTOS_HABILITADAS && (
+        <>
+          <Text style={[styles.sectionTitle, { color: theme.textTertiary, marginTop: 16 }]}>FOTO DE RESPALDO FINAL:</Text>
+          <FotoEvidenciaField
+            foto={foto}
+            onChange={setFoto}
+            titulo="Adjuntar Foto"
+            subtitulo="Respaldo de la zona o el horometro, etc..."
+            disabled={isSubmitting}
+          />
+        </>
+      )}
 
       {/* Novedades */}
       <Text style={[styles.sectionTitle, { color: theme.textTertiary, marginTop: 16 }]}>NOVEDADES PARA EL TRASPASO DE TURNO EN TERRENO:</Text>
@@ -346,35 +351,6 @@ const styles = StyleSheet.create({
   },
   desgloseFooter: {
     fontSize: 11,
-    textAlign: 'center',
-  },
-  evidenciaBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    borderStyle: 'dashed',
-    gap: 12,
-    marginBottom: 8,
-  },
-  evidenciaIconBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  evidenciaTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  evidenciaSub: {
-    fontSize: 12,
     textAlign: 'center',
   },
   textArea: {

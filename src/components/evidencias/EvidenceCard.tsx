@@ -6,8 +6,8 @@ import { EvidenciaHistorial } from '../../hooks/useEvidenciasHistorial';
 
 interface EvidenceCardProps {
   evidencia: EvidenciaHistorial;
-  onPressDetalle: (id: number) => void;
-  onPressEliminar: (id: number) => void;
+  onPressDetalle: (id: string) => void;
+  onPressEliminar: (id: string) => void;
 }
 
 export const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidencia, onPressDetalle, onPressEliminar }) => {

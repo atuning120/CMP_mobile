@@ -14,16 +14,15 @@ export const StateChangeBanner: React.FC<Props> = ({ onPress, estadosCatalogo })
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
-  const nombresEstados = estadosCatalogo.map(e => e.nombre);
-  let subtitulo = '';
-  if (nombresEstados.length > 0) {
-    if (nombresEstados.length === 1) {
-      subtitulo = nombresEstados[0];
-    } else {
-      const ultimos = nombresEstados.pop();
-      subtitulo = `${nombresEstados.join(', ')} o ${ultimos}`;
-    }
-  }
+  // El catálogo real tiene muchos estados: se resume por categoría en vez de listarlos todos
+  const categorias = [
+    estadosCatalogo.some(e => e.categoria === 'PRODUCTIVO') && 'producción',
+    estadosCatalogo.some(e => e.categoria === 'DEMORA') && 'demoras',
+    estadosCatalogo.some(e => e.categoria === 'MANTENCION') && 'mantención',
+  ].filter(Boolean) as string[];
+  const subtitulo = estadosCatalogo.length === 0
+    ? 'Conéctate una vez para descargar los estados operacionales'
+    : `${estadosCatalogo.length} estados: ${categorias.length > 1 ? `${categorias.slice(0, -1).join(', ')} o ${categorias[categorias.length - 1]}` : categorias[0]}`;
 
   return (
     <TouchableOpacity

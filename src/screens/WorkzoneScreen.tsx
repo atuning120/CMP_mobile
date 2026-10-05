@@ -13,9 +13,9 @@ import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdow
 import { StartShiftModal } from '../components/workzone/StartShiftModal';
 import { EndShiftModal } from '../components/workzone/EndShiftModal';
 import { ChangeStateModal } from '../components/workzone/ChangeStateModal';
-import { ApiError } from '../services/apiClient';
 import { cerrarSesion } from '../services/authService';
-import { IniciarTurnoDatos } from '../types/turno';
+import { FOTOS_HABILITADAS } from '../constants/features';
+import { FinalizarTurnoDatos, IniciarTurnoDatos } from '../types/turno';
 
 const formatearFechaHora = (iso: string) =>
   new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -41,7 +41,7 @@ export default function WorkzoneScreen() {
   const [isEndShiftModalVisible, setIsEndShiftModalVisible] = useState(false);
   const [isChangeStateModalVisible, setIsChangeStateModalVisible] = useState(false);
 
-  // Cerrar sesión NO cierra el turno: sigue EN_CURSO en el Backend y se recupera al volver a ingresar
+  // Cerrar sesión NO cierra el turno: sigue EN_CURSO en el teléfono y en el Backend
   const handleLogout = async () => {
     await cerrarSesion();
     router.replace('/');
@@ -52,18 +52,16 @@ export default function WorkzoneScreen() {
     setIsStartShiftModalVisible(false);
   };
 
-  const handleFinalizarTurno = async (horometroFinal: number) => {
-    try {
-      await finalizarTurno(horometroFinal);
-      setIsEndShiftModalVisible(false);
-      Alert.alert('Turno cerrado', 'El turno se cerró correctamente.');
-    } catch (e) {
-      if (e instanceof ApiError && e.code === 'TURNO_CERRADO_AUTOMATICAMENTE') {
-        setIsEndShiftModalVisible(false);
-        Alert.alert('Turno cerrado automáticamente', e.message);
-        return;
-      }
-      throw e;
+  const handleFinalizarTurno = async (datos: FinalizarTurnoDatos) => {
+    const estado = await finalizarTurno(datos);
+    setIsEndShiftModalVisible(false);
+    if (estado === 'CERRADO_AUTO') {
+      Alert.alert(
+        'Turno cerrado automáticamente',
+        'El turno superó las 12 horas, por lo que se cerró en el límite. Se registró tu horómetro final; informa a tu jefe de turno.',
+      );
+    } else {
+      Alert.alert('Turno cerrado', 'El turno se cerró correctamente. Se sincronizará con el servidor en segundo plano.');
     }
   };
 
@@ -101,7 +99,7 @@ export default function WorkzoneScreen() {
           <View style={[styles.autoCloseBanner, { backgroundColor: theme.card, borderColor: theme.warning }]}>
             <AlertTriangle size={20} color={theme.warning} />
             <Text style={[styles.autoCloseText, { color: theme.text }]}>
-              Tu turno #{turnoCerradoAutomaticamente.id} (iniciado el {formatearFechaHora(turnoCerradoAutomaticamente.fechaInicio)}) se
+              Tu turno{turnoCerradoAutomaticamente.id !== null ? ` #${turnoCerradoAutomaticamente.id}` : ''} (iniciado el {formatearFechaHora(turnoCerradoAutomaticamente.fechaInicio)}) se
               cerró automáticamente por superar 12 horas. Informa a tu jefe de turno para regularizar el horómetro final.
             </Text>
           </View>
@@ -127,13 +125,16 @@ export default function WorkzoneScreen() {
             disabled={!hayTurnoEnCurso}
             style={{ marginHorizontal: 8 }}
           />
+          {/* Visible pero sin acción mientras las fotos estén desactivadas (pendiente Cloudinary) */}
           <ActionCard
             icon={Camera}
             iconColor={theme.warning}
             title="Evidencias"
             subtitle="Subir fotos de inspección, cancha o falla mecánica."
-            badgeText={`${cantidadEvidencias} FOTO${cantidadEvidencias === 1 ? '' : 'S'}`}
-            onPress={() => router.push('/evidencias')}
+            badgeText={FOTOS_HABILITADAS ? `${cantidadEvidencias} FOTO${cantidadEvidencias === 1 ? '' : 'S'}` : 'PRÓXIMAMENTE'}
+            onPress={() => {
+              if (FOTOS_HABILITADAS) router.push('/evidencias');
+            }}
           />
         </View>
 
@@ -149,7 +150,7 @@ export default function WorkzoneScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top', 'left', 'right']}>
-      <LoginHeader showConnectionStatus />
+      <LoginHeader showConnectionStatus showSyncStatus />
       <ImageBackground
         source={require('../../assets/images/Mina_fondo.jpg')}
         style={styles.mainContent}

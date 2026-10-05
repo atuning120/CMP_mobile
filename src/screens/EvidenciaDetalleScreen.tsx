@@ -11,11 +11,10 @@ export default function EvidenciaDetalleScreen() {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
-  // Assuming operadorId = 1
-  const { evidencias, isLoading } = useEvidenciasHistorial(1);
-  
+  const { evidencias, isLoading } = useEvidenciasHistorial();
+
   const evidencia = useMemo(() => {
-    return evidencias.find(e => e.id.toString() === id);
+    return evidencias.find(e => e.id === id);
   }, [id, evidencias]);
 
   const formatDate = (isoString: string) => {

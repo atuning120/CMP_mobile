@@ -12,13 +12,14 @@ export class ApiError extends Error {
   }
 }
 
-const enviar = async (path: string, init: RequestInit): Promise<Response> => {
+const enviar = async (path: string, init: RequestInit, timeoutMs?: number): Promise<Response> => {
   const token = await getStoredToken();
   try {
-    return await fetchBackend(path, {
-      ...init,
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init.headers },
-    });
+    return await fetchBackend(
+      path,
+      { ...init, headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init.headers } },
+      timeoutMs,
+    );
   } catch {
     throw new ApiError('No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.', 0);
   }
@@ -28,13 +29,13 @@ const enviar = async (path: string, init: RequestInit): Promise<Response> => {
  * fetch autenticado con el JWT guardado. Si el access token expiró, renueva la sesión y reintenta
  * una vez. Lanza ApiError con el `code` que envía el backend.
  */
-export const apiRequest = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
-  let response = await enviar(path, init);
+export const apiRequest = async <T>(path: string, init: RequestInit = {}, timeoutMs?: number): Promise<T> => {
+  let response = await enviar(path, init, timeoutMs);
 
   if (response.status === 401) {
     const resultado = await sincronizarSesion();
     if (resultado === 'ok') {
-      response = await enviar(path, init);
+      response = await enviar(path, init, timeoutMs);
     } else if (resultado === 'sin-conexion') {
       throw new ApiError('No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.', 0);
     }
