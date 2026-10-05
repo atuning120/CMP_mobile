@@ -12,10 +12,10 @@ export default function HomeScreen() {
   const netInfo = useNetInfo();
   const networkState = netInfo.isConnected === false ? 'offline' : 'online';
 
-  const handleLoginSuccess = (operador: Operador) => {
-    console.log('Login successful:', operador);
-    // Navigate to the workzone screen
-    router.replace('/workzone');
+  const handleLoginSuccess = (operador: Operador, rol: string) => {
+    console.log('Login successful:', operador, rol);
+    // Los jefes de turno trabajan en la pantalla de supervisión; los operadores en la zona de trabajo
+    router.replace(rol === 'JEFE_TURNO' ? '/ship-supervisor' : '/workzone');
   };
 
   return (

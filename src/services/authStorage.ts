@@ -10,9 +10,9 @@ const CACHE_PREFIX = '@cmp_cache_';
  * Guarda de forma segura las credenciales y la info del operador después de un login exitoso.
  * (Nota de seguridad: en producción, nunca guardar contraseñas en texto plano, usar hashes locales).
  */
-export const saveSecureSession = async (email: string, passwordOrPin: string, token: string, operador: Operador) => {
+export const saveSecureSession = async (email: string, passwordOrPin: string, token: string, rol: string, operador: Operador) => {
   try {
-    const sessionData = JSON.stringify({ email, passwordOrPin, token });
+    const sessionData = JSON.stringify({ email, passwordOrPin, token, rol });
     await SecureStore.setItemAsync(`${SECURE_STORE_PREFIX}session`, sessionData);
     await AsyncStorage.setItem(`${CACHE_PREFIX}operador`, JSON.stringify(operador));
   } catch (error) {
@@ -23,7 +23,10 @@ export const saveSecureSession = async (email: string, passwordOrPin: string, to
 /**
  * Intenta hacer login offline validando las credenciales guardadas localmente.
  */
-export const attemptOfflineLogin = async (email: string, passwordInput: string): Promise<Operador | null> => {
+export const attemptOfflineLogin = async (
+  email: string,
+  passwordInput: string,
+): Promise<{ operador: Operador; rol: string } | null> => {
   try {
     const sessionString = await SecureStore.getItemAsync(`${SECURE_STORE_PREFIX}session`);
     if (!sessionString) return null;
@@ -37,7 +40,7 @@ export const attemptOfflineLogin = async (email: string, passwordInput: string):
       // Credenciales válidas, retornamos el operador cacheado
       const operadorString = await AsyncStorage.getItem(`${CACHE_PREFIX}operador`);
       if (operadorString) {
-        return JSON.parse(operadorString) as Operador;
+        return { operador: JSON.parse(operadorString) as Operador, rol: sessionData.rol };
       }
     }
     return null;
@@ -84,7 +87,8 @@ export const backgroundSyncLogin = async (): Promise<boolean> => {
     const sessionString = await SecureStore.getItemAsync(`${SECURE_STORE_PREFIX}session`);
     if (!sessionString) return false;
 
-    const { email, passwordOrPin } = JSON.parse(sessionString);
+    const session = JSON.parse(sessionString);
+    const { email, passwordOrPin } = session;
 
     const debuggerHost = Constants.expoConfig?.hostUri;
     const backendIp = debuggerHost ? debuggerHost.split(':')[0] : '10.0.2.2';
@@ -98,7 +102,7 @@ export const backgroundSyncLogin = async (): Promise<boolean> => {
 
     if (response.ok) {
       const data = await response.json();
-      const sessionData = JSON.stringify({ email, passwordOrPin, token: data.accessToken });
+      const sessionData = JSON.stringify({ ...session, token: data.accessToken, rol: data.rol });
       await SecureStore.setItemAsync(`${SECURE_STORE_PREFIX}session`, sessionData);
       console.log('✅ Sincronización en segundo plano exitosa. Nuevo token obtenido.');
       return true;

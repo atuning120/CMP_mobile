@@ -8,7 +8,6 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 
 import { useNetInfo } from '@react-native-community/netinfo';
@@ -18,7 +17,6 @@ import { saveSecureSession, attemptOfflineLogin } from '../services/authStorage'
 import { LoginFooter } from '../components/LoginFooter';
 import { LoginForm } from '../components/LoginForm';
 import { LoginHeader } from '../components/LoginHeader';
-import { MicrosoftLoginButton } from '../components/MicrosoftLoginButton';
 import { ProfileChip } from '../components/ProfileChip';
 import { styles } from './LoginScreen.styles';
 
@@ -26,7 +24,7 @@ import { darkTheme, lightTheme } from '../constants/theme';
 import { NetworkState, Operador } from '../types/mining';
 
 interface LoginScreenProps {
-  onLoginSuccess: (operador: Operador) => void;
+  onLoginSuccess: (operador: Operador, rol: string) => void;
   operadoresDisponibles: Operador[];
   networkState: NetworkState;
 }
@@ -44,12 +42,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
-  const router = useRouter();
   const netInfo = useNetInfo();
-
-  const handleMicrosoftLogin = () => {
-    router.push('/ship-supervisor');
-  };
 
   const handleStandardLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -62,10 +55,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     // Flujo Offline Explicito
     if (networkState === 'offline') {
       console.log('Modo offline detectado, intentando login local...');
-      const cachedOperador = await attemptOfflineLogin(email, password);
-      if (cachedOperador) {
+      const cachedSession = await attemptOfflineLogin(email, password);
+      if (cachedSession) {
         console.log('Login offline exitoso');
-        onLoginSuccess(cachedOperador);
+        onLoginSuccess(cachedSession.operador, cachedSession.rol);
       } else {
         setErrorMsg('Credenciales inválidas o no hay sesión guardada para modo offline.');
       }
@@ -118,19 +111,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       }
 
       // Guardamos la sesión de manera segura para futuros logins offline
-      await saveSecureSession(email, password, data.accessToken, finalOp);
+      await saveSecureSession(email, password, data.accessToken, data.rol, finalOp);
       
-      onLoginSuccess(finalOp);
+      onLoginSuccess(finalOp, data.rol);
     } catch (error: any) {
       console.error('Login error:', error);
       
       // Si falló por un error de red (no del servidor), intentamos offline
       if (error.message === 'Failed to fetch' || error.message.includes('Network request failed')) {
         console.log('Fallo de red detectado, intentando login local...');
-        const cachedOperador = await attemptOfflineLogin(email, password);
-        if (cachedOperador) {
+        const cachedSession = await attemptOfflineLogin(email, password);
+        if (cachedSession) {
           console.log('Login offline de respaldo exitoso');
-          onLoginSuccess(cachedOperador);
+          onLoginSuccess(cachedSession.operador, cachedSession.rol);
           return;
         }
       }
@@ -200,16 +193,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               onSubmit={handleStandardLogin}
             />
 
-            {/* Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={[styles.dividerLine, { borderTopColor: theme.border }]} />
-              <View style={[styles.dividerTextWrapper, { backgroundColor: theme.card }]}>
-                <Text style={[styles.dividerText, { color: theme.textSecondary }]}>O accede con Microsoft</Text>
-              </View>
-            </View>
-
-            {/* Extracted Microsoft Button Component */}
-            <MicrosoftLoginButton onPress={handleMicrosoftLogin} />
             {/* Offline Support Notice */}
             <View style={styles.offlineNotice}>
               <View style={styles.offlineLeft}>
