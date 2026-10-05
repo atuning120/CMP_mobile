@@ -16,6 +16,7 @@ import { IncorporacionEquipoModal } from '../components/supervisor/Incorporacion
 import { ReemplazoEquipoModal } from '../components/supervisor/ReemplazoEquipoModal';
 import { EditarEquipoModal } from '../components/supervisor/EditarEquipoModal';
 import { styles } from './ShipSupervisorScreen.styles';
+import { cerrarSesion } from '../services/authService';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
@@ -36,7 +37,8 @@ export const ShipSupervisorScreen = () => {
 
   const { maquinas, contadorFlota, isLoading, actualizarMaquina } = useFlotaResumen();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await cerrarSesion();
     router.replace('/');
   };
 

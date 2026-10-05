@@ -5,12 +5,15 @@ import { Appearance, Text, TouchableOpacity, useColorScheme, View } from 'react-
 import { darkTheme, lightTheme } from '../constants/theme';
 import { CmpLogo } from './CmpLogo';
 import { styles } from './LoginHeader.styles';
+import { SyncIndicator } from './SyncIndicator';
 
 export interface LoginHeaderProps {
   showConnectionStatus?: boolean;
+  // Registros pendientes de subir al servidor (pantallas del operador)
+  showSyncStatus?: boolean;
 }
 
-export const LoginHeader: React.FC<LoginHeaderProps> = ({ showConnectionStatus = false }) => {
+export const LoginHeader: React.FC<LoginHeaderProps> = ({ showConnectionStatus = false, showSyncStatus = false }) => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const theme = isDark ? darkTheme : lightTheme;
@@ -63,6 +66,7 @@ export const LoginHeader: React.FC<LoginHeaderProps> = ({ showConnectionStatus =
             )}
           </View>
         )}
+        {showSyncStatus && <SyncIndicator theme={theme} />}
       </View>
     </View>
   );

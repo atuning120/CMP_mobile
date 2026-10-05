@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, useColorScheme, useWindowDimensions, Alert, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -6,6 +6,10 @@ import { Camera, ChevronLeft, AlertCircle, RefreshCw } from 'lucide-react-native
 import { darkTheme, lightTheme } from '../constants/theme';
 import { useEvidenciasHistorial } from '../hooks/useEvidenciasHistorial';
 import { EvidenceCard } from '../components/evidencias/EvidenceCard';
+import { NovedadModal } from '../components/evidencias/NovedadModal';
+import { useCapturaFoto } from '../hooks/useCapturaFoto';
+import { eliminarEvidenciaPendiente, registrarNovedad } from '../services/operacionesTurno';
+import { FotoCapturada } from '../types/turno';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 
@@ -19,29 +23,44 @@ export default function EvidenciasScreen() {
   const isSmallScreen = width < 380;
   const numColumns = isSmallScreen ? 1 : 2;
 
-  // Assuming operadorId = 1 for now (mocked context)
-  const { evidencias, isLoading, error, refetch } = useEvidenciasHistorial(1);
+  const { evidencias, isLoading, error, refetch } = useEvidenciasHistorial();
+  const capturarFoto = useCapturaFoto();
+  const [fotoNueva, setFotoNueva] = useState<FotoCapturada | null>(null);
 
-  const handleCapturePress = () => {
-    Alert.alert(
-      "Capturar Evidencia",
-      "El flujo de captura de evidencia (OP-10) está en desarrollo y se integrará aquí próximamente.",
-      [{ text: "Entendido", style: "default" }]
-    );
+  // La evidencia se guarda en el teléfono y se sube en segundo plano cuando hay conexión
+  const handleCapturePress = async () => {
+    const foto = await capturarFoto();
+    if (foto) setFotoNueva(foto);
   };
 
-  const handleDelete = (id: number) => {
+  const handleGuardarNovedad = async (descripcion: string) => {
+    if (!fotoNueva) return;
+    await registrarNovedad(descripcion, fotoNueva);
+    setFotoNueva(null);
+  };
+
+  const handleDelete = (id: string) => {
+    const evidencia = evidencias.find((e) => e.id === id);
+    if (!evidencia) return;
     Alert.alert(
       "Eliminar evidencia",
       "¿Estás seguro de que deseas eliminar esta evidencia que aún no ha sido sincronizada?",
       [
         { text: "Cancelar", style: "cancel" },
-        { text: "Eliminar", style: "destructive", onPress: () => console.log('Delete', id) }
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => {
+            eliminarEvidenciaPendiente(evidencia.origen).catch((e) =>
+              Alert.alert('No se pudo eliminar', e instanceof Error ? e.message : String(e)),
+            );
+          },
+        },
       ]
     );
   };
 
-  const handleDetail = (id: number) => {
+  const handleDetail = (id: string) => {
     router.push(`/evidencias/detalle/${id}`);
   };
 
@@ -122,7 +141,7 @@ export default function EvidenciasScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top', 'left', 'right']}>
-      <LoginHeader showConnectionStatus />
+      <LoginHeader showConnectionStatus showSyncStatus />
       <ImageBackground
         source={require('../../assets/images/Mina_fondo.jpg')}
         style={styles.container}
@@ -133,7 +152,7 @@ export default function EvidenciasScreen() {
         <FlatList
           key={numColumns} // Force re-render when columns change
           data={evidencias}
-          keyExtractor={item => item.id.toString()}
+          keyExtractor={item => item.id}
           numColumns={numColumns}
           columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
           contentContainerStyle={[styles.listContent, evidencias.length === 0 && { flexGrow: 1 }]}
@@ -151,6 +170,7 @@ export default function EvidenciasScreen() {
         />
       </ImageBackground>
       <LoginFooter />
+      <NovedadModal foto={fotoNueva} onClose={() => setFotoNueva(null)} onGuardar={handleGuardarNovedad} />
     </SafeAreaView>
   );
 }

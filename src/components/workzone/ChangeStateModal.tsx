@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
-import { Play, Truck, Coffee, Clock, Wrench } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, useColorScheme, useWindowDimensions } from 'react-native';
+import { CheckCircle2, Clock, Info } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { EstadoOperacional, TurnoEstadoActual } from '../../types/turno';
+import { CATEGORIAS, colorCategoria, IconoEstado, nombreCorto } from './estadoVisual';
+import { EstadoInfoModal } from './EstadoInfoModal';
+import { styles } from './ChangeStateModal.styles';
 
 interface ChangeStateModalProps {
   visible: boolean;
@@ -13,24 +16,18 @@ interface ChangeStateModalProps {
   onStateChange: (estado: EstadoOperacional) => void;
 }
 
-const getStateConfig = (nombre: string, theme: any) => {
-  const normalized = nombre.toLowerCase();
-  if (normalized.includes('producción')) {
-    return { title: 'OPERANDO EN PRODUCCIÓN', sub: 'Carguío, empuje o...', icon: Play, color: theme.success };
-  } else if (normalized.includes('traslado')) {
-    return { title: 'TRASLADO ENTRE ÁREAS', sub: 'Tránsito de maquinaria en...', icon: Truck, color: theme.primary };
-  } else if (normalized.includes('colación')) {
-    return { title: 'COLACIÓN / DESCANSO', sub: 'Pausa de colación...', icon: Coffee, color: theme.warning };
-  } else if (normalized.includes('espera')) {
-    return { title: 'ESPERA OPERACIONAL', sub: 'Espera de tolva, tren, o...', icon: Clock, color: theme.warning };
-  } else if (normalized.includes('falla')) {
-    return { title: 'FALLA MECÁNICA / PANA', sub: 'Detención por avería o...', icon: Wrench, color: theme.danger };
-  } else {
-    // Default
-    return { title: nombre.toUpperCase(), sub: 'Registro manual...', icon: Clock, color: theme.textSecondary };
-  }
+const formatearDuracion = (inicioIso: string) => {
+  const segundos = Math.max(0, Math.floor((Date.now() - new Date(inicioIso).getTime()) / 1000));
+  const h = Math.floor(segundos / 3600);
+  const m = Math.floor((segundos % 3600) / 60);
+  const s = segundos % 60;
+  return [h, m, s].map((n) => n.toString().padStart(2, '0')).join(':');
 };
 
+/**
+ * Panel para cambiar el estado operacional: estados agrupados por categoría en una grilla
+ * compacta; cada uno con un botón "i" que explica qué significa.
+ */
 export const ChangeStateModal: React.FC<ChangeStateModalProps> = ({
   visible,
   onClose,
@@ -40,30 +37,27 @@ export const ChangeStateModal: React.FC<ChangeStateModalProps> = ({
 }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  const { width } = useWindowDimensions();
+  // Dos columnas en teléfono, tres en tablet
+  const anchoTarjeta = width >= 700 ? '31.8%' : '48.5%';
 
   const [elapsedTime, setElapsedTime] = useState('00:00:00');
+  const [estadoInfo, setEstadoInfo] = useState<EstadoOperacional | null>(null);
 
   useEffect(() => {
     if (!visible || !estadoActual) return;
-    
-    const updateTimer = () => {
-      const now = new Date();
-      const start = new Date(estadoActual.inicio);
-      const diffInSeconds = Math.floor((now.getTime() - start.getTime()) / 1000);
-      
-      const hours = Math.floor(diffInSeconds / 3600);
-      const minutes = Math.floor((diffInSeconds % 3600) / 60);
-      const seconds = diffInSeconds % 60;
-      
-      setElapsedTime(
-        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-      );
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+    const actualizar = () => setElapsedTime(formatearDuracion(estadoActual.inicio));
+    actualizar();
+    const interval = setInterval(actualizar, 1000);
     return () => clearInterval(interval);
   }, [visible, estadoActual]);
+
+  const idActivo = estadoActual?.estado.id ?? null;
+
+  const seleccionar = (estado: EstadoOperacional) => {
+    setEstadoInfo(null);
+    if (estado.id !== idActivo) onStateChange(estado);
+  };
 
   const headerTop = (
     <Text style={[styles.headerTag, { color: theme.primary }]}>
@@ -76,132 +70,106 @@ export const ChangeStateModal: React.FC<ChangeStateModalProps> = ({
       visible={visible}
       onClose={onClose}
       title="Cambiar Estado Operacional"
-      subtitle="Presiona el estado correspondiente para auditar las horas efectivas sin ambigüedad."
+      subtitle="Toca el estado en que está el equipo. Usa la «i» para ver qué significa cada uno."
       headerTop={headerTop}
       scrollContentStyle={{ padding: 16 }}
     >
-      <View style={[styles.timerContainer, { borderColor: theme.border, backgroundColor: theme.background }]}>
-        <Text style={[styles.timerLabel, { color: theme.textSecondary }]}>
-          TIEMPO EN ESTADO ACTUAL
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-          <Clock size={14} color={theme.warning} />
-          <Text style={[styles.timerValue, { color: theme.warning }]}>{elapsedTime}</Text>
+      {/* Estado vigente */}
+      <View style={[styles.actual, { borderColor: theme.border, backgroundColor: theme.background }]}>
+        <View style={styles.actualTextos}>
+          <Text style={[styles.actualEtiqueta, { color: theme.textTertiary }]}>ESTADO ACTUAL</Text>
+          <Text style={[styles.actualNombre, { color: estadoActual ? theme.text : theme.textSecondary }]} numberOfLines={1}>
+            {estadoActual ? nombreCorto(estadoActual.estado) : 'Sin estado registrado'}
+          </Text>
         </View>
+        {estadoActual && (
+          <View style={styles.actualTiempo}>
+            <Clock size={14} color={theme.warning} />
+            <Text style={[styles.actualTiempoTexto, { color: theme.warning }]}>{elapsedTime}</Text>
+          </View>
+        )}
       </View>
 
-      <View style={styles.gridContainer}>
-        {estadosCatalogo.map((estado) => {
-          const config = getStateConfig(estado.nombre, theme);
-          const Icon = config.icon;
-          const isActive = estadoActual?.estado.id === estado.id;
-          const activeColor = config.color;
-          
-          return (
-            <TouchableOpacity
-              key={estado.id}
-              style={[
-                styles.stateCard,
-                { backgroundColor: theme.cardAlt, borderColor: isActive ? activeColor : theme.border },
-                isActive && { borderWidth: 2 }
-              ]}
-              onPress={() => onStateChange(estado)}
-              disabled={isActive}
-            >
-              <View style={[styles.iconContainer, { backgroundColor: theme.background }]}>
-                <Icon size={24} color={isActive ? activeColor : theme.textSecondary} />
-              </View>
-              
-              <View style={{ flex: 1, paddingLeft: 12 }}>
-                <Text style={[styles.stateTitle, { color: isActive ? activeColor : theme.text }]}>
-                  {config.title}
-                </Text>
-                <Text style={[styles.stateSub, { color: theme.textSecondary }]}>
-                  {config.sub}
-                </Text>
-              </View>
+      {estadosCatalogo.length === 0 && (
+        <Text style={[styles.vacio, { color: theme.textSecondary }]}>
+          No hay estados guardados en el teléfono. Conéctate una vez para descargarlos.
+        </Text>
+      )}
 
-              {isActive && (
-                <View style={[styles.activeBadge, { backgroundColor: activeColor + '20' }]}>
-                  <Text style={[styles.activeBadgeText, { color: activeColor }]}>ACTIVO</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      {CATEGORIAS.map(({ categoria, titulo, ayuda }) => {
+        const estados = estadosCatalogo.filter((e) => e.categoria === categoria);
+        if (estados.length === 0) return null;
+        const color = colorCategoria(categoria, theme);
+
+        return (
+          <View key={categoria} style={styles.seccion}>
+            <View style={styles.seccionEncabezado}>
+              <View style={[styles.seccionPunto, { backgroundColor: color }]} />
+              <Text style={[styles.seccionTitulo, { color: theme.text }]}>{titulo}</Text>
+              <Text style={[styles.seccionConteo, { color: theme.textTertiary }]}>{estados.length}</Text>
+            </View>
+            <Text style={[styles.seccionAyuda, { color: theme.textTertiary }]}>{ayuda}</Text>
+
+            <View style={styles.grilla}>
+              {estados.map((estado) => {
+                const activo = estado.id === idActivo;
+                return (
+                  <TouchableOpacity
+                    key={estado.id}
+                    style={[
+                      styles.tarjeta,
+                      { width: anchoTarjeta, backgroundColor: activo ? color + '18' : theme.cardAlt, borderColor: activo ? color : theme.border },
+                      activo && styles.tarjetaActiva,
+                    ]}
+                    onPress={() => seleccionar(estado)}
+                    disabled={activo}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: activo }}
+                    accessibilityLabel={nombreCorto(estado)}
+                  >
+                    <View style={styles.tarjetaArriba}>
+                      <View style={[styles.icono, { backgroundColor: activo ? color : color + '18' }]}>
+                        <IconoEstado estado={estado} size={18} color={activo ? '#FFFFFF' : color} />
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.botonInfo, { borderColor: theme.border, backgroundColor: theme.card }]}
+                        onPress={() => setEstadoInfo(estado)}
+                        hitSlop={8}
+                        accessibilityLabel={`Información de ${nombreCorto(estado)}`}
+                      >
+                        <Info size={14} color={theme.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+
+                    <Text style={[styles.tarjetaTitulo, { color: activo ? color : theme.text }]} numberOfLines={2}>
+                      {nombreCorto(estado)}
+                    </Text>
+                    {!!estado.descripcion && (
+                      <Text style={[styles.tarjetaDescripcion, { color: theme.textSecondary }]} numberOfLines={2}>
+                        {estado.descripcion}
+                      </Text>
+                    )}
+
+                    {activo && (
+                      <View style={[styles.badgeActivo, { backgroundColor: color }]}>
+                        <CheckCircle2 size={11} color="#FFFFFF" />
+                        <Text style={styles.badgeActivoTexto}>ACTIVO</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        );
+      })}
+
+      <EstadoInfoModal
+        estado={estadoInfo}
+        esActivo={estadoInfo?.id === idActivo}
+        onClose={() => setEstadoInfo(null)}
+        onSeleccionar={seleccionar}
+      />
     </AppBottomSheetModal>
   );
 };
-
-const styles = StyleSheet.create({
-  headerTag: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  timerContainer: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  timerLabel: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  timerValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  stateCard: {
-    width: '48%',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    minHeight: 110,
-    position: 'relative',
-  },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  stateTitle: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    marginLeft: -12,
-  },
-  stateSub: {
-    fontSize: 10,
-    marginLeft: -12,
-  },
-  activeBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  activeBadgeText: {
-    fontSize: 9,
-    fontWeight: 'bold',
-  }
-});

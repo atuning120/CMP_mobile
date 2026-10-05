@@ -1,9 +1,7 @@
-import { useMemo } from 'react';
-import { listarZonasPorArea } from '../services/turnoService';
-import { useRemoteList } from './useRemoteList';
+import { ZonaTrabajo } from '../types/turno';
+import { useCatalogo } from './useCatalogo';
 
 export const useZonasPorArea = (idArea: number | null) => {
-  const fetcher = useMemo(() => (idArea !== null ? () => listarZonasPorArea(idArea) : null), [idArea]);
-  const { items, ...rest } = useRemoteList(fetcher);
+  const { items, ...rest } = useCatalogo<ZonaTrabajo>('zona', idArea !== null, idArea);
   return { zonas: items, ...rest };
 };
