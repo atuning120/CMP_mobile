@@ -1,26 +1,29 @@
-import { Operador } from '../types/mining';
+import { PerfilPrueba } from '../types/mining';
 
-export const INITIAL_OPERADORES: Operador[] = [
+// Credenciales de prueba para el acceso rápido del login
+export const INITIAL_OPERADORES: PerfilPrueba[] = [
   {
     id_operador: 1,
-    nombre: 'Cristian',
-    apellido: 'Núñez',
+    nombre: 'Operador',
+    apellido: 'Ejemplo',
     rut: '15.123.456-7',
     telefono: '+56 9 1234 5678',
     estado: 'En Faena',
-    email: 'pedro.gomez@cmp.cl',
+    email: 'cristian.nunez@cmp.cl',
     empresa: 'Servicio Movimiento de Material MLC',
     rol: 'Operador de Maquinaria',
+    password: '12345',
   },
   {
     id_operador: 2,
-    nombre: 'María',
-    apellido: 'López',
+    nombre: 'Jefe',
+    apellido: 'Turno',
     rut: '16.987.654-3',
     telefono: '+56 9 8765 4321',
     estado: 'En Faena',
-    email: 'mlopez@ejemplo.cl',
+    email: 'ana.rojas@cmp.cl',
     empresa: 'Servicio Movimiento de Material MLC',
-    rol: 'Operador de Maquinaria',
+    rol: 'Jefe de Turno',
+    password: 'miPassword123',
   }
 ];

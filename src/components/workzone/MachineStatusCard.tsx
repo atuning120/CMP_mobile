@@ -18,8 +18,8 @@ export const MachineStatusCard: React.FC<Props> = ({ turno, variant = 'default' 
   useFocusEffect(
     useCallback(() => {
       const updateDuration = () => {
-        if (!turno.estadoOperacionalActual.inicio) return;
-        const start = new Date(turno.estadoOperacionalActual.inicio).getTime();
+        // Sin estado operacional registrado se muestra la duración del turno completo
+        const start = new Date(turno.estadoOperacionalActual?.inicio ?? turno.fechaInicio).getTime();
         const now = Date.now();
         const diffMs = now - start;
         const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
@@ -31,7 +31,7 @@ export const MachineStatusCard: React.FC<Props> = ({ turno, variant = 'default' 
       const intervalId = setInterval(updateDuration, 60000);
 
       return () => clearInterval(intervalId);
-    }, [turno.estadoOperacionalActual.inicio])
+    }, [turno.estadoOperacionalActual?.inicio, turno.fechaInicio])
   );
 
   const isCompact = variant === 'compact';
@@ -51,7 +51,7 @@ export const MachineStatusCard: React.FC<Props> = ({ turno, variant = 'default' 
             {turno.maquina.nombreCompleto}
           </Text>
           <Text style={[styles.secondaryText, isCompact && styles.secondaryTextCompact, { color: theme.textSecondary }]}>
-            Área: {turno.area.nombre} · Horóm. Inicial: <Text style={{ color: theme.warning, fontWeight: 'bold' }}>{turno.horometroInicial}h</Text>
+            Área: {turno.area?.nombre ?? 'Sin asignar'} · Horóm. Inicial: <Text style={{ color: theme.warning, fontWeight: 'bold' }}>{turno.horometroInicial}h</Text>
           </Text>
         </View>
         <View style={[styles.statusPill, isCompact && styles.statusPillCompact, { backgroundColor: theme.success + '20', borderColor: theme.success }]}>
@@ -64,7 +64,7 @@ export const MachineStatusCard: React.FC<Props> = ({ turno, variant = 'default' 
           <Text style={[styles.label, { color: theme.textTertiary }]}>ESTADO OPERACIONAL ACTUAL</Text>
           <View style={styles.stateValueContainer}>
             <View style={[styles.dot, isCompact && styles.dotCompact, { backgroundColor: theme.success }]} />
-            <Text style={[styles.stateName, isCompact && styles.stateNameCompact, { color: theme.warning }]}>{turno.estadoOperacionalActual.estado.nombre}</Text>
+            <Text style={[styles.stateName, isCompact && styles.stateNameCompact, { color: theme.warning }]}>{turno.estadoOperacionalActual?.estado.nombre ?? 'Sin registrar'}</Text>
           </View>
         </View>
         <View style={styles.durationBlock}>

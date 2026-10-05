@@ -77,7 +77,13 @@ export const AppBottomSheetModal: React.FC<AppBottomSheetModalProps> = ({
             </View>
 
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flexShrink: 1 }}>
-              <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, scrollContentStyle]} showsVerticalScrollIndicator={true}>
+              <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={[styles.scrollContent, scrollContentStyle]}
+                showsVerticalScrollIndicator={true}
+                // Permite tocar opciones de listas desplegables sin que el primer toque solo cierre el teclado
+                keyboardShouldPersistTaps="handled"
+              >
                 {children}
                 {/* Espacio final */}
                 <View style={{ height: 40 }} />

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView, TouchableOpacity, ImageBackground, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Play, Square, Camera } from 'lucide-react-native';
+import { Play, Square, Camera, AlertTriangle } from 'lucide-react-native';
 import { lightTheme, darkTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
@@ -13,29 +13,57 @@ import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdow
 import { StartShiftModal } from '../components/workzone/StartShiftModal';
 import { EndShiftModal } from '../components/workzone/EndShiftModal';
 import { ChangeStateModal } from '../components/workzone/ChangeStateModal';
+import { ApiError } from '../services/apiClient';
+import { IniciarTurnoDatos } from '../types/turno';
+
+const formatearFechaHora = (iso: string) =>
+  new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 export default function WorkzoneScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
-  const { turno, isLoading, error, refetch, estadosCatalogo, updateEstadoActual } = useTurnoActual();
+  const {
+    turno,
+    turnoCerradoAutomaticamente,
+    isLoading,
+    error,
+    refetch,
+    iniciarTurno,
+    finalizarTurno,
+    estadosCatalogo,
+    updateEstadoActual,
+  } = useTurnoActual();
+  // Sin turno en curso solo se puede iniciar; con turno en curso solo se puede cerrar
+  const hayTurnoEnCurso = turno !== null;
   const [isStartShiftModalVisible, setIsStartShiftModalVisible] = useState(false);
   const [isEndShiftModalVisible, setIsEndShiftModalVisible] = useState(false);
   const [isChangeStateModalVisible, setIsChangeStateModalVisible] = useState(false);
 
+  // Cerrar sesión NO cierra el turno: sigue EN_CURSO en el Backend y se recupera al volver a ingresar
   const handleLogout = () => {
     router.replace('/');
   };
 
-  useEffect(() => {
-    if (!isLoading && !error && turno === null) {
-      // Redirigir a OP-02 (Iniciar Turno)
-      // Como aún no existe esa pantalla en este mock, usamos '/iniciar-turno'
-      // O podemos redirigir al home (login) si falla
-      console.log('No hay turno, redirigiendo a iniciar turno...');
-      //router.replace('/iniciar-turno');
+  const handleIniciarTurno = async (datos: IniciarTurnoDatos) => {
+    await iniciarTurno(datos);
+    setIsStartShiftModalVisible(false);
+  };
+
+  const handleFinalizarTurno = async (horometroFinal: number) => {
+    try {
+      await finalizarTurno(horometroFinal);
+      setIsEndShiftModalVisible(false);
+      Alert.alert('Turno cerrado', 'El turno se cerró correctamente.');
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'TURNO_CERRADO_AUTOMATICAMENTE') {
+        setIsEndShiftModalVisible(false);
+        Alert.alert('Turno cerrado automáticamente', e.message);
+        return;
+      }
+      throw e;
     }
-  }, [turno, isLoading, error, router]);
+  };
 
   const renderContent = () => {
     if (isLoading) {
@@ -61,35 +89,40 @@ export default function WorkzoneScreen() {
       );
     }
 
-    if (!turno) {
-      return (
-        <View style={styles.centerContainer}>
-          <Text style={{ color: theme.text }}>Redirigiendo a Iniciar Turno...</Text>
-        </View>
-      );
-    }
+    const cantidadEvidencias = turno?.cantidadEvidencias ?? 0;
 
     return (
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <TurnoSummaryDropdown turno={turno} onLogout={handleLogout} />
+
+        {!hayTurnoEnCurso && turnoCerradoAutomaticamente && (
+          <View style={[styles.autoCloseBanner, { backgroundColor: theme.card, borderColor: theme.warning }]}>
+            <AlertTriangle size={20} color={theme.warning} />
+            <Text style={[styles.autoCloseText, { color: theme.text }]}>
+              Tu turno #{turnoCerradoAutomaticamente.id} (iniciado el {formatearFechaHora(turnoCerradoAutomaticamente.fechaInicio)}) se
+              cerró automáticamente por superar 12 horas. Informa a tu jefe de turno para regularizar el horómetro final.
+            </Text>
+          </View>
+        )}
+
         <View style={styles.actionsContainer}>
           <ActionCard
             icon={Play}
             iconColor={theme.success}
             title="Inicio de Turno"
-            subtitle="Turno ya en curso"
+            subtitle={hayTurnoEnCurso ? `Turno en curso desde ${formatearFechaHora(turno.fechaInicio)}` : 'Seleccionar máquina y registrar horómetro inicial.'}
             badgeText="PASO 1"
-            disabled={false}
+            disabled={hayTurnoEnCurso}
             onPress={() => setIsStartShiftModalVisible(true)}
           />
           <ActionCard
             icon={Square}
             iconColor={theme.danger}
             title="Cierre de Turno"
-            subtitle="Registrar horómetro final y liquidar horas."
+            subtitle={hayTurnoEnCurso ? 'Registrar horómetro final y liquidar horas.' : 'Disponible al iniciar un turno.'}
             badgeText="PASO FINAL"
             onPress={() => setIsEndShiftModalVisible(true)}
-            disabled={false}
+            disabled={!hayTurnoEnCurso}
             style={{ marginHorizontal: 8 }}
           />
           <ActionCard
@@ -97,15 +130,17 @@ export default function WorkzoneScreen() {
             iconColor={theme.warning}
             title="Evidencias"
             subtitle="Subir fotos de inspección, cancha o falla mecánica."
-            badgeText={`${turno.cantidadEvidencias} FOTO${turno.cantidadEvidencias === 1 ? '' : 'S'}`}
+            badgeText={`${cantidadEvidencias} FOTO${cantidadEvidencias === 1 ? '' : 'S'}`}
             onPress={() => router.push('/evidencias')}
           />
         </View>
 
-        <StateChangeBanner
-          estadosCatalogo={estadosCatalogo}
-          onPress={() => setIsChangeStateModalVisible(true)}
-        />
+        {hayTurnoEnCurso && (
+          <StateChangeBanner
+            estadosCatalogo={estadosCatalogo}
+            onPress={() => setIsChangeStateModalVisible(true)}
+          />
+        )}
       </ScrollView>
     );
   };
@@ -125,19 +160,13 @@ export default function WorkzoneScreen() {
       <StartShiftModal 
         visible={isStartShiftModalVisible} 
         onClose={() => setIsStartShiftModalVisible(false)} 
-        onConfirm={() => {
-          setIsStartShiftModalVisible(false);
-          console.log('Turno Iniciado');
-        }} 
+        onConfirm={handleIniciarTurno}
       />
 
       <EndShiftModal
         visible={isEndShiftModalVisible}
         onClose={() => setIsEndShiftModalVisible(false)}
-        onConfirm={() => {
-          setIsEndShiftModalVisible(false);
-          console.log('Turno Cerrado y Liquidado');
-        }}
+        onConfirm={handleFinalizarTurno}
         turno={turno}
       />
 
@@ -176,6 +205,19 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
+  },
+  autoCloseBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 4,
+  },
+  autoCloseText: {
+    flex: 1,
+    fontSize: 13,
   },
   actionsContainer: {
     flexDirection: 'row',

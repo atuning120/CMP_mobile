@@ -47,10 +47,6 @@ export const styles = StyleSheet.create({
   quickOpName: { fontSize: 12, fontWeight: 'bold' },
   quickOpRut: { fontSize: 10, fontFamily: 'monospace' },
 
-  dividerContainer: { marginVertical: 24, alignItems: 'center', justifyContent: 'center' },
-  dividerLine: { position: 'absolute', width: '100%', borderTopWidth: 1 },
-  dividerTextWrapper: { paddingHorizontal: 10 },
-  dividerText: { fontSize: 11, textTransform: 'uppercase' },
 
   offlineNotice: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, useColorScheme, ActivityIndicator } from 'react-native';
 import { Camera, TrendingUp, FileCheck } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
@@ -8,7 +8,7 @@ import { TurnoActual } from '../../types/turno';
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (horometroFinal: number) => Promise<void>;
   turno: TurnoActual | null;
 }
 
@@ -18,6 +18,8 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
 
   const [horometro, setHorometro] = useState('');
   const [novedades, setNovedades] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   // Cálculos de horas
   const desglose = useMemo(() => {
@@ -69,17 +71,43 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
   const isHorometroValid = !isNaN(numericHorometro) && (turno ? numericHorometro >= turno.horometroInicial : true);
   const horometroError = (!isHorometroValid && horometro !== '') ? 'El horómetro final debe ser mayor o igual al inicial.' : '';
 
+  const canSubmit = isHorometroValid && horometro !== '' && !isSubmitting;
+
+  const handleClose = () => {
+    if (isSubmitting) return;
+    setSubmitError('');
+    onClose();
+  };
+
+  // TODO: las novedades aún no se envían al Backend (REPORTE_TURNO tipo FIN)
+  const handleConfirm = async () => {
+    if (!canSubmit) return;
+    setIsSubmitting(true);
+    setSubmitError('');
+    try {
+      await onConfirm(numericHorometro);
+      setHorometro('');
+      setNovedades('');
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : 'No se pudo cerrar el turno.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const footer = (
     <>
-      <TouchableOpacity style={[styles.footerBtn, { borderColor: theme.border, backgroundColor: theme.background }]} onPress={onClose}>
+      <TouchableOpacity style={[styles.footerBtn, { borderColor: theme.border, backgroundColor: theme.background }]} onPress={handleClose}>
         <Text style={[styles.footerBtnText, { color: theme.text }]}>Cancelar</Text>
       </TouchableOpacity>
       <TouchableOpacity
-        style={[styles.footerBtnConfirm, { backgroundColor: theme.danger, opacity: isHorometroValid && horometro !== '' ? 1 : 0.5 }]}
-        onPress={onConfirm}
-        disabled={!isHorometroValid || horometro === ''}
+        style={[styles.footerBtnConfirm, { backgroundColor: theme.danger, opacity: canSubmit ? 1 : 0.5 }]}
+        onPress={handleConfirm}
+        disabled={!canSubmit}
       >
-        <FileCheck size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+        {isSubmitting
+          ? <ActivityIndicator color="#FFFFFF" style={{ marginRight: 8 }} />
+          : <FileCheck size={20} color="#FFFFFF" style={{ marginRight: 8 }} />}
         <Text style={[styles.footerBtnConfirmText, { color: '#FFFFFF' }]}>CERRAR TURNO</Text>
       </TouchableOpacity>
     </>
@@ -90,7 +118,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
   return (
     <AppBottomSheetModal
       visible={visible}
-      onClose={onClose}
+      onClose={handleClose}
       title="Cierre de Turno y Conciliación"
       icon={<FileCheck size={22} color={theme.danger} />}
       iconBadgeColor={theme.danger + '15'}
@@ -113,7 +141,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
         </View>
         <View style={styles.datoCol}>
           <Text style={[styles.datoLabel, { color: theme.textSecondary }]}>ÁREA:</Text>
-          <Text style={[styles.datoValue, { color: theme.primary }]} numberOfLines={1}>{turno.area.nombre}</Text>
+          <Text style={[styles.datoValue, { color: theme.primary }]} numberOfLines={1}>{turno.area?.nombre ?? 'Sin asignar'}</Text>
         </View>
       </View>
 
@@ -202,6 +230,10 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
         placeholder="Turno finalizado sin novedades mecánicas..."
         placeholderTextColor={theme.textTertiary}
       />
+
+      {submitError !== '' && (
+        <Text style={[styles.errorText, { color: theme.danger, textAlign: 'center' }]}>{submitError}</Text>
+      )}
     </AppBottomSheetModal>
   );
 };

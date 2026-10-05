@@ -10,6 +10,11 @@ export interface Operador {
   rol: string;
 }
 
+// Perfil del acceso rápido del login. Solo para pruebas: incluye la contraseña en texto plano.
+export interface PerfilPrueba extends Operador {
+  password: string;
+}
+
 export type VisualContrastMode = 'day' | 'night';
 export type NetworkState = 'online' | 'offline';
 export type DeviceViewMode = 'phone' | 'tablet';

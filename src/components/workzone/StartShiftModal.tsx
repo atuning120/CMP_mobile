@@ -1,37 +1,39 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, useColorScheme } from 'react-native';
-import { ChevronDown, Camera, CheckCircle, ClipboardCheck } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, useColorScheme, ActivityIndicator } from 'react-native';
+import { Camera, CheckCircle, ClipboardCheck } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
+import { SearchableSelect } from '../common/SearchableSelect';
+import { useMaquinasActivas } from '../../hooks/useMaquinasActivas';
+import { useAreasActivas } from '../../hooks/useAreasActivas';
+import { useZonasPorArea } from '../../hooks/useZonasPorArea';
+import { Area, IniciarTurnoDatos, ZonaTrabajo } from '../../types/turno';
 
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (datos: IniciarTurnoDatos) => Promise<void>;
 }
 
-const MOCK_MAQUINAS = [
-  { id: 'CF-01', tipo: 'Cargador Frontal', modelo: 'CAT 988K High Lift', horometro: '4855.6' },
-  { id: 'CF-02', tipo: 'Cargador Frontal', modelo: 'CAT 988K Standard', horometro: '5931.2' },
-  { id: 'CF-03', tipo: 'Cargador Frontal', modelo: 'Komatsu WA600-8', horometro: '2310.8' },
-  { id: 'BD-01', tipo: 'Bulldozer', modelo: 'CAT D10T2 Heavy Crawler', horometro: '7420.5' },
-  { id: 'EX-01', tipo: 'Excavadora', modelo: 'CAT 349D2 L Hydraulic', horometro: '6184.9' },
-  { id: 'RX-01', tipo: 'Retroexcavadora', modelo: 'CAT 420F2 4WD', horometro: '3120.1' },
-];
-
-const MOCK_AREAS = ['Área 55 (Carguío de Trenes)', 'Área 56 (Chancador Secundario)', 'Área 57 (Botadero Norte)'];
-const MOCK_ZONAS = ['Vía Férrea 1 - Espolón Sur', 'Fase 4 - Banco 320', 'Fase 4 - Rampa Sur'];
+// Accesores estables para SearchableSelect (evitan recalcular la búsqueda en cada render)
+const getId = (item: Area | ZonaTrabajo) => item.id;
+const getNombre = (item: Area | ZonaTrabajo) => item.nombre;
+const getDescripcion = (item: Area | ZonaTrabajo) => item.descripcion;
 
 export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
-  const [selectedMaquina, setSelectedMaquina] = useState('CF-01');
+  const { maquinas, isLoading: isLoadingMaquinas, error: maquinasError, refetch: refetchMaquinas } = useMaquinasActivas(visible);
+  const [selectedMaquina, setSelectedMaquina] = useState<number | null>(null);
   const [horometro, setHorometro] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [instrucciones, setInstrucciones] = useState('');
-  const [activeDropdown, setActiveDropdown] = useState<'area' | 'zona' | null>(null);
-  const [area, setArea] = useState(MOCK_AREAS[0]);
-  const [zona, setZona] = useState(MOCK_ZONAS[0]);
+  const { areas, isLoading: isLoadingAreas, error: areasError, refetch: refetchAreas } = useAreasActivas(visible);
+  const [areaSeleccionada, setAreaSeleccionada] = useState<Area | null>(null);
+  const [zonaSeleccionada, setZonaSeleccionada] = useState<ZonaTrabajo | null>(null);
+  const { zonas, isLoading: isLoadingZonas, error: zonasError, refetch: refetchZonas } = useZonasPorArea(areaSeleccionada?.id ?? null);
 
   const handleHorometroChange = (text: string) => {
     let formattedText = text.replace(',', '.');
@@ -51,13 +53,55 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
     setHorometro(formattedText);
   };
 
+  const numericHorometro = parseFloat(horometro);
+  const canSubmit =
+    selectedMaquina !== null &&
+    areaSeleccionada !== null &&
+    !isNaN(numericHorometro) &&
+    !isSubmitting;
+
+  const handleClose = () => {
+    if (isSubmitting) return;
+    setSubmitError('');
+    onClose();
+  };
+
+  const handleConfirm = async () => {
+    if (!canSubmit || selectedMaquina === null || areaSeleccionada === null) return;
+    setIsSubmitting(true);
+    setSubmitError('');
+    try {
+      await onConfirm({
+        idMaquina: selectedMaquina,
+        horometroInicial: numericHorometro,
+        idArea: areaSeleccionada.id,
+        idZona: zonaSeleccionada?.id ?? null,
+      });
+      setSelectedMaquina(null);
+      setAreaSeleccionada(null);
+      setZonaSeleccionada(null);
+      setHorometro('');
+      setInstrucciones('');
+    } catch (e) {
+      setSubmitError(e instanceof Error ? e.message : 'No se pudo iniciar el turno.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const footer = (
     <>
-      <TouchableOpacity style={[styles.footerBtn, { borderColor: theme.border, backgroundColor: theme.background }]} onPress={onClose}>
+      <TouchableOpacity style={[styles.footerBtn, { borderColor: theme.border, backgroundColor: theme.background }]} onPress={handleClose}>
         <Text style={[styles.footerBtnText, { color: theme.text }]}>Cancelar</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[styles.footerBtnConfirm, { backgroundColor: theme.success }]} onPress={onConfirm}>
-        <CheckCircle size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+      <TouchableOpacity
+        style={[styles.footerBtnConfirm, { backgroundColor: theme.success, opacity: canSubmit ? 1 : 0.5 }]}
+        onPress={handleConfirm}
+        disabled={!canSubmit}
+      >
+        {isSubmitting
+          ? <ActivityIndicator color="#FFFFFF" style={{ marginRight: 8 }} />
+          : <CheckCircle size={20} color="#FFFFFF" style={{ marginRight: 8 }} />}
         <Text style={[styles.footerBtnConfirmText, { color: '#FFFFFF' }]}>INICIAR TURNO</Text>
       </TouchableOpacity>
     </>
@@ -66,7 +110,7 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
   return (
     <AppBottomSheetModal
       visible={visible}
-      onClose={onClose}
+      onClose={handleClose}
       title="Inicio de Turno"
       icon={<ClipboardCheck size={22} color={theme.success} />}
       iconBadgeColor={theme.success + '15'}
@@ -74,8 +118,14 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
     >
       {/* Sección Maquinaria */}
       <Text style={[styles.sectionTitle, { color: theme.textTertiary }]}>SELECCIONAR MAQUINARIA ASIGNADA:</Text>
+      {isLoadingMaquinas && <ActivityIndicator color={theme.primary} style={{ marginBottom: 20 }} />}
+      {maquinasError && (
+        <TouchableOpacity onPress={refetchMaquinas} style={{ marginBottom: 20 }}>
+          <Text style={[styles.errorText, { color: theme.danger }]}>{maquinasError.message} Toca para reintentar.</Text>
+        </TouchableOpacity>
+      )}
       <View style={styles.gridContainer}>
-        {MOCK_MAQUINAS.map((maq) => {
+        {maquinas.map((maq) => {
           const isSelected = selectedMaquina === maq.id;
           return (
             <TouchableOpacity
@@ -96,68 +146,62 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
               onPress={() => setSelectedMaquina(maq.id)}
             >
               <View style={styles.maquinaCardTop}>
-                <Text style={[styles.maquinaId, { color: theme.text }]}>{maq.id}</Text>
-                <Text style={[styles.maquinaTipo, { color: theme.warning }]}>{maq.tipo}</Text>
+                <Text style={[styles.maquinaId, { color: theme.text }]}>{maq.codigoCorto}</Text>
+                <Text style={[styles.maquinaTipo, { color: theme.warning }]}>{maq.tipoMaquina}</Text>
               </View>
               <Text style={[styles.maquinaModelo, { color: theme.textSecondary }]} numberOfLines={1}>{maq.modelo}</Text>
-              <Text style={[styles.maquinaHorom, { color: theme.textSecondary }]}>
-                Horóm: <Text style={{ color: theme.warning, fontWeight: 'bold' }}>{maq.horometro} hrs</Text>
-              </Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
       {/* Área y Zona */}
-      <View style={{ marginBottom: 16, zIndex: 9 }}>
-        <Text style={[styles.sectionTitle, { color: theme.textTertiary }]}>ÁREA DE OPERACIÓN PRINCIPAL:</Text>
-        <TouchableOpacity 
-          style={[styles.dropdown, { backgroundColor: theme.cardAlt, borderColor: activeDropdown === 'area' ? theme.primary : theme.border }]}
-          onPress={() => setActiveDropdown(activeDropdown === 'area' ? null : 'area')}
-        >
-          <Text style={[styles.dropdownText, { color: theme.text }]} numberOfLines={1}>{area}</Text>
-          <ChevronDown size={20} color={theme.textSecondary} />
-        </TouchableOpacity>
-        {activeDropdown === 'area' && (
-          <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
-            {MOCK_AREAS.map((a, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={[styles.dropdownOption, idx < MOCK_AREAS.length - 1 && styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
-                onPress={() => { setArea(a); setActiveDropdown(null); }}
-              >
-                <Text style={[styles.dropdownText, { color: area === a ? theme.primary : theme.text }]}>{a}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+      <View style={{ marginBottom: 16 }}>
+        <SearchableSelect
+          label="ÁREA DE OPERACIÓN PRINCIPAL:"
+          placeholder="Buscar o seleccionar área..."
+          options={areas}
+          value={areaSeleccionada}
+          onChange={(area) => {
+            setAreaSeleccionada(area);
+            setZonaSeleccionada(null);
+          }}
+          getOptionKey={getId}
+          getOptionLabel={getNombre}
+          getOptionDescription={getDescripcion}
+          isLoading={isLoadingAreas}
+          error={areasError?.message}
+          onRetry={refetchAreas}
+          emptyMessage="No hay áreas activas registradas"
+        />
       </View>
-      <View style={{ marginBottom: 24, zIndex: 8 }}>
-        <Text style={[styles.sectionTitle, { color: theme.textTertiary }]}>ZONA DE TRABAJO ESPECÍFICA:</Text>
-        <TouchableOpacity 
-          style={[styles.dropdown, { backgroundColor: theme.cardAlt, borderColor: activeDropdown === 'zona' ? theme.primary : theme.border }]}
-          onPress={() => setActiveDropdown(activeDropdown === 'zona' ? null : 'zona')}
-        >
-          <Text style={[styles.dropdownText, { color: theme.text }]} numberOfLines={1}>{zona}</Text>
-          <ChevronDown size={20} color={theme.textSecondary} />
-        </TouchableOpacity>
-        {activeDropdown === 'zona' && (
-          <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
-            {MOCK_ZONAS.map((z, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={[styles.dropdownOption, idx < MOCK_ZONAS.length - 1 && styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
-                onPress={() => { setZona(z); setActiveDropdown(null); }}
-              >
-                <Text style={[styles.dropdownText, { color: zona === z ? theme.primary : theme.text }]}>{z}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+      <View style={{ marginBottom: 24 }}>
+        <SearchableSelect
+          label="ZONA DE TRABAJO ESPECÍFICA (OPCIONAL):"
+          placeholder={areaSeleccionada ? 'Buscar o seleccionar zona...' : 'Primero selecciona un área'}
+          options={zonas}
+          value={zonaSeleccionada}
+          onChange={setZonaSeleccionada}
+          getOptionKey={getId}
+          getOptionLabel={getNombre}
+          getOptionDescription={getDescripcion}
+          isLoading={isLoadingZonas}
+          error={zonasError?.message}
+          onRetry={refetchZonas}
+          disabled={!areaSeleccionada}
+          hint={
+            !areaSeleccionada
+              ? 'Las zonas se cargan según el área seleccionada.'
+              : !isLoadingZonas && !zonasError && zonas.length === 0
+                ? 'Esta área no tiene zonas de trabajo registradas.'
+                : undefined
+          }
+          emptyMessage="Esta área no tiene zonas de trabajo activas"
+        />
       </View>
 
       {/* Horómetro */}
-      <View style={[styles.horometroContainer, { backgroundColor: theme.cardAlt, borderColor: theme.border, zIndex: 7 }]}>
+      <View style={[styles.horometroContainer, { backgroundColor: theme.cardAlt, borderColor: theme.border, }]}>
         <Text style={[styles.sectionTitle, { color: theme.textTertiary, textAlign: 'center', marginBottom: 16 }]}>
           HORÓMETRO INICIAL EN CABINA
         </Text>
@@ -183,7 +227,7 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
       </View>
 
       {/* Evidencias */}
-      <View style={{ zIndex: 6 }}>
+      <View>
         <Text style={[styles.sectionTitle, { color: theme.textTertiary, marginTop: 16 }]}>EVIDENCIA FOTOGRÁFICA DE PRE-USO (OPCIONAL):</Text>
       <TouchableOpacity style={[styles.evidenciaBtn, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
         <View style={[styles.evidenciaIconBadge, { backgroundColor: theme.primary + '15' }]}>
@@ -197,7 +241,7 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
       </View>
 
       {/* Instrucciones */}
-      <View style={{ zIndex: 5 }}>
+      <View>
         <Text style={[styles.sectionTitle, { color: theme.textTertiary, marginTop: 16 }]}>INSTRUCCIONES / DESCRIPCIÓN DEL TRABAJO:</Text>
         <TextInput
         style={[styles.textArea, { backgroundColor: theme.cardAlt, borderColor: theme.border, color: theme.text }]}
@@ -214,6 +258,10 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
         {instrucciones.length}/250
         </Text>
       </View>
+
+      {submitError !== '' && (
+        <Text style={[styles.errorText, { color: theme.danger, textAlign: 'center' }]}>{submitError}</Text>
+      )}
     </AppBottomSheetModal>
   );
 };
@@ -256,42 +304,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 4,
   },
-  maquinaHorom: {
-    fontSize: 11,
-  },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-  },
-  dropdownText: {
-    fontSize: 14,
-    flex: 1,
-  },
-  dropdownOptionsContainer: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    borderWidth: 1,
-    borderRadius: 8,
-    marginTop: 4,
-    overflow: 'hidden',
-    zIndex: 9999,
-    elevation: 9999,
-  },
-  dropdownOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dropdownOptionBorder: {
-    borderBottomWidth: 1,
+  errorText: {
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: '500',
   },
   horometroContainer: {
     borderWidth: 1,
