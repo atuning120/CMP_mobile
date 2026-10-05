@@ -1,7 +1,13 @@
 import Constants from 'expo-constants';
 
-// IP del servidor de Expo (dispositivo físico en la misma red) o el alias del emulador Android.
+// URL del Backend desplegado (p. ej. Azure Container Apps). Se define al compilar el APK con
+// EXPO_PUBLIC_API_URL (eas.json o .env); Expo la incrusta en el bundle.
+const URL_CONFIGURADA = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, '');
+
+// Sin URL configurada (desarrollo): IP del servidor de Expo (dispositivo físico en la misma red)
+// o el alias del emulador Android.
 export const getBackendBaseUrl = () => {
+  if (URL_CONFIGURADA) return URL_CONFIGURADA;
   const debuggerHost = Constants.expoConfig?.hostUri;
   const backendIp = debuggerHost ? debuggerHost.split(':')[0] : '10.0.2.2';
   return `http://${backendIp}:3000`;

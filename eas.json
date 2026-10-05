@@ -12,6 +12,9 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://cmp-backend.blueglacier-678ef622.chilecentral.azurecontainerapps.io"
       }
     },
     "production": {
