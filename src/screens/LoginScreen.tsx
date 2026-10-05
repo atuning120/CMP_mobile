@@ -8,11 +8,10 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Constants from 'expo-constants';
 
 import { useNetInfo } from '@react-native-community/netinfo';
 
-import { saveSecureSession, attemptOfflineLogin } from '../services/authStorage';
+import { AuthError, loginOffline, loginOnline, OFFLINE_MAX_DIAS } from '../services/authService';
 
 import { LoginFooter } from '../components/LoginFooter';
 import { LoginForm } from '../components/LoginForm';
@@ -39,8 +38,6 @@ const getLoginErrorMessage = (status: number, code?: string): string => {
   if (status === 403) return LOGIN_ERROR_MESSAGES.SIN_ACCESO_APP;
   return 'El servidor no pudo procesar el inicio de sesión. Intenta nuevamente en unos minutos.';
 };
-
-class LoginError extends Error {}
 
 interface LoginScreenProps {
   onLoginSuccess: (operador: Operador, rol: string) => void;
@@ -71,90 +68,62 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     setErrorMsg(null);
 
+    const intentarOffline = async (motivoSinRed: boolean) => {
+      const resultado = await loginOffline(email, password);
+      if (resultado.ok) {
+        console.log('Login offline exitoso');
+        onLoginSuccess(resultado.operador, resultado.rol);
+        return;
+      }
+      setErrorMsg(
+        resultado.motivo === 'credenciales'
+          ? 'Correo o contraseña incorrectos.'
+          : resultado.motivo === 'vencida'
+            ? `Sin conexión: tu acceso offline venció (más de ${OFFLINE_MAX_DIAS} días sin validar). Conéctate para ingresar.`
+            : motivoSinRed
+              ? 'Sin conexión: para usar el modo offline primero debes ingresar una vez con conexión en este dispositivo.'
+              : 'No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.',
+      );
+    };
+
     // Flujo Offline Explicito
     if (networkState === 'offline') {
       console.log('Modo offline detectado, intentando login local...');
-      const cachedSession = await attemptOfflineLogin(email, password);
-      if (cachedSession) {
-        console.log('Login offline exitoso');
-        onLoginSuccess(cachedSession.operador, cachedSession.rol);
-      } else {
-        setErrorMsg('Credenciales inválidas o no hay sesión guardada para modo offline.');
-      }
+      await intentarOffline(true);
       return;
     }
 
+    // El operador mostrado sale de los perfiles de prueba hasta que el Backend exponga el perfil
+    const matched = operadoresDisponibles.find(
+      (op) => op.email.toLowerCase() === email.trim().toLowerCase()
+    );
+    const finalOp: Operador = matched ?? {
+      id_operador: 105,
+      nombre: email.split('@')[0],
+      apellido: 'Operador',
+      rut: '16.789.012-3',
+      telefono: '+56 9 8899 7766',
+      estado: 'En Faena',
+      email,
+      empresa: 'Servicio Movimiento de Material MLC',
+      rol: 'Operador de Maquinaria',
+    };
+
     try {
-      // Determine the backend IP dynamically from Expo or fallback to Android Emulator default
-      const debuggerHost = Constants.expoConfig?.hostUri;
-      const backendIp = debuggerHost ? debuggerHost.split(':')[0] : '10.0.2.2';
-      const backendUrl = `http://${backendIp}:3000/auth/login`;
-
-      console.log('Intentando conectar al backend (Online):', backendUrl);
-
       // El backend responde con el rol (OPERADOR o JEFE_TURNO) para decidir la pantalla
-      const response = await fetch(backendUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new LoginError(getLoginErrorMessage(response.status, errorData?.code));
-      }
-
-      const data = await response.json();
-      console.log('Login successful, rol:', data.rol);
-
-      let finalOp: Operador;
-      const matched = operadoresDisponibles.find(
-        (op) => op.email.toLowerCase() === email.toLowerCase()
-      );
-
-      if (matched) {
-        finalOp = matched;
-      } else {
-        finalOp = {
-          id_operador: 105,
-          nombre: email.split('@')[0],
-          apellido: 'Operador',
-          rut: '16.789.012-3',
-          telefono: '+56 9 8899 7766',
-          estado: 'En Faena',
-          email,
-          empresa: 'Servicio Movimiento de Material MLC',
-          rol: 'Operador de Maquinaria',
-        };
-      }
-
-      // Guardamos la sesión de manera segura para futuros logins offline
-      await saveSecureSession(email, password, data.accessToken, data.rol, finalOp);
-      
-      onLoginSuccess(finalOp, data.rol);
-    } catch (error: any) {
-      // Errores ya traducidos desde la respuesta del backend
-      if (error instanceof LoginError) {
-        setErrorMsg(error.message);
+      const { rol } = await loginOnline(email, password, finalOp);
+      console.log('Login successful, rol:', rol);
+      onLoginSuccess(finalOp, rol);
+    } catch (error) {
+      if (error instanceof AuthError && error.status > 0) {
+        // Errores ya traducidos desde la respuesta del backend
+        setErrorMsg(getLoginErrorMessage(error.status, error.code));
         return;
       }
 
-      console.error('Login error:', error);
-
-      // Si falló por un error de red (no del servidor), intentamos offline
-      if (error.message === 'Failed to fetch' || error.message.includes('Network request failed')) {
-        console.log('Fallo de red detectado, intentando login local...');
-        const cachedSession = await attemptOfflineLogin(email, password);
-        if (cachedSession) {
-          console.log('Login offline de respaldo exitoso');
-          onLoginSuccess(cachedSession.operador, cachedSession.rol);
-          return;
-        }
-      }
-
-      setErrorMsg('No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.');
+      // Fallo de red (no del servidor): intentamos con la sesión guardada
+      console.log('Fallo de red detectado, intentando login local...');
+      await intentarOffline(false);
     }
   };
 

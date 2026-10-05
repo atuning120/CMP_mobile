@@ -1,12 +1,6 @@
-import Constants from 'expo-constants';
 import { getStoredToken } from './authStorage';
-
-// Misma resolución de host que el login: IP del servidor de Expo o el alias del emulador Android.
-export const getBackendBaseUrl = () => {
-  const debuggerHost = Constants.expoConfig?.hostUri;
-  const backendIp = debuggerHost ? debuggerHost.split(':')[0] : '10.0.2.2';
-  return `http://${backendIp}:3000`;
-};
+import { sincronizarSesion } from './authService';
+import { fetchBackend } from './backendUrl';
 
 export class ApiError extends Error {
   constructor(
@@ -18,24 +12,32 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * fetch autenticado con el JWT guardado. Lanza ApiError con el `code` que envía el backend.
- */
-export const apiRequest = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
+const enviar = async (path: string, init: RequestInit): Promise<Response> => {
   const token = await getStoredToken();
-
-  let response: Response;
   try {
-    response = await fetch(`${getBackendBaseUrl()}${path}`, {
+    return await fetchBackend(path, {
       ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...init.headers,
-      },
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...init.headers },
     });
   } catch {
     throw new ApiError('No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.', 0);
+  }
+};
+
+/**
+ * fetch autenticado con el JWT guardado. Si el access token expiró, renueva la sesión y reintenta
+ * una vez. Lanza ApiError con el `code` que envía el backend.
+ */
+export const apiRequest = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
+  let response = await enviar(path, init);
+
+  if (response.status === 401) {
+    const resultado = await sincronizarSesion();
+    if (resultado === 'ok') {
+      response = await enviar(path, init);
+    } else if (resultado === 'sin-conexion') {
+      throw new ApiError('No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.', 0);
+    }
   }
 
   if (!response.ok) {

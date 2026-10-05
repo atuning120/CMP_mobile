@@ -3,7 +3,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { useNetInfo } from '@react-native-community/netinfo';
-import { backgroundSyncLogin } from '../services/authStorage';
+import { sincronizarSesion } from '../services/authService';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -22,8 +22,8 @@ export default function TabLayout() {
       wasOffline.current = true;
     } else if (netInfo.isConnected === true && wasOffline.current) {
       wasOffline.current = false;
-      console.log('🌐 Conexión recuperada. Ejecutando sincronización en segundo plano...');
-      backgroundSyncLogin();
+      console.log('🌐 Conexión recuperada. Sincronizando sesión con el servidor...');
+      sincronizarSesion().then((resultado) => console.log('Sincronización de sesión:', resultado));
     }
   }, [netInfo.isConnected]);
 

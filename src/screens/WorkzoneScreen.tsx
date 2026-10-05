@@ -14,6 +14,7 @@ import { StartShiftModal } from '../components/workzone/StartShiftModal';
 import { EndShiftModal } from '../components/workzone/EndShiftModal';
 import { ChangeStateModal } from '../components/workzone/ChangeStateModal';
 import { ApiError } from '../services/apiClient';
+import { cerrarSesion } from '../services/authService';
 import { IniciarTurnoDatos } from '../types/turno';
 
 const formatearFechaHora = (iso: string) =>
@@ -41,7 +42,8 @@ export default function WorkzoneScreen() {
   const [isChangeStateModalVisible, setIsChangeStateModalVisible] = useState(false);
 
   // Cerrar sesión NO cierra el turno: sigue EN_CURSO en el Backend y se recupera al volver a ingresar
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await cerrarSesion();
     router.replace('/');
   };
 

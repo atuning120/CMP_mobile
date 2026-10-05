@@ -1,115 +1,75 @@
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
 import { Operador } from '../types/mining';
+import { CredencialOffline } from './credencialOffline';
 
-const SECURE_STORE_PREFIX = 'cmp_secure_';
-const CACHE_PREFIX = '@cmp_cache_';
+const SESSION_KEY = 'cmp_secure_session_v2';
+// Formato anterior: guardaba la contraseña en texto plano. Se elimina al leer.
+const LEGACY_SESSION_KEY = 'cmp_secure_session';
+const OPERADOR_CACHE_KEY = '@cmp_cache_operador';
 
-/**
- * Guarda de forma segura las credenciales y la info del operador después de un login exitoso.
- * (Nota de seguridad: en producción, nunca guardar contraseñas en texto plano, usar hashes locales).
- */
-export const saveSecureSession = async (email: string, passwordOrPin: string, token: string, rol: string, operador: Operador) => {
-  try {
-    const sessionData = JSON.stringify({ email, passwordOrPin, token, rol });
-    await SecureStore.setItemAsync(`${SECURE_STORE_PREFIX}session`, sessionData);
-    await AsyncStorage.setItem(`${CACHE_PREFIX}operador`, JSON.stringify(operador));
-  } catch (error) {
-    console.error('Error saving secure session', error);
-  }
-};
+export interface TokensSesion {
+  accessToken: string;
+  refreshToken: string;
+  refreshTokenExpiraEn: string; // ISO 8601
+}
 
 /**
- * Intenta hacer login offline validando las credenciales guardadas localmente.
+ * Sesión persistida en SecureStore (Keychain / Keystore). Contiene los tokens del Backend y el
+ * verificador de la contraseña para el login offline; nunca la contraseña en claro.
  */
-export const attemptOfflineLogin = async (
-  email: string,
-  passwordInput: string,
-): Promise<{ operador: Operador; rol: string } | null> => {
-  try {
-    const sessionString = await SecureStore.getItemAsync(`${SECURE_STORE_PREFIX}session`);
-    if (!sessionString) return null;
+export interface SesionGuardada {
+  version: 2;
+  identificador: string; // email o RUT normalizado
+  rol: string;
+  idOperador: number | null;
+  credencial: CredencialOffline;
+  // Última vez que el Backend confirmó la identidad (login o refresh). Limita el uso offline.
+  ultimaValidacionOnline: string; // ISO 8601
+  // null tras cerrar sesión con conexión o si el Backend invalidó la sesión: se recupera con un login online.
+  // Un logout sin conexión los conserva, para que la sesión siga renovándose al volver la red.
+  tokens: TokensSesion | null;
+}
 
-    const sessionData = JSON.parse(sessionString);
-    
-    if (
-      sessionData.email.toLowerCase() === email.toLowerCase() && 
-      sessionData.passwordOrPin === passwordInput
-    ) {
-      // Credenciales válidas, retornamos el operador cacheado
-      const operadorString = await AsyncStorage.getItem(`${CACHE_PREFIX}operador`);
-      if (operadorString) {
-        return { operador: JSON.parse(operadorString) as Operador, rol: sessionData.rol };
-      }
-    }
-    return null;
+export const normalizarIdentificador = (identificador: string) => identificador.trim().toLowerCase();
+
+export const leerSesion = async (): Promise<SesionGuardada | null> => {
+  try {
+    await SecureStore.deleteItemAsync(LEGACY_SESSION_KEY).catch(() => undefined);
+    const raw = await SecureStore.getItemAsync(SESSION_KEY);
+    if (!raw) return null;
+    const sesion = JSON.parse(raw) as SesionGuardada;
+    return sesion.version === 2 ? sesion : null;
   } catch (error) {
-    console.error('Error in offline login', error);
+    console.error('Error leyendo la sesión guardada', error);
     return null;
   }
 };
 
-/**
- * Elimina la sesión actual (Logout).
- */
-export const clearSecureSession = async () => {
-  try {
-    await SecureStore.deleteItemAsync(`${SECURE_STORE_PREFIX}session`);
-    await AsyncStorage.removeItem(`${CACHE_PREFIX}operador`);
-  } catch (error) {
-    console.error('Error clearing secure session', error);
-  }
+export const guardarSesion = async (sesion: SesionGuardada) => {
+  await SecureStore.setItemAsync(SESSION_KEY, JSON.stringify(sesion));
+};
+
+export const actualizarSesion = async (cambios: Partial<SesionGuardada>) => {
+  const actual = await leerSesion();
+  if (actual) await guardarSesion({ ...actual, ...cambios });
+};
+
+export const borrarSesion = async () => {
+  await SecureStore.deleteItemAsync(SESSION_KEY).catch(() => undefined);
+  await AsyncStorage.removeItem(OPERADOR_CACHE_KEY).catch(() => undefined);
+};
+
+export const guardarOperadorCache = async (operador: Operador) => {
+  await AsyncStorage.setItem(OPERADOR_CACHE_KEY, JSON.stringify(operador));
+};
+
+export const leerOperadorCache = async (): Promise<Operador | null> => {
+  const raw = await AsyncStorage.getItem(OPERADOR_CACHE_KEY);
+  return raw ? (JSON.parse(raw) as Operador) : null;
 };
 
 /**
- * Obtiene el token guardado para futuras peticiones a la API.
+ * Token para las peticiones a la API.
  */
-export const getStoredToken = async (): Promise<string | null> => {
-  try {
-    const sessionString = await SecureStore.getItemAsync(`${SECURE_STORE_PREFIX}session`);
-    if (sessionString) {
-      const sessionData = JSON.parse(sessionString);
-      return sessionData.token;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-};
-
-/**
- * Realiza un login silencioso en segundo plano usando las credenciales guardadas.
- * Se llama cuando vuelve la conexión a internet.
- */
-export const backgroundSyncLogin = async (): Promise<boolean> => {
-  try {
-    const sessionString = await SecureStore.getItemAsync(`${SECURE_STORE_PREFIX}session`);
-    if (!sessionString) return false;
-
-    const session = JSON.parse(sessionString);
-    const { email, passwordOrPin } = session;
-
-    const debuggerHost = Constants.expoConfig?.hostUri;
-    const backendIp = debuggerHost ? debuggerHost.split(':')[0] : '10.0.2.2';
-    const backendUrl = `http://${backendIp}:3000/auth/login`;
-
-    const response = await fetch(backendUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: passwordOrPin }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      const sessionData = JSON.stringify({ ...session, token: data.accessToken, rol: data.rol });
-      await SecureStore.setItemAsync(`${SECURE_STORE_PREFIX}session`, sessionData);
-      console.log('✅ Sincronización en segundo plano exitosa. Nuevo token obtenido.');
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error('❌ Error en sincronización en segundo plano', error);
-    return false;
-  }
-};
+export const getStoredToken = async (): Promise<string | null> => (await leerSesion())?.tokens?.accessToken ?? null;
