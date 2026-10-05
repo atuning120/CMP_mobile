@@ -21,11 +21,30 @@ import { ProfileChip } from '../components/ProfileChip';
 import { styles } from './LoginScreen.styles';
 
 import { darkTheme, lightTheme } from '../constants/theme';
-import { NetworkState, Operador } from '../types/mining';
+import { NetworkState, Operador, PerfilPrueba } from '../types/mining';
+
+// Mensajes que se muestran al usuario según el error del login. Nunca se muestra el texto crudo
+// del servidor ni de la red.
+const LOGIN_ERROR_MESSAGES: Record<string, string> = {
+  DATOS_INCOMPLETOS: 'Por favor ingresa tu correo corporativo y contraseña.',
+  CREDENCIALES_INVALIDAS: 'Correo o contraseña incorrectos.',
+  OPERADOR_INACTIVO: 'Tu cuenta de operador está inactiva. Contacta a tu jefe de turno.',
+  SIN_ACCESO_APP: 'Tu usuario no tiene acceso a la aplicación móvil.',
+};
+
+const getLoginErrorMessage = (status: number, code?: string): string => {
+  if (code && LOGIN_ERROR_MESSAGES[code]) return LOGIN_ERROR_MESSAGES[code];
+  if (status === 400) return LOGIN_ERROR_MESSAGES.DATOS_INCOMPLETOS;
+  if (status === 401) return LOGIN_ERROR_MESSAGES.CREDENCIALES_INVALIDAS;
+  if (status === 403) return LOGIN_ERROR_MESSAGES.SIN_ACCESO_APP;
+  return 'El servidor no pudo procesar el inicio de sesión. Intenta nuevamente en unos minutos.';
+};
+
+class LoginError extends Error {}
 
 interface LoginScreenProps {
   onLoginSuccess: (operador: Operador, rol: string) => void;
-  operadoresDisponibles: Operador[];
+  operadoresDisponibles: PerfilPrueba[];
   networkState: NetworkState;
 }
 
@@ -34,11 +53,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   operadoresDisponibles,
   networkState,
 }) => {
-  //password hardcodeada. ESTO ES SOLO PARA PRUEBAS
-  const [email, setEmail] = useState<string>('pedro.gomez@cmp.cl');
-  const [password, setPassword] = useState<string>('miPassword123');
+  //credenciales precargadas desde el acceso rápido. ESTO ES SOLO PARA PRUEBAS
+  const [email, setEmail] = useState<string>(operadoresDisponibles[0].email);
+  const [password, setPassword] = useState<string>(operadoresDisponibles[0].password);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [selectedQuickOp, setSelectedQuickOp] = useState<Operador>(operadoresDisponibles[0]);
+  const [selectedQuickOp, setSelectedQuickOp] = useState<PerfilPrueba>(operadoresDisponibles[0]);
 
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
@@ -69,10 +88,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       // Determine the backend IP dynamically from Expo or fallback to Android Emulator default
       const debuggerHost = Constants.expoConfig?.hostUri;
       const backendIp = debuggerHost ? debuggerHost.split(':')[0] : '10.0.2.2';
-      const backendUrl = `http://${backendIp}:3000/auth/login/operador`;
+      const backendUrl = `http://${backendIp}:3000/auth/login`;
 
       console.log('Intentando conectar al backend (Online):', backendUrl);
 
+      // El backend responde con el rol (OPERADOR o JEFE_TURNO) para decidir la pantalla
       const response = await fetch(backendUrl, {
         method: 'POST',
         headers: {
@@ -83,11 +103,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || 'Credenciales inválidas o error de servidor');
+        throw new LoginError(getLoginErrorMessage(response.status, errorData?.code));
       }
 
       const data = await response.json();
-      console.log('Login successful, token received:', data.accessToken);
+      console.log('Login successful, rol:', data.rol);
 
       let finalOp: Operador;
       const matched = operadoresDisponibles.find(
@@ -115,8 +135,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       
       onLoginSuccess(finalOp, data.rol);
     } catch (error: any) {
+      // Errores ya traducidos desde la respuesta del backend
+      if (error instanceof LoginError) {
+        setErrorMsg(error.message);
+        return;
+      }
+
       console.error('Login error:', error);
-      
+
       // Si falló por un error de red (no del servidor), intentamos offline
       if (error.message === 'Failed to fetch' || error.message.includes('Network request failed')) {
         console.log('Fallo de red detectado, intentando login local...');
@@ -128,14 +154,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         }
       }
 
-      setErrorMsg(error.message || 'Error al conectar con el servidor.');
+      setErrorMsg('No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.');
     }
   };
 
-  const handleQuickSelect = (op: Operador) => {
+  const handleQuickSelect = (op: PerfilPrueba) => {
     setSelectedQuickOp(op);
     setEmail(op.email);
-    setPassword('••••••••');
+    setPassword(op.password);
     setErrorMsg(null);
   };
 

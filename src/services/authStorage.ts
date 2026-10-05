@@ -92,7 +92,7 @@ export const backgroundSyncLogin = async (): Promise<boolean> => {
 
     const debuggerHost = Constants.expoConfig?.hostUri;
     const backendIp = debuggerHost ? debuggerHost.split(':')[0] : '10.0.2.2';
-    const backendUrl = `http://${backendIp}:3000/auth/login/operador`;
+    const backendUrl = `http://${backendIp}:3000/auth/login`;
 
     const response = await fetch(backendUrl, {
       method: 'POST',
