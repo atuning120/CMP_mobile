@@ -424,5 +424,197 @@
     "seen": 1790952590.5657265,
     "ast_hash": "6794be22dd9dd00003515895d3b4ff06",
     "semantic_hash": "6794be22dd9dd00003515895d3b4ff06"
+  },
+  ".claude/settings.json": {
+    "mtime": 1790952590.68022,
+    "seen": 1791199421.0358887,
+    "ast_hash": "94db4c3f711cb63b2c3d5650c553a9c8",
+    "semantic_hash": ""
+  },
+  ".claude/skills/new-screen/SKILL.md": {
+    "mtime": 1790952560.3753896,
+    "seen": 1791199421.035999,
+    "ast_hash": "104d1628ad7cd7e9ca98e0267a8f9de4",
+    "semantic_hash": ""
+  },
+  ".github/workflows/pr-check.yml": {
+    "mtime": 1790612952.604476,
+    "seen": 1791199421.036,
+    "ast_hash": "7a2e9fd39bea3b4d9722187b87fe3a44",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1790611913.4059455,
+    "seen": 1791199421.036001,
+    "ast_hash": "233d1484702a528f5dcb4333cd01bb43",
+    "semantic_hash": ""
+  },
+  "CLAUDE.md": {
+    "mtime": 1790952598.0872715,
+    "seen": 1791199421.0360022,
+    "ast_hash": "e7fbe9b81e7a9611253c627dc8114fba",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1790613994.956516,
+    "seen": 1791199421.036003,
+    "ast_hash": "3a7319bc4129b636d6efab3a11f0ea8e",
+    "semantic_hash": ""
+  },
+  "pnpm-workspace.yaml": {
+    "mtime": 1790613536.1663568,
+    "seen": 1791199421.036004,
+    "ast_hash": "a17c1c39bf7c6db0d76998181b6b04c8",
+    "semantic_hash": ""
+  },
+  "assets/expo.icon/Assets/expo-symbol 2.svg": {
+    "mtime": 1790611877.118907,
+    "seen": 1791199421.036005,
+    "ast_hash": "6979b664c1ce82c10426a051082412a7",
+    "semantic_hash": ""
+  },
+  "assets/expo.icon/Assets/grid.png": {
+    "mtime": 1790611877.1088328,
+    "seen": 1791199421.036006,
+    "ast_hash": "37cdeda9d1af5d7432716d9671b098da",
+    "semantic_hash": ""
+  },
+  "assets/images/CMP_logo.png": {
+    "mtime": 1790621081.6153696,
+    "seen": 1791199421.036007,
+    "ast_hash": "a4de4c1977bfefa9c4d2431ee7e44748",
+    "semantic_hash": ""
+  },
+  "assets/images/CMP_logo_modo_oscuro.png": {
+    "mtime": 1790621001.48626,
+    "seen": 1791199421.0360076,
+    "ast_hash": "18e1516ac6732bc4ebb5d1f2c0f8b1e9",
+    "semantic_hash": ""
+  },
+  "assets/images/Mina_fondo.jpg": {
+    "mtime": 1790622525.547309,
+    "seen": 1791199421.0360086,
+    "ast_hash": "6a910e5d4a8aa1376d0192697288aa0c",
+    "semantic_hash": ""
+  },
+  "assets/images/android-icon-background.png": {
+    "mtime": 1790611877.1073256,
+    "seen": 1791199421.0360098,
+    "ast_hash": "2d65569cc0e2afdcea0af9f9902d4173",
+    "semantic_hash": ""
+  },
+  "assets/images/android-icon-foreground.png": {
+    "mtime": 1790611877.1076827,
+    "seen": 1791199421.0360105,
+    "ast_hash": "72e71a9c846c6aa4ae32476641a00e18",
+    "semantic_hash": ""
+  },
+  "assets/images/android-icon-monochrome.png": {
+    "mtime": 1790611877.1080348,
+    "seen": 1791199421.0360112,
+    "ast_hash": "1e097dab989759fc0b69440092ca22cd",
+    "semantic_hash": ""
+  },
+  "assets/images/expo-badge-white.png": {
+    "mtime": 1790611877.1083658,
+    "seen": 1791199421.036013,
+    "ast_hash": "02efb8472f161bcf8afc8c8489a28fca",
+    "semantic_hash": ""
+  },
+  "assets/images/expo-badge.png": {
+    "mtime": 1790611877.10856,
+    "seen": 1791199421.0360138,
+    "ast_hash": "6b0da8ec880685d1bd053c0f5ea9d09d",
+    "semantic_hash": ""
+  },
+  "assets/images/expo-logo.png": {
+    "mtime": 1790611877.1086917,
+    "seen": 1791199421.0360148,
+    "ast_hash": "5ee5db91d59518c45ebcc99a2f5afc57",
+    "semantic_hash": ""
+  },
+  "assets/images/favicon.png": {
+    "mtime": 1790611877.1088328,
+    "seen": 1791199421.0360155,
+    "ast_hash": "d9f444efbdfbe7931aa93beada07318a",
+    "semantic_hash": ""
+  },
+  "assets/images/icon.png": {
+    "mtime": 1790611877.113596,
+    "seen": 1791199421.0360167,
+    "ast_hash": "8d892ef03dbd43e8d899c1d605ad42df",
+    "semantic_hash": ""
+  },
+  "assets/images/logo-glow.png": {
+    "mtime": 1790611877.115649,
+    "seen": 1791199421.0360174,
+    "ast_hash": "dbca075a49dc45e550c5d2e3e9601039",
+    "semantic_hash": ""
+  },
+  "assets/images/react-logo.png": {
+    "mtime": 1790611877.1160493,
+    "seen": 1791199421.0360184,
+    "ast_hash": "695d5a1c6f29a689130f3aaa573aec6e",
+    "semantic_hash": ""
+  },
+  "assets/images/react-logo@2x.png": {
+    "mtime": 1790611877.1181428,
+    "seen": 1791199421.036019,
+    "ast_hash": "b507e7f2c91ebc8fe24dee79ccb3b600",
+    "semantic_hash": ""
+  },
+  "assets/images/react-logo@3x.png": {
+    "mtime": 1790611877.1183987,
+    "seen": 1791199421.0360203,
+    "ast_hash": "8a4d0e5b845044e56e3b2df627d01cfd",
+    "semantic_hash": ""
+  },
+  "assets/images/splash-icon.png": {
+    "mtime": 1790611877.118561,
+    "seen": 1791199421.036021,
+    "ast_hash": "5ee5db91d59518c45ebcc99a2f5afc57",
+    "semantic_hash": ""
+  },
+  "assets/images/tabIcons/explore.png": {
+    "mtime": 1790611877.1080348,
+    "seen": 1791199421.036022,
+    "ast_hash": "8409922f7d5c981001e3c9b25e4bfae5",
+    "semantic_hash": ""
+  },
+  "assets/images/tabIcons/explore@2x.png": {
+    "mtime": 1790611877.1082745,
+    "seen": 1791199421.0360231,
+    "ast_hash": "dd40200ba8e8d98061578292d6b73791",
+    "semantic_hash": ""
+  },
+  "assets/images/tabIcons/explore@3x.png": {
+    "mtime": 1790611877.1083658,
+    "seen": 1791199421.0360239,
+    "ast_hash": "c4278d79298bb11a8b0e68ed3e40da9e",
+    "semantic_hash": ""
+  },
+  "assets/images/tabIcons/home.png": {
+    "mtime": 1790611877.109623,
+    "seen": 1791199421.0360248,
+    "ast_hash": "eeb5de2ac12ace75b31dfda235208956",
+    "semantic_hash": ""
+  },
+  "assets/images/tabIcons/home@2x.png": {
+    "mtime": 1790611877.109796,
+    "seen": 1791199421.0360258,
+    "ast_hash": "456346cfb0b82cc0f39e921e05d082d9",
+    "semantic_hash": ""
+  },
+  "assets/images/tabIcons/home@3x.png": {
+    "mtime": 1790611877.1098943,
+    "seen": 1791199421.036027,
+    "ast_hash": "5d86e963002b3664ab81c128c838559d",
+    "semantic_hash": ""
+  },
+  "assets/images/tutorial-web.png": {
+    "mtime": 1790611877.118907,
+    "seen": 1791199421.0360277,
+    "ast_hash": "c62d22797f3002396754d8cc55b0ae1a",
+    "semantic_hash": ""
   }
 }

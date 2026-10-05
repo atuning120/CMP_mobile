@@ -1,32 +1,35 @@
-# Graph Report - Front-mobile  (2026-10-02)
+# Graph Report - Front-mobile  (2026-10-05)
 
 ## Corpus Check
-- cluster-only mode — file stats not available
+- 76 files · ~99,561 words
+- Verdict: corpus is large enough that graph structure adds value.
+- Unclassified: 3 file(s) not represented in the graph (top: (none) 3)
 
 ## Summary
-- 336 nodes · 709 edges · 13 communities (12 shown, 1 thin omitted)
+- 341 nodes · 712 edges · 14 communities (11 shown, 3 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9c028be7`
+- Built from commit: `20552ce6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- Community 0
-- Community 1
-- Community 2
-- Community 3
-- Community 4
-- Community 5
-- Community 6
-- Community 7
-- Community 8
-- Community 9
-- Community 10
-- Community 11
-- Community 12
+- react-native
+- package.json
+- ShipSupervisorScreen.tsx
+- expo
+- LoginScreen.tsx
+- dependencies
+- WorkzoneScreen.tsx
+- ReemplazoEquipoModal.tsx
+- react
+- Front-mobile
+- reset-project.js
+- tsconfig.json
+- global.d.ts
+- SKILL.md
 
 ## God Nodes (most connected - your core abstractions)
 1. `react-native` - 49 edges
@@ -55,75 +58,71 @@
 ## Import Cycles
 - None detected.
 
-## Communities (13 total, 1 thin omitted)
+## Communities (14 total, 3 thin omitted)
 
-### Community 0 - "Community 0"
+### Community 0 - "react-native"
 Cohesion: 0.09
-Nodes (34): lucide-react-native, react, AppBottomSheetModalProps, styles, styles, LoginFormProps, styles, styles (+26 more)
+Nodes (33): lucide-react-native, react-native, react-native-reanimated, AppBottomSheetModalProps, styles, styles, LoginFormProps, styles (+25 more)
 
-### Community 1 - "Community 1"
+### Community 1 - "package.json"
 Cohesion: 0.05
 Nodes (40): { defineConfig }, expoConfig, devDependencies, eslint, eslint-config-expo, @types/react, typescript, main (+32 more)
 
-### Community 2 - "Community 2"
-Cohesion: 0.10
-Nodes (25): AppBottomSheetModal(), EditarEquipoModal(), MOCK_OPERADORES, MOCK_ZONAS, Props, styles, EquipoDataForm(), FilterOption (+17 more)
+### Community 2 - "ShipSupervisorScreen.tsx"
+Cohesion: 0.09
+Nodes (26): AppBottomSheetModal(), EditarEquipoModal(), MOCK_OPERADORES, MOCK_ZONAS, Props, styles, EquipoDataForm(), FilterOption (+18 more)
 
-### Community 3 - "Community 3"
+### Community 3 - "expo"
 Cohesion: 0.06
 Nodes (32): backgroundColor, backgroundImage, foregroundImage, monochromeImage, adaptiveIcon, package, predictiveBackGestureEnabled, projectId (+24 more)
 
-### Community 4 - "Community 4"
+### Community 4 - "LoginScreen.tsx"
 Cohesion: 0.11
-Nodes (22): expo-constants, expo-secure-store, expo-splash-screen, @react-native-async-storage/async-storage, @react-native-community/netinfo, TabLayout(), LoginForm(), MicrosoftLoginButton() (+14 more)
+Nodes (24): expo-constants, expo-router, expo-secure-store, expo-splash-screen, @react-native-async-storage/async-storage, @react-native-community/netinfo, TabLayout(), LoginForm() (+16 more)
 
-### Community 5 - "Community 5"
+### Community 5 - "dependencies"
 Cohesion: 0.07
 Nodes (30): dependencies, expo, expo-constants, expo-device, expo-font, expo-glass-effect, expo-image, expo-linking (+22 more)
 
-### Community 6 - "Community 6"
-Cohesion: 0.11
-Nodes (19): expo-router, react-native-reanimated, ProfileChip(), ProfileChipProps, styles, Props, MachineStatusCard(), Props (+11 more)
+### Community 6 - "WorkzoneScreen.tsx"
+Cohesion: 0.13
+Nodes (21): ActionCard(), ChangeStateModal(), ChangeStateModalProps, getStateConfig(), styles, EndShiftModal(), StartShiftModal(), Props (+13 more)
 
-### Community 7 - "Community 7"
+### Community 7 - "ReemplazoEquipoModal.tsx"
 Cohesion: 0.11
 Nodes (17): EquipoFormState, FuenteDatos, PlantillaEquipo, Props, styles, INITIAL_EQUIPO_STATE, MOCK_PLANTILLAS, MOCK_ZONAS (+9 more)
 
-### Community 8 - "Community 8"
-Cohesion: 0.16
-Nodes (13): react-native-safe-area-context, EvidenceCard(), EvidenceCardProps, styles, LoginFooter(), EvidenciaHistorial, MOCK_EVIDENCIAS, useEvidenciasHistorial() (+5 more)
+### Community 8 - "react"
+Cohesion: 0.12
+Nodes (19): react, react-native-safe-area-context, CmpLogo(), styles, EvidenceCard(), EvidenceCardProps, styles, LoginFooter() (+11 more)
 
-### Community 9 - "Community 9"
-Cohesion: 0.18
-Nodes (10): react-native, CmpLogo(), styles, LoginHeader(), LoginHeaderProps, styles, MicrosoftLoginButtonProps, styles (+2 more)
-
-### Community 10 - "Community 10"
+### Community 10 - "reset-project.js"
 Cohesion: 0.17
 Nodes (7): exampleDirPath, fs, oldDirs, path, readline, rl, root
 
-### Community 11 - "Community 11"
+### Community 11 - "tsconfig.json"
 Cohesion: 0.25
 Nodes (7): expo/tsconfig.base, compilerOptions, paths, strict, extends, include, @/assets/*
 
 ## Knowledge Gaps
-- **151 isolated node(s):** `AppBottomSheetModalProps`, `LoginFormProps`, `Props`, `Props`, `ThemeColors` (+146 more)
-  These have ≤1 connection - possible missing edges. (Counts symbols only; 164 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **1 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **153 isolated node(s):** `New screen`, `graphify`, `AppBottomSheetModalProps`, `LoginFormProps`, `Props` (+148 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 168 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `react-native` connect `Community 9` to `Community 0`, `Community 1`, `Community 2`, `Community 4`, `Community 6`, `Community 7`, `Community 8`?**
-  _High betweenness centrality (0.190) - this node is a cross-community bridge._
-- **Why does `react` connect `Community 0` to `Community 1`, `Community 2`, `Community 4`, `Community 6`, `Community 7`, `Community 8`, `Community 9`?**
-  _High betweenness centrality (0.146) - this node is a cross-community bridge._
-- **Why does `dependencies` connect `Community 5` to `Community 1`?**
-  _High betweenness centrality (0.137) - this node is a cross-community bridge._
-- **What connects `AppBottomSheetModalProps`, `LoginFormProps`, `Props` to the rest of the system?**
-  _151 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.09333333333333334 - nodes in this community are weakly interconnected._
-- **Should `Community 1` be split into smaller, more focused modules?**
+- **Why does `react-native` connect `react-native` to `package.json`, `ShipSupervisorScreen.tsx`, `LoginScreen.tsx`, `WorkzoneScreen.tsx`, `ReemplazoEquipoModal.tsx`, `react`?**
+  _High betweenness centrality (0.184) - this node is a cross-community bridge._
+- **Why does `react` connect `react` to `react-native`, `package.json`, `ShipSupervisorScreen.tsx`, `LoginScreen.tsx`, `WorkzoneScreen.tsx`, `ReemplazoEquipoModal.tsx`?**
+  _High betweenness centrality (0.142) - this node is a cross-community bridge._
+- **Why does `dependencies` connect `dependencies` to `package.json`?**
+  _High betweenness centrality (0.133) - this node is a cross-community bridge._
+- **What connects `New screen`, `graphify`, `AppBottomSheetModalProps` to the rest of the system?**
+  _153 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `react-native` be split into smaller, more focused modules?**
+  _Cohesion score 0.08672699849170437 - nodes in this community are weakly interconnected._
+- **Should `package.json` be split into smaller, more focused modules?**
   _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
-- **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.09682539682539683 - nodes in this community are weakly interconnected._
+- **Should `ShipSupervisorScreen.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.0931174089068826 - nodes in this community are weakly interconnected._
