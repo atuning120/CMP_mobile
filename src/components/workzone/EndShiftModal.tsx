@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, useColorScheme, ActivityIndicator } from 'react-native';
 import { TrendingUp, FileCheck } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { FinalizarTurnoDatos, FotoCapturada, TurnoActual } from '../../types/turno';
 import { FotoEvidenciaField } from '../common/FotoEvidenciaField';
+import { calcularDesgloseHoras, formatearHoras } from '../../utils/desgloseHoras';
 import { FOTOS_HABILITADAS } from '../../constants/features';
 
 interface Props {
@@ -24,33 +25,23 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  // Cálculos de horas
-  const desglose = useMemo(() => {
-    let efectivasMs = 0;
-    let demorasMs = 0;
-    const now = new Date();
+  // El desglose se recalcula cada 30 s mientras el modal está abierto (el estado vigente sigue sumando)
+  const [ahora, setAhora] = useState(() => new Date());
+  useEffect(() => {
+    if (!visible) return;
+    const actualizar = () => setAhora(new Date());
+    const primera = setTimeout(actualizar, 0);
+    const intervalo = setInterval(actualizar, 30_000);
+    return () => {
+      clearTimeout(primera);
+      clearInterval(intervalo);
+    };
+  }, [visible]);
 
-    if (turno?.historialEstados) {
-      turno.historialEstados.forEach(h => {
-        const start = new Date(h.inicio).getTime();
-        const end = h.fin ? new Date(h.fin).getTime() : now.getTime();
-        const durationMs = end - start;
-
-        if (h.estado.categoria === 'PRODUCTIVO') {
-          efectivasMs += durationMs;
-        } else if (h.estado.categoria === 'DEMORA') {
-          demorasMs += durationMs;
-        }
-      });
-    }
-
-    const totalTurnoMs = turno ? (now.getTime() - new Date(turno.fechaInicio).getTime()) : 0;
-    const totalTurnoHrs = (totalTurnoMs / (1000 * 60 * 60)).toFixed(1);
-    const efectivasHrs = (efectivasMs / (1000 * 60 * 60)).toFixed(1);
-    const pausasHrs = (demorasMs / (1000 * 60 * 60)).toFixed(1);
-
-    return { totalTurnoHrs, efectivasHrs, pausasHrs, ralentiHrs: '0.0' }; // ralentiHrs is TODO
-  }, [turno]);
+  const desglose = useMemo(
+    () => (turno ? calcularDesgloseHoras(turno.fechaInicio, turno.historialEstados, ahora) : null),
+    [turno, ahora],
+  );
 
   const handleHorometroChange = (text: string) => {
     let formattedText = text.replace(',', '.');
@@ -188,24 +179,41 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
           </View>
         </View>
 
-        <View style={styles.statsGrid}>
-          <View style={[styles.statCard, { backgroundColor: theme.background }]}>
-            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>TOTAL TURNO</Text>
-            <Text style={[styles.statValue, { color: theme.text }]}>{desglose.totalTurnoHrs} hrs</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: theme.success }]}>
-            <Text style={[styles.statLabel, { color: '#FFFFFF', opacity: 0.8 }]}>HORAS EFECTIVAS</Text>
-            <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{desglose.efectivasHrs} hrs</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: theme.warning }]}>
-            <Text style={[styles.statLabel, { color: '#FFFFFF', opacity: 0.8 }]}>PAUSAS / COLACIÓN</Text>
-            <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{desglose.pausasHrs} hrs</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: theme.danger }]}>
-            <Text style={[styles.statLabel, { color: '#FFFFFF', opacity: 0.8 }]}>RALENTÍ DESCONTADO</Text>
-            <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{desglose.ralentiHrs} hrs</Text>
-          </View>
-        </View>
+        {desglose && (
+          <>
+            <View style={styles.statsGrid}>
+              <View style={[styles.statCard, styles.statCardAncho, { backgroundColor: theme.background }]}>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>TOTAL TURNO</Text>
+                <Text style={[styles.statValue, { color: theme.text }]}>{formatearHoras(desglose.totalMs)}</Text>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: theme.success }]}>
+                <Text style={[styles.statLabel, { color: '#FFFFFF', opacity: 0.8 }]}>HORAS EFECTIVAS</Text>
+                <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{formatearHoras(desglose.efectivasMs)}</Text>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: theme.warning }]}>
+                <Text style={[styles.statLabel, { color: '#FFFFFF', opacity: 0.8 }]}>DEMORAS OPERACIONALES</Text>
+                <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{formatearHoras(desglose.demorasMs)}</Text>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: theme.danger }]}>
+                <Text style={[styles.statLabel, { color: '#FFFFFF', opacity: 0.8 }]}>MANTENCIÓN Y FALLAS</Text>
+                <Text style={[styles.statValue, { color: '#FFFFFF' }]}>{formatearHoras(desglose.mantencionMs)}</Text>
+              </View>
+              {/* El ralentí requiere la telemetría GPS del equipo, que la app aún no integra */}
+              <View style={[styles.statCard, { backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border, borderStyle: 'dashed' }]}>
+                <Text style={[styles.statLabel, { color: theme.textTertiary }]}>RALENTÍ</Text>
+                <Text style={[styles.statNoDisponible, { color: theme.textTertiary }]}>No disponible</Text>
+                <Text style={[styles.statNota, { color: theme.textTertiary }]}>Requiere telemetría GPS</Text>
+              </View>
+            </View>
+
+            {desglose.sinEstadoMs >= 60_000 && (
+              <Text style={[styles.sinEstado, { color: theme.textSecondary }]}>
+                Sin estado registrado: <Text style={{ fontWeight: 'bold' }}>{formatearHoras(desglose.sinEstadoMs)}</Text>
+                {'  '}(tiempo del turno antes de elegir un estado operacional)
+              </Text>
+            )}
+          </>
+        )}
       </View>
 
       {/* Evidencias */}
@@ -330,6 +338,23 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 16,
+  },
+  statCardAncho: {
+    width: '100%',
+  },
+  statNoDisponible: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  statNota: {
+    fontSize: 9,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  sinEstado: {
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: -4,
   },
   statCard: {
     width: '48%',
