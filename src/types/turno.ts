@@ -4,6 +4,9 @@ export interface EstadoOperacional {
   id: number;
   nombre: string;
   categoria: CategoriaEstado;
+  // Si suma como hora efectiva en el desglose del turno
+  esProductivo: boolean;
+  descripcion: string | null;
 }
 
 export interface TurnoEstadoActual {

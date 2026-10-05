@@ -34,6 +34,8 @@ interface EstadoOperacionalApi {
   idEstado: number;
   nombre: string;
   categoria: CategoriaEstado | null;
+  esProductivo?: boolean;
+  descripcion?: string | null;
 }
 
 export interface TurnoApi {
@@ -83,6 +85,8 @@ export const mapEstado = (estado: EstadoOperacionalApi): EstadoOperacional => ({
   id: estado.idEstado,
   nombre: estado.nombre,
   categoria: estado.categoria ?? 'DEMORA',
+  esProductivo: estado.esProductivo ?? estado.categoria === 'PRODUCTIVO',
+  descripcion: estado.descripcion ?? null,
 });
 
 const post = <T>(path: string, body: Record<string, unknown>) =>

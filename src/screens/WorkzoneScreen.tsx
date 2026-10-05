@@ -178,10 +178,8 @@ export default function WorkzoneScreen() {
         onClose={() => setIsChangeStateModalVisible(false)}
         estadosCatalogo={estadosCatalogo}
         estadoActual={turno?.estadoOperacionalActual || null}
-        onStateChange={(estado) => {
-          updateEstadoActual(estado);
-          setTimeout(() => setIsChangeStateModalVisible(false), 400); // Dar feedback visual antes de cerrar
-        }}
+        // El panel queda abierto tras cambiar de estado: solo se cierra cuando el operador lo decide
+        onStateChange={updateEstadoActual}
       />
     </SafeAreaView>
   );

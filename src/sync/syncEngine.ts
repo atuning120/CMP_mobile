@@ -1,4 +1,4 @@
-import { getDb, guardarAjuste } from '../db/database';
+import { getDb, guardarAjuste, leerAjuste } from '../db/database';
 import { catalogoActualizadoEn, guardarCatalogo, TipoCatalogo } from '../db/catalogoLocal';
 import {
   actualizarEstadoEvidencia,
@@ -37,6 +37,9 @@ import { actualizarEstadoSincronizacion, emitirCambioDatos } from './eventos';
  */
 
 const CATALOGO_VIGENCIA_MS = 30 * 60 * 1000;
+// Subir este número cuando cambie el formato de un catálogo: los teléfonos lo vuelven a descargar
+// (2: estados operacionales con descripción y esProductivo)
+const VERSION_CATALOGOS = 2;
 // Una foto que no logra subirse se marca con error tras estos intentos (y deja de reintentarse sola)
 const MAX_INTENTOS_EVIDENCIA = 8;
 export const AVISO_CIERRE_AUTO = (idOperador: number) => `aviso_cierre_auto:${idOperador}`;
@@ -232,6 +235,8 @@ const CATALOGOS: { tipo: TipoCatalogo; cargar: () => Promise<{ id: number }[]>; 
  * Descarga los catálogos (máquinas, áreas, zonas, estados) para poder trabajar offline.
  */
 export const sincronizarCatalogos = async (forzar = false) => {
+  const versionGuardada = await leerAjuste<number>('catalogo_version');
+  if (versionGuardada !== VERSION_CATALOGOS) forzar = true;
   let cambios = false;
   for (const catalogo of CATALOGOS) {
     const actualizado = await catalogoActualizadoEn(catalogo.tipo);
@@ -240,6 +245,7 @@ export const sincronizarCatalogos = async (forzar = false) => {
     await guardarCatalogo(catalogo.tipo, items, catalogo.padre as ((item: { id: number }) => number) | undefined);
     cambios = true;
   }
+  if (versionGuardada !== VERSION_CATALOGOS) await guardarAjuste('catalogo_version', VERSION_CATALOGOS);
   if (cambios) emitirCambioDatos();
 };
 
