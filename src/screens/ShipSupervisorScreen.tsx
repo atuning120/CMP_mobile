@@ -17,6 +17,7 @@ import { ReemplazoEquipoModal } from '../components/supervisor/ReemplazoEquipoMo
 import { EditarEquipoModal } from '../components/supervisor/EditarEquipoModal';
 import { styles } from './ShipSupervisorScreen.styles';
 import { cerrarSesion } from '../services/authService';
+import { ConfirmLogoutModal } from '../components/common/ConfirmLogoutModal';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
@@ -37,8 +38,11 @@ export const ShipSupervisorScreen = () => {
 
   const { maquinas, contadorFlota, isLoading, actualizarMaquina } = useFlotaResumen();
 
+  const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
+
   const handleLogout = async () => {
     await cerrarSesion();
+    setIsLogoutModalVisible(false);
     router.replace('/');
   };
 
@@ -169,7 +173,7 @@ export const ShipSupervisorScreen = () => {
         imageStyle={{ opacity: colorScheme === 'dark' ? 0.3 : 0.9 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <TurnoSummaryDropdown turno={null} onLogout={handleLogout} />
+          <TurnoSummaryDropdown turno={null} onLogout={() => setIsLogoutModalVisible(true)} />
 
           <View style={styles.buttonsRow}>
             <TouchableOpacity
@@ -300,6 +304,11 @@ export const ShipSupervisorScreen = () => {
             : `¿Confirmas que el equipo ${maquinaAToggle?.codigo} está reparado y listo para operar?`}
         </Text>
       </AppBottomSheetModal>
+      <ConfirmLogoutModal
+        visible={isLogoutModalVisible}
+        onCancel={() => setIsLogoutModalVisible(false)}
+        onConfirm={handleLogout}
+      />
     </SafeAreaView>
   );
 };

@@ -14,6 +14,8 @@ import { StartShiftModal } from '../components/workzone/StartShiftModal';
 import { EndShiftModal } from '../components/workzone/EndShiftModal';
 import { ChangeStateModal } from '../components/workzone/ChangeStateModal';
 import { cerrarSesion } from '../services/authService';
+import { ConfirmLogoutModal } from '../components/common/ConfirmLogoutModal';
+import { useSyncStatus } from '../hooks/useSyncStatus';
 import { FOTOS_HABILITADAS } from '../constants/features';
 import { FinalizarTurnoDatos, IniciarTurnoDatos } from '../types/turno';
 
@@ -40,10 +42,13 @@ export default function WorkzoneScreen() {
   const [isStartShiftModalVisible, setIsStartShiftModalVisible] = useState(false);
   const [isEndShiftModalVisible, setIsEndShiftModalVisible] = useState(false);
   const [isChangeStateModalVisible, setIsChangeStateModalVisible] = useState(false);
+  const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
+  const { pendientes } = useSyncStatus();
 
   // Cerrar sesión NO cierra el turno: sigue EN_CURSO en el teléfono y en el Backend
   const handleLogout = async () => {
     await cerrarSesion();
+    setIsLogoutModalVisible(false);
     router.replace('/');
   };
 
@@ -93,7 +98,7 @@ export default function WorkzoneScreen() {
 
     return (
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <TurnoSummaryDropdown turno={turno} onLogout={handleLogout} />
+        <TurnoSummaryDropdown turno={turno} onLogout={() => setIsLogoutModalVisible(true)} />
 
         {!hayTurnoEnCurso && turnoCerradoAutomaticamente && (
           <View style={[styles.autoCloseBanner, { backgroundColor: theme.card, borderColor: theme.warning }]}>
@@ -180,6 +185,18 @@ export default function WorkzoneScreen() {
         estadoActual={turno?.estadoOperacionalActual || null}
         // El panel queda abierto tras cambiar de estado: solo se cierra cuando el operador lo decide
         onStateChange={updateEstadoActual}
+      />
+
+      <ConfirmLogoutModal
+        visible={isLogoutModalVisible}
+        onCancel={() => setIsLogoutModalVisible(false)}
+        onConfirm={handleLogout}
+        avisoTurno={
+          turno
+            ? `Tu turno en ${turno.maquina.codigoCorto} seguirá en curso. Podrás retomarlo al volver a ingresar.`
+            : null
+        }
+        pendientesSincronizar={pendientes}
       />
     </SafeAreaView>
   );
