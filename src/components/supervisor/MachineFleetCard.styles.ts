@@ -12,6 +12,12 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
   },
+  // Sombra de Android desactivada: sobre el vidrio oscuro deja un halo gris
+  cardOscura: {
+    borderBottomWidth: 1,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -14,6 +14,10 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  sinSombra: {
+    elevation: 0,
+    shadowOpacity: 0,
+  },
   icon: {
     marginRight: 8,
   },

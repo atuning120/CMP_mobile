@@ -29,14 +29,20 @@ export const FleetFilterChips: React.FC<Props> = ({ activeFilter, onFilterChange
                 styles.chip,
                 isActive 
                   ? { backgroundColor: theme.primary, elevation: 4, shadowColor: theme.primary } 
-                  : { backgroundColor: theme.card, elevation: 1, borderColor: theme.border, borderWidth: 1 }
+                  : {
+                      backgroundColor: theme.glassSurface,
+                      borderColor: theme.glassSurfaceBorder,
+                      borderWidth: 1,
+                      elevation: colorScheme === 'dark' ? 0 : 1,
+                      shadowOpacity: colorScheme === 'dark' ? 0 : 0.1,
+                    }
               ]}
               onPress={() => onFilterChange(filter)}
               activeOpacity={0.7}
             >
               <Text style={[
                 styles.chipText,
-                isActive ? { color: '#FFFFFF' } : { color: theme.textSecondary }
+                isActive ? { color: '#FFFFFF' } : { color: colorScheme === 'dark' ? theme.textTertiary : theme.textSecondary }
               ]}>
                 {filter}
               </Text>

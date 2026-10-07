@@ -7,6 +7,11 @@ export const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
   },
+  fondo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
   scrollContainer: {
     padding: 16,
     flexGrow: 1,
