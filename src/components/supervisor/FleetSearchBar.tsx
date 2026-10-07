@@ -14,7 +14,14 @@ export const FleetSearchBar: React.FC<Props> = ({ value, onChangeText }) => {
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.card, borderColor: theme.border }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.glassSurface, borderColor: theme.glassSurfaceBorder },
+        // La sombra de Android se ve sucia sobre el vidrio oscuro
+        colorScheme === 'dark' && styles.sinSombra,
+      ]}
+    >
       <Search size={20} color={theme.textTertiary} style={styles.icon} />
       <TextInput
         style={[styles.input, { color: theme.text }]}

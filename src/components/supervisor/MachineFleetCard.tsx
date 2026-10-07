@@ -16,15 +16,24 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const isOperativo = maquina.estadoOperativo === 'OPERATIVO';
+  const isDark = colorScheme === 'dark';
+  // En modo oscuro los controles secundarios son translúcidos sobre la tarjeta, sin sombras
+  const superficieSecundaria = isDark ? 'rgba(255,255,255,0.06)' : theme.cardAlt;
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: theme.glassSurface, borderColor: theme.glassSurfaceBorder },
+        isDark && styles.cardOscura,
+      ]}
+    >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={[styles.codigo, { color: theme.text }]}>{maquina.codigo}</Text>
           {!!maquina.patente && (
-            <View style={[styles.patenteBadge, { backgroundColor: theme.cardAlt }]}>
+            <View style={[styles.patenteBadge, { backgroundColor: superficieSecundaria }]}>
               <Text style={[styles.patenteText, { color: theme.textSecondary }]}>{maquina.patente}</Text>
             </View>
           )}
@@ -80,11 +89,11 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
       </View>
 
       {/* Actions */}
-      <View style={[styles.actionsRow, { borderTopColor: theme.border }]}>
+      <View style={[styles.actionsRow, { borderTopColor: theme.glassSurfaceBorder }]}>
         <TouchableOpacity
           style={[
             styles.btnAction, 
-            { backgroundColor: isOperativo ? theme.cardAlt : theme.warning, opacity: isOperativo ? 0.6 : 1 }
+            { backgroundColor: isOperativo ? superficieSecundaria : theme.warning, opacity: isOperativo ? 0.6 : 1 }
           ]}
           onPress={() => !isOperativo && onSustituir(maquina)}
           disabled={isOperativo}
@@ -95,7 +104,7 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
           <Text style={[styles.btnActionText, { color: isOperativo ? theme.textSecondary : "#1A1A1A" }]}>Sustituir / Reemplazo</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.btnIcon, { backgroundColor: theme.cardAlt }]} onPress={() => onEditar(maquina)}>
+        <TouchableOpacity style={[styles.btnIcon, { backgroundColor: superficieSecundaria }]} onPress={() => onEditar(maquina)}>
           <Edit2 size={16} color={theme.text} />
         </TouchableOpacity>
 

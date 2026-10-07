@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, ImageBackground, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo, useRef } from 'react';
+import { View, Text, Image, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { BlurTargetView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { darkTheme, lightTheme } from '../constants/theme';
@@ -18,6 +19,7 @@ import { EditarEquipoModal } from '../components/supervisor/EditarEquipoModal';
 import { styles } from './ShipSupervisorScreen.styles';
 import { cerrarSesion } from '../services/authService';
 import { ConfirmLogoutModal } from '../components/common/ConfirmLogoutModal';
+import { GlassCapsule } from '../components/common/GlassCapsule';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
@@ -25,6 +27,9 @@ export const ShipSupervisorScreen = () => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const router = useRouter();
+  // Fondo que difumina la cápsula de la flota (en Android el BlurView necesita esta referencia)
+  const fondoRef = useRef<View | null>(null);
+  const [tamanoFondo, setTamanoFondo] = useState<{ width: number; height: number } | null>(null);
 
   const [activeTab, setActiveTab] = useState<TabOption>('FLOTA');
   const [searchQuery, setSearchQuery] = useState('');
@@ -133,7 +138,7 @@ export const ShipSupervisorScreen = () => {
     }
 
     return (
-      <View style={{ flex: 1 }}>
+      <GlassCapsule blurTarget={fondoRef}>
         <FleetSearchBar value={searchQuery} onChangeText={setSearchQuery} />
         <FleetFilterChips activeFilter={activeFilter} onFilterChange={setActiveFilter} />
 
@@ -159,7 +164,7 @@ export const ShipSupervisorScreen = () => {
             />
           ))
         )}
-      </View>
+      </GlassCapsule>
     );
   };
 
@@ -167,11 +172,24 @@ export const ShipSupervisorScreen = () => {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
       <LoginHeader showConnectionStatus />
 
-      <ImageBackground
-        source={require('../../assets/images/Mina_fondo.jpg')}
+      <View
         style={styles.mainContent}
-        imageStyle={{ opacity: colorScheme === 'dark' ? 0.3 : 0.9 }}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setTamanoFondo((prev) => (prev?.width === width && prev?.height === height ? prev : { width, height }));
+        }}
       >
+        {/* El fondo va en un BlurTargetView aparte (no envuelve al contenido) para que la cápsula lo pueda difuminar.
+            Se le da el tamaño exacto del contenedor: dentro del BlurTargetView nativo la imagen debe recortarse
+            igual que con ImageBackground y no según su tamaño propio */}
+        {tamanoFondo && (
+          // El color de fondo y el velo van dentro del target: el blur solo ve lo que hay aquí y en Android
+          // ignora la opacidad de la imagen, por eso el oscurecimiento es una capa y no opacity
+          <BlurTargetView ref={fondoRef} style={[styles.fondo, tamanoFondo, { backgroundColor: theme.background }]}>
+            <Image source={require('../../assets/images/Mina_fondo.jpg')} style={[styles.fondo, tamanoFondo]} resizeMode="cover" />
+            <View style={[styles.fondo, tamanoFondo, { backgroundColor: theme.backgroundVeil }]} />
+          </BlurTargetView>
+        )}
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <TurnoSummaryDropdown turno={null} onLogout={() => setIsLogoutModalVisible(true)} />
 
@@ -227,7 +245,7 @@ export const ShipSupervisorScreen = () => {
             {renderContent()}
           </View>
         </ScrollView>
-      </ImageBackground>
+      </View>
 
       <LoginFooter />
 
