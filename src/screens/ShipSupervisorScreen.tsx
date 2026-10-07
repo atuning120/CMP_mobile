@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { View, Text, Image, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, Image, NativeScrollEvent, NativeSyntheticEvent, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -7,7 +7,7 @@ import { darkTheme, lightTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
-import { PlusCircle, Truck, History, ShieldAlert, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { Truck, History, ShieldAlert, AlertTriangle, CheckCircle } from 'lucide-react-native';
 import { AppBottomSheetModal } from '../components/common/AppBottomSheetModal';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
@@ -20,8 +20,16 @@ import { styles } from './ShipSupervisorScreen.styles';
 import { cerrarSesion } from '../services/authService';
 import { ConfirmLogoutModal } from '../components/common/ConfirmLogoutModal';
 import { GlassCapsule } from '../components/common/GlassCapsule';
+import { NuevaMaquinaFab } from '../components/supervisor/NuevaMaquinaFab';
+import { HistorialEventoCard } from '../components/supervisor/HistorialEventoCard';
+import { useHistorial } from '../hooks/useHistorial';
+import type { FiltroHistorial } from '../services/historialService';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
+
+const FILTROS_HISTORIAL = ['Todo', 'Turnos', 'Flota'] as const;
+type FiltroHistorialUI = (typeof FILTROS_HISTORIAL)[number];
+const FILTRO_HISTORIAL_API: Record<FiltroHistorialUI, FiltroHistorial> = { Todo: 'TODO', Turnos: 'TURNOS', Flota: 'FLOTA' };
 
 export const ShipSupervisorScreen = () => {
   const colorScheme = useColorScheme();
@@ -29,6 +37,16 @@ export const ShipSupervisorScreen = () => {
   const router = useRouter();
   // Fondo que difumina la cápsula de la flota (en Android el BlurView necesita esta referencia)
   const fondoRef = useRef<View | null>(null);
+  // El botón flotante se contrae al bajar por la lista y vuelve a mostrar su etiqueta al subir
+  const [fabExpandido, setFabExpandido] = useState(true);
+  const ultimoScrollY = useRef(0);
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const delta = y - ultimoScrollY.current;
+    ultimoScrollY.current = y;
+    if (y < 40) setFabExpandido(true);
+    else if (Math.abs(delta) > 6) setFabExpandido(delta < 0);
+  };
   const [tamanoFondo, setTamanoFondo] = useState<{ width: number; height: number } | null>(null);
 
   const [activeTab, setActiveTab] = useState<TabOption>('FLOTA');
@@ -43,6 +61,9 @@ export const ShipSupervisorScreen = () => {
 
   // La búsqueda la resuelve el Backend; el filtro por estado se aplica sobre el resultado
   const { maquinas, contadorFlota, isLoading, error, refetch, actualizarMaquina } = useFlotaResumen(searchQuery);
+
+  const [filtroHistorial, setFiltroHistorial] = useState<FiltroHistorialUI>('Todo');
+  const historial = useHistorial(FILTRO_HISTORIAL_API[filtroHistorial]);
 
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
 
@@ -96,7 +117,11 @@ export const ShipSupervisorScreen = () => {
 
       <TouchableOpacity
         style={[styles.tab, activeTab === 'HISTORIAL' && { backgroundColor: theme.card }]}
-        onPress={() => setActiveTab('HISTORIAL')}
+        onPress={() => {
+          // Al entrar se recarga: pueden haber turnos nuevos de los operadores
+          if (activeTab !== 'HISTORIAL') historial.refetch();
+          setActiveTab('HISTORIAL');
+        }}
         activeOpacity={0.7}
       >
         <View style={styles.tabIconRow}>
@@ -106,7 +131,9 @@ export const ShipSupervisorScreen = () => {
           </Text>
         </View>
         <Text style={[styles.tabCounter, { color: activeTab === 'HISTORIAL' ? theme.textSecondary : theme.textTertiary }]}>
-          3 cambios
+          {historial.isLoading && historial.eventos.length === 0
+            ? 'Cargando...'
+            : `${historial.eventos.length}${historial.hayMas ? '+' : ''} eventos`}
         </Text>
       </TouchableOpacity>
 
@@ -128,7 +155,46 @@ export const ShipSupervisorScreen = () => {
     </View>
   );
 
+  const renderHistorial = () => (
+    <GlassCapsule blurTarget={fondoRef}>
+      <FleetFilterChips filters={FILTROS_HISTORIAL} activeFilter={filtroHistorial} onFilterChange={setFiltroHistorial} />
+
+      {historial.isLoading ? (
+        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
+      ) : historial.error && historial.eventos.length === 0 ? (
+        <View style={{ alignItems: 'center', marginTop: 40, gap: 12 }}>
+          <Text style={{ textAlign: 'center', color: theme.danger }}>{historial.error}</Text>
+          <TouchableOpacity onPress={historial.refetch} style={{ backgroundColor: theme.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}>
+            <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      ) : historial.eventos.length === 0 ? (
+        <Text style={{ textAlign: 'center', marginTop: 40, color: theme.textSecondary }}>Aún no hay eventos registrados.</Text>
+      ) : (
+        <>
+          {historial.eventos.map(evento => (
+            <HistorialEventoCard key={evento.id} evento={evento} />
+          ))}
+          {historial.hayMas && (
+            <TouchableOpacity
+              onPress={historial.cargarMas}
+              disabled={historial.isLoadingMas}
+              style={[styles.cargarMas, { borderColor: theme.glassSurfaceBorder, backgroundColor: theme.glassSurface }]}
+            >
+              {historial.isLoadingMas ? (
+                <ActivityIndicator color={theme.primary} />
+              ) : (
+                <Text style={[styles.cargarMasTexto, { color: theme.primary }]}>Cargar eventos anteriores</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </>
+      )}
+    </GlassCapsule>
+  );
+
   const renderContent = () => {
+    if (activeTab === 'HISTORIAL') return renderHistorial();
     if (activeTab !== 'FLOTA') {
       return (
         <View style={styles.placeholderContainer}>
@@ -190,54 +256,14 @@ export const ShipSupervisorScreen = () => {
             <View style={[styles.fondo, tamanoFondo, { backgroundColor: theme.backgroundVeil }]} />
           </BlurTargetView>
         )}
-        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
           <TurnoSummaryDropdown turno={null} onLogout={() => setIsLogoutModalVisible(true)} />
-
-          <View style={styles.buttonsRow}>
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.warning,
-                  shadowColor: theme.warning
-                }
-              ]}
-              activeOpacity={0.7}
-              onPress={() => setIsModificacionModalVisible(true)}
-            >
-              <View style={styles.actionHeaderRow}>
-                <View style={[styles.iconBadge, { backgroundColor: theme.warning + '20' }]}>
-                  <RefreshCw size={16} color={theme.warning} />
-                </View>
-                <Text style={[styles.actionTopText, { color: theme.warning }]}>Relevo faena</Text>
-              </View>
-              <Text style={[styles.actionMainText, { color: theme.text }]}>Reemplazar (1 o 2)</Text>
-              <Text style={[styles.actionSubText, { color: theme.textSecondary }]}>Pre-carga modelo & datos</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.primary,
-                  shadowColor: theme.primary
-                }
-              ]}
-              activeOpacity={0.7}
-              onPress={() => setIsModalVisible(true)}
-            >
-              <View style={styles.actionHeaderRow}>
-                <View style={[styles.iconBadge, { backgroundColor: theme.primary + '20' }]}>
-                  <PlusCircle size={16} color={theme.primary} />
-                </View>
-                <Text style={[styles.actionTopText, { color: theme.primary }]}>CREAR NUEVA</Text>
-              </View>
-              <Text style={[styles.actionMainText, { color: theme.text }]}>Desde Cero</Text>
-              <Text style={[styles.actionSubText, { color: theme.textSecondary }]}>Formulario limpio</Text>
-            </TouchableOpacity>
-          </View>
 
           {renderTabs()}
 
@@ -245,6 +271,9 @@ export const ShipSupervisorScreen = () => {
             {renderContent()}
           </View>
         </ScrollView>
+
+        {/* Botón flotante: queda fijo sobre el contenido, dentro del área que termina en el footer */}
+        <NuevaMaquinaFab expandido={fabExpandido} onPress={() => setIsModalVisible(true)} />
       </View>
 
       <LoginFooter />
@@ -252,7 +281,10 @@ export const ShipSupervisorScreen = () => {
       <IncorporacionEquipoModal
         visible={isModalVisible}
         onClose={() => setIsModalVisible(false)}
-        onCreated={refetch}
+        onCreated={() => {
+          refetch();
+          historial.refetch();
+        }}
       />
 
       <ReemplazoEquipoModal

@@ -3,7 +3,9 @@ import { View, Text, TouchableOpacity, useColorScheme, TextInput } from 'react-n
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { CheckCircle, MapPin, Truck, Wrench, ChevronDown, AlertCircle, Gauge, RefreshCw } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
-import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState, PlantillaEquipo } from './EquipoDataForm';
+import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
+import { useModelosMaquina } from '../../hooks/useModelosMaquina';
+import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 import { styles } from './ReemplazoEquipoModal.styles';
 
 interface Props {
@@ -11,13 +13,6 @@ interface Props {
   onClose: () => void;
 }
 
-// Mocks
-const MOCK_PLANTILLAS: PlantillaEquipo[] = [
-  { id: 'p1', nombreCorto: 'CAT 793F (240T)', marca: 'Caterpillar', modelo: '793F High Altitude', tipoMaquina: 'Camión Tolva', horometroSugerido: 0 },
-  { id: 'p2', nombreCorto: 'Komatsu 930E (290T)', marca: 'Komatsu', modelo: '930E-4', tipoMaquina: 'Camión Tolva', horometroSugerido: 0 },
-  { id: 'p3', nombreCorto: 'Pala Liebherr R9800', marca: 'Liebherr', modelo: 'R9800', tipoMaquina: 'Pala', horometroSugerido: 0 },
-  { id: 'p4', nombreCorto: 'Dozer D11T', marca: 'Caterpillar', modelo: 'D11T', tipoMaquina: 'Bulldozer', horometroSugerido: 0 },
-];
 
 
 const MOCK_ZONAS = [
@@ -35,6 +30,8 @@ const MOCK_MAQUINAS_RETIRAR = ['CAEX-204 - Caterpillar 793F', 'CAEX-205 - Komats
 export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  const modelos = useModelosMaquina(visible);
+  const opcionesMaquina = useOpcionesMaquina(visible);
   const successColor = colorScheme === 'dark' ? '#81c995' : theme.success;
 
   const [numEquipos, setNumEquipos] = useState<1 | 2>(1);
@@ -247,14 +244,20 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
               equipoIdx={0}
               state={equipo1}
               onChange={setEquipo1}
-              plantillas={MOCK_PLANTILLAS}
+              plantillas={modelos.plantillas}
+              cargandoPlantillas={modelos.cargando}
+              errorPlantillas={modelos.error}
+              opciones={opcionesMaquina}
             />
           ) : (
             <EquipoDataForm
               equipoIdx={1}
               state={equipo2}
               onChange={setEquipo2}
-              plantillas={MOCK_PLANTILLAS}
+              plantillas={modelos.plantillas}
+              cargandoPlantillas={modelos.cargando}
+              errorPlantillas={modelos.error}
+              opciones={opcionesMaquina}
             />
           )}
         </View>

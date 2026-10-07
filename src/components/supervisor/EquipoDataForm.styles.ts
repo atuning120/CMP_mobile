@@ -83,6 +83,17 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  chipSubtext: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  plantillasEstado: {
+    paddingVertical: 12,
+  },
+  plantillasMensaje: {
+    fontSize: 13,
+    paddingVertical: 8,
+  },
   formSection: {
     gap: 16,
   },

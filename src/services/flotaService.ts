@@ -34,7 +34,23 @@ export interface CrearMaquinaApi {
   numeroChasis: string | null;
   horometroInicial: number;
   esContratista: boolean;
+  motivo: string;
+  observacion: string | null;
 }
 
 export const crearMaquina = (datos: CrearMaquinaApi) =>
   apiRequest<MaquinaFlotaApi>('/maquinas', { method: 'POST', body: JSON.stringify(datos) });
+
+export interface ModeloMaquinaApi {
+  idModelo: number;
+  nombre: string;
+  marca: string;
+  modelo: string;
+  tipoMaquina: string;
+}
+
+export const listarModelosMaquina = () => apiRequest<ModeloMaquinaApi[]>('/modelos-maquina');
+
+export const listarTiposMaquina = () => apiRequest<string[]>('/maquinas/tipos');
+
+export const listarMarcasMaquina = () => apiRequest<string[]>('/maquinas/marcas');

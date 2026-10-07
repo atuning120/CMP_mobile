@@ -1,8 +1,10 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, useColorScheme, Switch } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, useColorScheme, Switch, ActivityIndicator } from 'react-native';
 import { Sparkles, PlusCircle, Copy, Zap } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { styles } from './EquipoDataForm.styles';
+import { SelectorConCreacion } from './SelectorConCreacion';
+import type { OpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 
 export type FuenteDatos = 'NUEVO' | 'PLANTILLA';
 
@@ -27,7 +29,6 @@ export interface PlantillaEquipo {
   marca: string;
   modelo: string;
   tipoMaquina: string;
-  horometroSugerido: number;
 }
 
 export const EQUIPO_FORM_INICIAL: EquipoFormState = {
@@ -51,24 +52,43 @@ interface Props {
   state: EquipoFormState;
   onChange: (newState: EquipoFormState) => void;
   plantillas: PlantillaEquipo[];
+  cargandoPlantillas?: boolean;
+  errorPlantillas?: string | null;
+  opciones: OpcionesMaquina;
 }
 
+const existeEn = (opciones: string[], valor: string) => opciones.some((o) => o.toUpperCase() === valor.trim().toUpperCase());
 
-export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, plantillas }) => {
+
+export const EquipoDataForm: React.FC<Props> = ({
+  equipoIdx,
+  state,
+  onChange,
+  plantillas,
+  cargandoPlantillas,
+  errorPlantillas,
+  opciones,
+}) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+
+  // Marca o tipo nuevo: el campo pasa a texto libre; al incorporar la máquina el Backend lo registra en modelo_maquina
+  const [creandoMarca, setCreandoMarca] = useState(() => state.marca !== '' && !existeEn(opciones.marcas, state.marca));
+  const [creandoTipo, setCreandoTipo] = useState(() => state.tipoMaquina !== '' && !existeEn(opciones.tipos, state.tipoMaquina));
 
   const updateField = (field: keyof EquipoFormState, value: any) => {
     onChange({ ...state, [field]: value });
   };
 
   const handleApplyPlantilla = (plantilla: PlantillaEquipo) => {
+    setCreandoMarca(false);
+    setCreandoTipo(false);
     onChange({
       ...state,
       marca: plantilla.marca,
       modelo: plantilla.modelo,
       tipoMaquina: plantilla.tipoMaquina,
-      horometro: plantilla.horometroSugerido.toString(),
+      // El horómetro es propio de cada máquina: la plantilla no lo toca
       fuenteDatos: 'PLANTILLA',
     });
   };
@@ -116,19 +136,42 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
             <View style={styles.plantillaHeaderTitleRow}>
               <Copy size={16} color={theme.primary} />
               <Text style={[styles.sourceTitle, { color: theme.textSecondary, marginBottom: 0 }]}>
-                Plantillas rápidas faena (1 toque para rellenar):
+                Modelos registrados (1 toque para rellenar marca, modelo y tipo):
               </Text>
             </View>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
-            {plantillas.map(p => (
-              <TouchableOpacity key={p.id} style={[styles.plantillaChip, { backgroundColor: theme.card, borderColor: 'transparent' }]} onPress={() => handleApplyPlantilla(p)}>
-                <Zap size={14} color={theme.primary} />
-                <Text style={[styles.chipText, { color: theme.text }]}>{p.nombreCorto}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          {cargandoPlantillas ? (
+            <ActivityIndicator color={theme.primary} style={styles.plantillasEstado} />
+          ) : errorPlantillas ? (
+            <Text style={[styles.plantillasMensaje, { color: theme.danger }]}>{errorPlantillas}</Text>
+          ) : plantillas.length === 0 ? (
+            <Text style={[styles.plantillasMensaje, { color: theme.textSecondary }]}>Aún no hay modelos registrados.</Text>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+              {plantillas.map(p => {
+                // Se marca el modelo que está aplicado en el formulario
+                const aplicada = state.marca === p.marca && state.modelo === p.modelo && state.tipoMaquina === p.tipoMaquina;
+                return (
+                  <TouchableOpacity
+                    key={p.id}
+                    style={[
+                      styles.plantillaChip,
+                      { backgroundColor: theme.card, borderColor: 'transparent' },
+                      aplicada && { backgroundColor: theme.primary + '18', borderColor: theme.primary },
+                    ]}
+                    onPress={() => handleApplyPlantilla(p)}
+                  >
+                    <Zap size={14} color={theme.primary} />
+                    <View>
+                      <Text style={[styles.chipText, { color: aplicada ? theme.primary : theme.text }]}>{p.nombreCorto}</Text>
+                      <Text style={[styles.chipSubtext, { color: theme.textSecondary }]}>{p.tipoMaquina}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
         </View>
       )}
 
@@ -161,37 +204,66 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
           </View>
         </View>
 
-        <View style={styles.row}>
-          <View style={styles.fieldCol}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>MARCA *</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
-              value={state.marca}
-              onChangeText={(v) => updateField('marca', v)}
-              placeholder="Ej. Komatsu"
-              placeholderTextColor={theme.textTertiary}
-            />
-          </View>
-          <View style={styles.fieldCol}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>MODELO Y VERSIÓN *</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
-              value={state.modelo}
-              onChangeText={(v) => updateField('modelo', v)}
-              placeholder="Ej. 930E-4"
-              placeholderTextColor={theme.textTertiary}
-            />
-          </View>
+        <View style={styles.fieldFull}>
+          <SelectorConCreacion
+            label="MARCA *"
+            labelNuevo="NUEVA MARCA *"
+            placeholder="Buscar o seleccionar marca..."
+            placeholderNuevo="Ej. Liebherr"
+            textoCrear="Crear nueva marca"
+            hintNuevo="Se guardará como marca nueva, junto con el modelo y el tipo, al incorporar la máquina."
+            emptyMessage="Aún no hay marcas registradas"
+            opciones={opciones.marcas}
+            valor={state.marca}
+            onChange={(v) => updateField('marca', v)}
+            creando={creandoMarca}
+            onCreandoChange={setCreandoMarca}
+            cargando={opciones.cargando}
+            error={opciones.error}
+            onReintentar={opciones.reintentar}
+          />
+        </View>
+
+        <View style={styles.fieldFull}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>MODELO Y VERSIÓN *</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
+            value={state.modelo}
+            onChangeText={(v) => updateField('modelo', v)}
+            placeholder="Ej. 930E-4"
+            placeholderTextColor={theme.textTertiary}
+          />
+        </View>
+
+        <View style={styles.fieldFull}>
+          <SelectorConCreacion
+            label="TIPO DE MÁQUINA *"
+            labelNuevo="NUEVO TIPO DE MÁQUINA *"
+            placeholder="Buscar o seleccionar tipo..."
+            placeholderNuevo="Ej. Pala Hidráulica"
+            textoCrear="Crear nuevo tipo de máquina"
+            hintNuevo="Se guardará como tipo nuevo, junto con la marca y el modelo, al incorporar la máquina."
+            emptyMessage="Aún no hay tipos de máquina registrados"
+            opciones={opciones.tipos}
+            valor={state.tipoMaquina}
+            onChange={(v) => updateField('tipoMaquina', v)}
+            creando={creandoTipo}
+            onCreandoChange={setCreandoTipo}
+            cargando={opciones.cargando}
+            error={opciones.error}
+            onReintentar={opciones.reintentar}
+          />
         </View>
 
         <View style={styles.row}>
           <View style={styles.fieldCol}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>TIPO DE MÁQUINA *</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>HORÓMETRO *</Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
-              value={state.tipoMaquina}
-              onChangeText={(v) => updateField('tipoMaquina', v)}
-              placeholder="Ej. Camión Tolva"
+              value={state.horometro}
+              onChangeText={(v) => updateField('horometro', v.replace(/[^0-9.]/g, ''))}
+              keyboardType="numeric"
+              placeholder="0.0"
               placeholderTextColor={theme.textTertiary}
             />
           </View>
@@ -208,28 +280,15 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
           </View>
         </View>
 
-        <View style={styles.row}>
-          <View style={styles.fieldCol}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>HORÓMETRO INICIAL *</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
-              value={state.horometro}
-              onChangeText={(v) => updateField('horometro', v.replace(/[^0-9.]/g, ''))}
-              keyboardType="numeric"
-              placeholder="0.0"
-              placeholderTextColor={theme.textTertiary}
-            />
-          </View>
-          <View style={styles.fieldCol}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>N° CHASIS / SERIE (VIN)</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
-              value={state.chasis}
-              onChangeText={(v) => updateField('chasis', v)}
-              placeholder="Opcional"
-              placeholderTextColor={theme.textTertiary}
-            />
-          </View>
+        <View style={styles.fieldFull}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>N° CHASIS / SERIE (VIN)</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
+            value={state.chasis}
+            onChangeText={(v) => updateField('chasis', v)}
+            placeholder="Opcional"
+            placeholderTextColor={theme.textTertiary}
+          />
         </View>
 
         {/* <View style={styles.fieldFull}>
