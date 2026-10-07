@@ -23,9 +23,11 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={[styles.codigo, { color: theme.text }]}>{maquina.codigo}</Text>
-          <View style={[styles.patenteBadge, { backgroundColor: theme.cardAlt }]}>
-            <Text style={[styles.patenteText, { color: theme.textSecondary }]}>{maquina.patente}</Text>
-          </View>
+          {!!maquina.patente && (
+            <View style={[styles.patenteBadge, { backgroundColor: theme.cardAlt }]}>
+              <Text style={[styles.patenteText, { color: theme.textSecondary }]}>{maquina.patente}</Text>
+            </View>
+          )}
         </View>
         <View style={[
           styles.estadoBadge,

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, useColorScheme, TextInput } from 'react-n
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { CheckCircle, MapPin, Truck, Wrench, ChevronDown, AlertCircle, Gauge, RefreshCw } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
-import { EquipoDataForm, EquipoFormState, PlantillaEquipo } from './EquipoDataForm';
+import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState, PlantillaEquipo } from './EquipoDataForm';
 import { styles } from './ReemplazoEquipoModal.styles';
 
 interface Props {
@@ -13,10 +13,10 @@ interface Props {
 
 // Mocks
 const MOCK_PLANTILLAS: PlantillaEquipo[] = [
-  { id: 'p1', nombreCorto: 'CAT 793F (240T)', marcaModelo: 'Caterpillar 793F High Altitude', horometroSugerido: 0 },
-  { id: 'p2', nombreCorto: 'Komatsu 930E (290T)', marcaModelo: 'Komatsu 930E-4', horometroSugerido: 0 },
-  { id: 'p3', nombreCorto: 'Pala Liebherr R9800', marcaModelo: 'Liebherr R9800', horometroSugerido: 0 },
-  { id: 'p4', nombreCorto: 'Dozer D11T', marcaModelo: 'Caterpillar D11T', horometroSugerido: 0 },
+  { id: 'p1', nombreCorto: 'CAT 793F (240T)', marca: 'Caterpillar', modelo: '793F High Altitude', tipoMaquina: 'Camión Tolva', horometroSugerido: 0 },
+  { id: 'p2', nombreCorto: 'Komatsu 930E (290T)', marca: 'Komatsu', modelo: '930E-4', tipoMaquina: 'Camión Tolva', horometroSugerido: 0 },
+  { id: 'p3', nombreCorto: 'Pala Liebherr R9800', marca: 'Liebherr', modelo: 'R9800', tipoMaquina: 'Pala', horometroSugerido: 0 },
+  { id: 'p4', nombreCorto: 'Dozer D11T', marca: 'Caterpillar', modelo: 'D11T', tipoMaquina: 'Bulldozer', horometroSugerido: 0 },
 ];
 
 
@@ -31,17 +31,6 @@ const MOCK_MOTIVOS = ['Aumento de Capacidad / Flota', 'Reemplazo por Falla', 'Ma
 const MOCK_MAQUINAS_RETIRAR = ['CAEX-204 - Caterpillar 793F', 'CAEX-205 - Komatsu 930E', 'EX-02 - CAT 349D2 L'];
 
 
-const INITIAL_EQUIPO_STATE: EquipoFormState = {
-  codigo: '',
-  patente: '',
-  marcaModelo: '',
-  horometro: '',
-  combustible: '',
-  chasis: '',
-  operadorId: '',
-  contratista: false,
-  fuenteDatos: 'NUEVO',
-};
 
 export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
   const colorScheme = useColorScheme();
@@ -51,8 +40,8 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
   const [numEquipos, setNumEquipos] = useState<1 | 2>(1);
   const [activeTabIdx, setActiveTabIdx] = useState<0 | 1>(0);
 
-  const [equipo1, setEquipo1] = useState<EquipoFormState>(INITIAL_EQUIPO_STATE);
-  const [equipo2, setEquipo2] = useState<EquipoFormState>(INITIAL_EQUIPO_STATE);
+  const [equipo1, setEquipo1] = useState<EquipoFormState>(EQUIPO_FORM_INICIAL);
+  const [equipo2, setEquipo2] = useState<EquipoFormState>(EQUIPO_FORM_INICIAL);
 
   const [destinoZonaId, setDestinoZonaId] = useState<number | null>(null);
   const [motivo, setMotivo] = useState<string>('');
@@ -64,7 +53,9 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
   const isEquipoValid = (eq: EquipoFormState) => {
     return eq.codigo.trim() !== '' &&
       eq.patente.trim() !== '' &&
-      eq.marcaModelo.trim() !== '' &&
+      eq.marca.trim() !== '' &&
+      eq.modelo.trim() !== '' &&
+      eq.tipoMaquina.trim() !== '' &&
       eq.horometro.trim() !== '' &&
       eq.operadorId !== '';
   };
@@ -92,8 +83,8 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
     // TODO: conectar con el endpoint real de incorporación de equipos cuando el backend lo exponga
 
     // Reset and close
-    setEquipo1(INITIAL_EQUIPO_STATE);
-    setEquipo2(INITIAL_EQUIPO_STATE);
+    setEquipo1(EQUIPO_FORM_INICIAL);
+    setEquipo2(EQUIPO_FORM_INICIAL);
     setNumEquipos(1);
     setActiveTabIdx(0);
     setDestinoZonaId(null);
