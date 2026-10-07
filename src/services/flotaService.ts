@@ -50,3 +50,5 @@ export interface ModeloMaquinaApi {
 export const listarModelosMaquina = () => apiRequest<ModeloMaquinaApi[]>('/modelos-maquina');
 
 export const listarTiposMaquina = () => apiRequest<string[]>('/maquinas/tipos');
+
+export const listarMarcasMaquina = () => apiRequest<string[]>('/maquinas/marcas');

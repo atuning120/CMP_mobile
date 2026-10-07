@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Keyboard, useColorScheme } from 'react-native';
-import { Search, ChevronDown, ChevronUp, X, Check, SearchX } from 'lucide-react-native';
+import { Search, ChevronDown, ChevronUp, X, Check, SearchX, Plus } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { buscar, RangoCoincidencia } from '../../utils/busqueda';
 import { styles } from './SearchableSelect.styles';
@@ -21,6 +21,8 @@ interface Props<T> {
   // Texto de ayuda bajo el campo (p. ej. por qué está deshabilitado)
   hint?: string;
   emptyMessage?: string;
+  // Acción fija al final de la lista (p. ej. crear una opción nueva); recibe lo que se estaba escribiendo
+  accionFinal?: { label: string; onPress: (consulta: string) => void };
 }
 
 const TextoResaltado: React.FC<{ texto: string; rangos: RangoCoincidencia[]; color: string; colorResaltado: string; style: object }> = ({
@@ -67,6 +69,7 @@ export function SearchableSelect<T>({
   disabled = false,
   hint,
   emptyMessage = 'No hay opciones disponibles',
+  accionFinal,
 }: Props<T>) {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
@@ -255,6 +258,24 @@ export function SearchableSelect<T>({
               </View>
             )}
             {renderOpciones()}
+            {accionFinal && !isLoading && (
+              <TouchableOpacity
+                style={[styles.accionFinal, { borderTopColor: theme.border }]}
+                onPress={() => {
+                  const consulta = consultaVisible;
+                  cerrar();
+                  inputRef.current?.blur();
+                  Keyboard.dismiss();
+                  accionFinal.onPress(consulta);
+                }}
+                accessibilityRole="button"
+              >
+                <View style={[styles.accionFinalIcono, { backgroundColor: theme.primary + '18' }]}>
+                  <Plus size={16} color={theme.primary} />
+                </View>
+                <Text style={[styles.accionFinalTexto, { color: theme.primary }]}>{accionFinal.label}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>

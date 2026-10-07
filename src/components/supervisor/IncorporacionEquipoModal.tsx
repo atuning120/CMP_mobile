@@ -5,7 +5,7 @@ import { PlusCircle, CheckCircle, MapPin, Truck, Wrench, ChevronDown, AlertTrian
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
 import { useModelosMaquina } from '../../hooks/useModelosMaquina';
-import { useTiposMaquina } from '../../hooks/useTiposMaquina';
+import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 import { styles } from './IncorporacionEquipoModal.styles';
 import { crearMaquina } from '../../services/flotaService';
 
@@ -44,7 +44,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const modelos = useModelosMaquina(visible);
-  const tipos = useTiposMaquina(visible);
+  const opcionesMaquina = useOpcionesMaquina(visible);
   const successColor = colorScheme === 'dark' ? '#81c995' : theme.success;
 
   const [numEquipos, setNumEquipos] = useState<1 | 2>(1);
@@ -236,10 +236,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
               plantillas={modelos.plantillas}
               cargandoPlantillas={modelos.cargando}
               errorPlantillas={modelos.error}
-              tiposMaquina={tipos.tipos}
-              cargandoTipos={tipos.cargando}
-              errorTipos={tipos.error}
-              onReintentarTipos={tipos.reintentar}
+              opciones={opcionesMaquina}
             />
           ) : (
             <EquipoDataForm
@@ -249,10 +246,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
               plantillas={modelos.plantillas}
               cargandoPlantillas={modelos.cargando}
               errorPlantillas={modelos.error}
-              tiposMaquina={tipos.tipos}
-              cargandoTipos={tipos.cargando}
-              errorTipos={tipos.error}
-              onReintentarTipos={tipos.reintentar}
+              opciones={opcionesMaquina}
             />
           )}
         </View>

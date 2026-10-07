@@ -3,15 +3,14 @@ import { listarModelosMaquina } from '../services/flotaService';
 import type { PlantillaEquipo } from '../components/supervisor/EquipoDataForm';
 
 // Modelos genéricos ("Datos Previos") para pre-cargar el formulario de una máquina nueva.
-// Se piden al abrir el modal; si falla, se reintenta la próxima vez que se abra.
+// Se recargan cada vez que se abre el modal: al incorporar una máquina de un tipo nuevo se agrega un modelo.
 export const useModelosMaquina = (habilitado: boolean) => {
   const [plantillas, setPlantillas] = useState<PlantillaEquipo[]>([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cargado, setCargado] = useState(false);
 
   useEffect(() => {
-    if (!habilitado || cargado) return;
+    if (!habilitado) return;
     let cancelado = false;
     const timer = setTimeout(async () => {
       setCargando(true);
@@ -22,7 +21,6 @@ export const useModelosMaquina = (habilitado: boolean) => {
         setPlantillas(
           modelos.map((m) => ({ id: String(m.idModelo), nombreCorto: m.nombre, marca: m.marca, modelo: m.modelo, tipoMaquina: m.tipoMaquina })),
         );
-        setCargado(true);
       } catch (err) {
         if (!cancelado) setError(err instanceof Error ? err.message : 'No se pudieron cargar los modelos.');
       } finally {
@@ -33,7 +31,7 @@ export const useModelosMaquina = (habilitado: boolean) => {
       cancelado = true;
       clearTimeout(timer);
     };
-  }, [habilitado, cargado]);
+  }, [habilitado]);
 
   return { plantillas, cargando, error };
 };

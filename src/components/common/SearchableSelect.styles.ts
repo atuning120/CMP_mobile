@@ -48,6 +48,25 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  accionFinal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+  },
+  accionFinalIcono: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  accionFinalTexto: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   optionsScroll: {
     maxHeight: OPCIONES_MAX_HEIGHT,
   },
