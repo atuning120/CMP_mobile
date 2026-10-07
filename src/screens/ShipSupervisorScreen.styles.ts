@@ -14,6 +14,8 @@ export const styles = StyleSheet.create({
   },
   scrollContainer: {
     padding: 16,
+    // Espacio para que el botón flotante no tape la última tarjeta
+    paddingBottom: 96,
     flexGrow: 1,
   },
   buttonsRow: {

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { View, Text, Image, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, Image, NativeScrollEvent, NativeSyntheticEvent, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -7,7 +7,7 @@ import { darkTheme, lightTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
-import { PlusCircle, Truck, History, ShieldAlert, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { Truck, History, ShieldAlert, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react-native';
 import { AppBottomSheetModal } from '../components/common/AppBottomSheetModal';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
@@ -20,6 +20,7 @@ import { styles } from './ShipSupervisorScreen.styles';
 import { cerrarSesion } from '../services/authService';
 import { ConfirmLogoutModal } from '../components/common/ConfirmLogoutModal';
 import { GlassCapsule } from '../components/common/GlassCapsule';
+import { NuevaMaquinaFab } from '../components/supervisor/NuevaMaquinaFab';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
@@ -29,6 +30,16 @@ export const ShipSupervisorScreen = () => {
   const router = useRouter();
   // Fondo que difumina la cápsula de la flota (en Android el BlurView necesita esta referencia)
   const fondoRef = useRef<View | null>(null);
+  // El botón flotante se contrae al bajar por la lista y vuelve a mostrar su etiqueta al subir
+  const [fabExpandido, setFabExpandido] = useState(true);
+  const ultimoScrollY = useRef(0);
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const delta = y - ultimoScrollY.current;
+    ultimoScrollY.current = y;
+    if (y < 40) setFabExpandido(true);
+    else if (Math.abs(delta) > 6) setFabExpandido(delta < 0);
+  };
   const [tamanoFondo, setTamanoFondo] = useState<{ width: number; height: number } | null>(null);
 
   const [activeTab, setActiveTab] = useState<TabOption>('FLOTA');
@@ -190,54 +201,14 @@ export const ShipSupervisorScreen = () => {
             <View style={[styles.fondo, tamanoFondo, { backgroundColor: theme.backgroundVeil }]} />
           </BlurTargetView>
         )}
-        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
           <TurnoSummaryDropdown turno={null} onLogout={() => setIsLogoutModalVisible(true)} />
-
-          <View style={styles.buttonsRow}>
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.warning,
-                  shadowColor: theme.warning
-                }
-              ]}
-              activeOpacity={0.7}
-              onPress={() => setIsModificacionModalVisible(true)}
-            >
-              <View style={styles.actionHeaderRow}>
-                <View style={[styles.iconBadge, { backgroundColor: theme.warning + '20' }]}>
-                  <RefreshCw size={16} color={theme.warning} />
-                </View>
-                <Text style={[styles.actionTopText, { color: theme.warning }]}>Relevo faena</Text>
-              </View>
-              <Text style={[styles.actionMainText, { color: theme.text }]}>Reemplazar (1 o 2)</Text>
-              <Text style={[styles.actionSubText, { color: theme.textSecondary }]}>Pre-carga modelo & datos</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.primary,
-                  shadowColor: theme.primary
-                }
-              ]}
-              activeOpacity={0.7}
-              onPress={() => setIsModalVisible(true)}
-            >
-              <View style={styles.actionHeaderRow}>
-                <View style={[styles.iconBadge, { backgroundColor: theme.primary + '20' }]}>
-                  <PlusCircle size={16} color={theme.primary} />
-                </View>
-                <Text style={[styles.actionTopText, { color: theme.primary }]}>CREAR NUEVA</Text>
-              </View>
-              <Text style={[styles.actionMainText, { color: theme.text }]}>Desde Cero</Text>
-              <Text style={[styles.actionSubText, { color: theme.textSecondary }]}>Formulario limpio</Text>
-            </TouchableOpacity>
-          </View>
 
           {renderTabs()}
 
@@ -245,6 +216,9 @@ export const ShipSupervisorScreen = () => {
             {renderContent()}
           </View>
         </ScrollView>
+
+        {/* Botón flotante: queda fijo sobre el contenido, dentro del área que termina en el footer */}
+        <NuevaMaquinaFab expandido={fabExpandido} onPress={() => setIsModalVisible(true)} />
       </View>
 
       <LoginFooter />
