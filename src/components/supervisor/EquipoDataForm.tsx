@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, useColorScheme, Switch } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, useColorScheme, Switch, ActivityIndicator } from 'react-native';
 import { Sparkles, PlusCircle, Copy, Zap } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { styles } from './EquipoDataForm.styles';
+import { SearchableSelect } from '../common/SearchableSelect';
 
 export type FuenteDatos = 'NUEVO' | 'PLANTILLA';
 
@@ -27,7 +28,6 @@ export interface PlantillaEquipo {
   marca: string;
   modelo: string;
   tipoMaquina: string;
-  horometroSugerido: number;
 }
 
 export const EQUIPO_FORM_INICIAL: EquipoFormState = {
@@ -51,10 +51,30 @@ interface Props {
   state: EquipoFormState;
   onChange: (newState: EquipoFormState) => void;
   plantillas: PlantillaEquipo[];
+  cargandoPlantillas?: boolean;
+  errorPlantillas?: string | null;
+  tiposMaquina: string[];
+  cargandoTipos?: boolean;
+  errorTipos?: string | null;
+  onReintentarTipos?: () => void;
 }
 
+// Accesores estables para SearchableSelect (evitan recalcular la búsqueda en cada render)
+const tipoComoTexto = (tipo: string) => tipo;
 
-export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, plantillas }) => {
+
+export const EquipoDataForm: React.FC<Props> = ({
+  equipoIdx,
+  state,
+  onChange,
+  plantillas,
+  cargandoPlantillas,
+  errorPlantillas,
+  tiposMaquina,
+  cargandoTipos,
+  errorTipos,
+  onReintentarTipos,
+}) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
@@ -68,7 +88,7 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
       marca: plantilla.marca,
       modelo: plantilla.modelo,
       tipoMaquina: plantilla.tipoMaquina,
-      horometro: plantilla.horometroSugerido.toString(),
+      // El horómetro es propio de cada máquina: la plantilla no lo toca
       fuenteDatos: 'PLANTILLA',
     });
   };
@@ -116,19 +136,42 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
             <View style={styles.plantillaHeaderTitleRow}>
               <Copy size={16} color={theme.primary} />
               <Text style={[styles.sourceTitle, { color: theme.textSecondary, marginBottom: 0 }]}>
-                Plantillas rápidas faena (1 toque para rellenar):
+                Modelos registrados (1 toque para rellenar marca, modelo y tipo):
               </Text>
             </View>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
-            {plantillas.map(p => (
-              <TouchableOpacity key={p.id} style={[styles.plantillaChip, { backgroundColor: theme.card, borderColor: 'transparent' }]} onPress={() => handleApplyPlantilla(p)}>
-                <Zap size={14} color={theme.primary} />
-                <Text style={[styles.chipText, { color: theme.text }]}>{p.nombreCorto}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          {cargandoPlantillas ? (
+            <ActivityIndicator color={theme.primary} style={styles.plantillasEstado} />
+          ) : errorPlantillas ? (
+            <Text style={[styles.plantillasMensaje, { color: theme.danger }]}>{errorPlantillas}</Text>
+          ) : plantillas.length === 0 ? (
+            <Text style={[styles.plantillasMensaje, { color: theme.textSecondary }]}>Aún no hay modelos registrados.</Text>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+              {plantillas.map(p => {
+                // Se marca el modelo que está aplicado en el formulario
+                const aplicada = state.marca === p.marca && state.modelo === p.modelo && state.tipoMaquina === p.tipoMaquina;
+                return (
+                  <TouchableOpacity
+                    key={p.id}
+                    style={[
+                      styles.plantillaChip,
+                      { backgroundColor: theme.card, borderColor: 'transparent' },
+                      aplicada && { backgroundColor: theme.primary + '18', borderColor: theme.primary },
+                    ]}
+                    onPress={() => handleApplyPlantilla(p)}
+                  >
+                    <Zap size={14} color={theme.primary} />
+                    <View>
+                      <Text style={[styles.chipText, { color: aplicada ? theme.primary : theme.text }]}>{p.nombreCorto}</Text>
+                      <Text style={[styles.chipSubtext, { color: theme.textSecondary }]}>{p.tipoMaquina}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
         </View>
       )}
 
@@ -184,14 +227,31 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
           </View>
         </View>
 
+        <View style={styles.fieldFull}>
+          <SearchableSelect
+            label="TIPO DE MÁQUINA *"
+            placeholder="Buscar o seleccionar tipo..."
+            options={tiposMaquina}
+            value={state.tipoMaquina || null}
+            onChange={(tipo) => updateField('tipoMaquina', tipo ?? '')}
+            getOptionKey={tipoComoTexto}
+            getOptionLabel={tipoComoTexto}
+            isLoading={cargandoTipos}
+            error={errorTipos}
+            onRetry={onReintentarTipos}
+            emptyMessage="Aún no hay tipos de máquina registrados"
+          />
+        </View>
+
         <View style={styles.row}>
           <View style={styles.fieldCol}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>TIPO DE MÁQUINA *</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>HORÓMETRO INICIAL *</Text>
             <TextInput
               style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
-              value={state.tipoMaquina}
-              onChangeText={(v) => updateField('tipoMaquina', v)}
-              placeholder="Ej. Camión Tolva"
+              value={state.horometro}
+              onChangeText={(v) => updateField('horometro', v.replace(/[^0-9.]/g, ''))}
+              keyboardType="numeric"
+              placeholder="0.0"
               placeholderTextColor={theme.textTertiary}
             />
           </View>
@@ -208,28 +268,15 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
           </View>
         </View>
 
-        <View style={styles.row}>
-          <View style={styles.fieldCol}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>HORÓMETRO INICIAL *</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
-              value={state.horometro}
-              onChangeText={(v) => updateField('horometro', v.replace(/[^0-9.]/g, ''))}
-              keyboardType="numeric"
-              placeholder="0.0"
-              placeholderTextColor={theme.textTertiary}
-            />
-          </View>
-          <View style={styles.fieldCol}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>N° CHASIS / SERIE (VIN)</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
-              value={state.chasis}
-              onChangeText={(v) => updateField('chasis', v)}
-              placeholder="Opcional"
-              placeholderTextColor={theme.textTertiary}
-            />
-          </View>
+        <View style={styles.fieldFull}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>N° CHASIS / SERIE (VIN)</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
+            value={state.chasis}
+            onChangeText={(v) => updateField('chasis', v)}
+            placeholder="Opcional"
+            placeholderTextColor={theme.textTertiary}
+          />
         </View>
 
         {/* <View style={styles.fieldFull}>

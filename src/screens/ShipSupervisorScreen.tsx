@@ -7,7 +7,7 @@ import { darkTheme, lightTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
-import { Truck, History, ShieldAlert, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { Truck, History, ShieldAlert, AlertTriangle, CheckCircle } from 'lucide-react-native';
 import { AppBottomSheetModal } from '../components/common/AppBottomSheetModal';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';

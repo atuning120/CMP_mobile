@@ -3,7 +3,9 @@ import { View, Text, TouchableOpacity, useColorScheme, TextInput, ActivityIndica
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { PlusCircle, CheckCircle, MapPin, Truck, Wrench, ChevronDown, AlertTriangle } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
-import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState, PlantillaEquipo } from './EquipoDataForm';
+import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
+import { useModelosMaquina } from '../../hooks/useModelosMaquina';
+import { useTiposMaquina } from '../../hooks/useTiposMaquina';
 import { styles } from './IncorporacionEquipoModal.styles';
 import { crearMaquina } from '../../services/flotaService';
 
@@ -26,13 +28,6 @@ const aCrearMaquina = (eq: EquipoFormState) => ({
   esContratista: eq.contratista,
 });
 
-// Mocks
-const MOCK_PLANTILLAS: PlantillaEquipo[] = [
-  { id: 'p1', nombreCorto: 'CAT 793F (240T)', marca: 'Caterpillar', modelo: '793F High Altitude', tipoMaquina: 'Camión Tolva', horometroSugerido: 0 },
-  { id: 'p2', nombreCorto: 'Komatsu 930E (290T)', marca: 'Komatsu', modelo: '930E-4', tipoMaquina: 'Camión Tolva', horometroSugerido: 0 },
-  { id: 'p3', nombreCorto: 'Pala Liebherr R9800', marca: 'Liebherr', modelo: 'R9800', tipoMaquina: 'Pala', horometroSugerido: 0 },
-  { id: 'p4', nombreCorto: 'Dozer D11T', marca: 'Caterpillar', modelo: 'D11T', tipoMaquina: 'Bulldozer', horometroSugerido: 0 },
-];
 
 
 const MOCK_ZONAS = [
@@ -48,6 +43,8 @@ const MOCK_ZONAS = [
 export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  const modelos = useModelosMaquina(visible);
+  const tipos = useTiposMaquina(visible);
   const successColor = colorScheme === 'dark' ? '#81c995' : theme.success;
 
   const [numEquipos, setNumEquipos] = useState<1 | 2>(1);
@@ -236,14 +233,26 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
               equipoIdx={0}
               state={equipo1}
               onChange={setEquipo1}
-              plantillas={MOCK_PLANTILLAS}
+              plantillas={modelos.plantillas}
+              cargandoPlantillas={modelos.cargando}
+              errorPlantillas={modelos.error}
+              tiposMaquina={tipos.tipos}
+              cargandoTipos={tipos.cargando}
+              errorTipos={tipos.error}
+              onReintentarTipos={tipos.reintentar}
             />
           ) : (
             <EquipoDataForm
               equipoIdx={1}
               state={equipo2}
               onChange={setEquipo2}
-              plantillas={MOCK_PLANTILLAS}
+              plantillas={modelos.plantillas}
+              cargandoPlantillas={modelos.cargando}
+              errorPlantillas={modelos.error}
+              tiposMaquina={tipos.tipos}
+              cargandoTipos={tipos.cargando}
+              errorTipos={tipos.error}
+              onReintentarTipos={tipos.reintentar}
             />
           )}
         </View>
