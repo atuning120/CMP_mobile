@@ -20,7 +20,10 @@ export const FleetSearchBar: React.FC<Props> = ({ value, onChangeText }) => {
         style={[styles.input, { color: theme.text }]}
         value={value}
         onChangeText={onChangeText}
-        placeholder="Buscar máquina por TAG, patente o modelo..."
+        placeholder="Buscar por código, patente, marca o modelo..."
+        autoCorrect={false}
+        autoCapitalize="none"
+        returnKeyType="search"
         placeholderTextColor={theme.textTertiary}
       />
     </View>

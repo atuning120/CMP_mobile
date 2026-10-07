@@ -1,22 +1,37 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, useColorScheme, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, useColorScheme, TextInput, ActivityIndicator } from 'react-native';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
-import { PlusCircle, CheckCircle, MapPin, Truck, Wrench, ChevronDown } from 'lucide-react-native';
+import { PlusCircle, CheckCircle, MapPin, Truck, Wrench, ChevronDown, AlertTriangle } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
-import { EquipoDataForm, EquipoFormState, PlantillaEquipo } from './EquipoDataForm';
+import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState, PlantillaEquipo } from './EquipoDataForm';
 import { styles } from './IncorporacionEquipoModal.styles';
+import { crearMaquina } from '../../services/flotaService';
 
 interface Props {
   visible: boolean;
   onClose: () => void;
+  // Se llama cada vez que el Backend registra una máquina, para refrescar la flota
+  onCreated?: () => void;
 }
+
+const aCrearMaquina = (eq: EquipoFormState) => ({
+  nombre: eq.codigo.trim(),
+  marca: eq.marca.trim(),
+  modelo: eq.modelo.trim(),
+  tipoMaquina: eq.tipoMaquina.trim(),
+  anio: eq.anio ? Number(eq.anio) : null,
+  patente: eq.patente.trim() || null,
+  numeroChasis: eq.chasis.trim() || null,
+  horometroInicial: Number(eq.horometro),
+  esContratista: eq.contratista,
+});
 
 // Mocks
 const MOCK_PLANTILLAS: PlantillaEquipo[] = [
-  { id: 'p1', nombreCorto: 'CAT 793F (240T)', marcaModelo: 'Caterpillar 793F High Altitude', horometroSugerido: 0 },
-  { id: 'p2', nombreCorto: 'Komatsu 930E (290T)', marcaModelo: 'Komatsu 930E-4', horometroSugerido: 0 },
-  { id: 'p3', nombreCorto: 'Pala Liebherr R9800', marcaModelo: 'Liebherr R9800', horometroSugerido: 0 },
-  { id: 'p4', nombreCorto: 'Dozer D11T', marcaModelo: 'Caterpillar D11T', horometroSugerido: 0 },
+  { id: 'p1', nombreCorto: 'CAT 793F (240T)', marca: 'Caterpillar', modelo: '793F High Altitude', tipoMaquina: 'Camión Tolva', horometroSugerido: 0 },
+  { id: 'p2', nombreCorto: 'Komatsu 930E (290T)', marca: 'Komatsu', modelo: '930E-4', tipoMaquina: 'Camión Tolva', horometroSugerido: 0 },
+  { id: 'p3', nombreCorto: 'Pala Liebherr R9800', marca: 'Liebherr', modelo: 'R9800', tipoMaquina: 'Pala', horometroSugerido: 0 },
+  { id: 'p4', nombreCorto: 'Dozer D11T', marca: 'Caterpillar', modelo: 'D11T', tipoMaquina: 'Bulldozer', horometroSugerido: 0 },
 ];
 
 
@@ -29,19 +44,8 @@ const MOCK_ZONAS = [
 
 
 
-const INITIAL_EQUIPO_STATE: EquipoFormState = {
-  codigo: '',
-  patente: '',
-  marcaModelo: '',
-  horometro: '',
-  combustible: '',
-  chasis: '',
-  operadorId: '',
-  contratista: false,
-  fuenteDatos: 'NUEVO',
-};
 
-export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
+export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const successColor = colorScheme === 'dark' ? '#81c995' : theme.success;
@@ -49,53 +53,85 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) 
   const [numEquipos, setNumEquipos] = useState<1 | 2>(1);
   const [activeTabIdx, setActiveTabIdx] = useState<0 | 1>(0);
 
-  const [equipo1, setEquipo1] = useState<EquipoFormState>(INITIAL_EQUIPO_STATE);
-  const [equipo2, setEquipo2] = useState<EquipoFormState>(INITIAL_EQUIPO_STATE);
+  const [equipo1, setEquipo1] = useState<EquipoFormState>(EQUIPO_FORM_INICIAL);
+  const [equipo2, setEquipo2] = useState<EquipoFormState>(EQUIPO_FORM_INICIAL);
 
   const [destinoZonaId, setDestinoZonaId] = useState<number | null>(null);
   const [motivo, setMotivo] = useState<string>('');
   const [observaciones, setObservaciones] = useState<string>('');
+  const [guardando, setGuardando] = useState(false);
+  const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
 
   // Validaciones
   const isEquipoValid = (eq: EquipoFormState) => {
+    const horometro = Number(eq.horometro);
     return eq.codigo.trim() !== '' &&
       eq.patente.trim() !== '' &&
-      eq.marcaModelo.trim() !== '' &&
-      eq.horometro.trim() !== '' &&
-      eq.operadorId !== '';
+      eq.marca.trim() !== '' &&
+      eq.modelo.trim() !== '' &&
+      eq.tipoMaquina.trim() !== '' &&
+      eq.horometro.trim() !== '' && Number.isFinite(horometro) && horometro >= 0 &&
+      (eq.anio === '' || eq.anio.length === 4);
   };
 
+  // El destino y el motivo aún no se guardan en el Backend, por eso no se exigen
   const isFormValid = () => {
     const isE1Valid = isEquipoValid(equipo1);
     const isE2Valid = numEquipos === 2 ? isEquipoValid(equipo2) : true;
-    const isDestinoValid = destinoZonaId !== null && motivo !== '';
-    return isE1Valid && isE2Valid && isDestinoValid;
+    return isE1Valid && isE2Valid;
   };
 
-  const handleSubmit = () => {
-    const payload = {
-      equipos: numEquipos === 1 ? [equipo1] : [equipo1, equipo2],
-      destino: {
-        zonaId: destinoZonaId,
-        motivo: motivo,
-        observaciones: observaciones,
-      },
-      autorizadoPor: 'Cristian Núñez (15.123.456-7)', // Mock from session
-      timestamp: new Date().toISOString(),
-    };
-
-    console.log('Payload de Incorporación:', JSON.stringify(payload, null, 2));
-    // TODO: conectar con el endpoint real de incorporación de equipos cuando el backend lo exponga
-
-    // Reset and close
-    setEquipo1(INITIAL_EQUIPO_STATE);
-    setEquipo2(INITIAL_EQUIPO_STATE);
+  const reiniciar = () => {
+    setEquipo1(EQUIPO_FORM_INICIAL);
+    setEquipo2(EQUIPO_FORM_INICIAL);
     setNumEquipos(1);
     setActiveTabIdx(0);
     setDestinoZonaId(null);
     setMotivo('');
     setObservaciones('');
+    setErrorEnvio(null);
+  };
+
+  const cerrar = () => {
+    if (guardando) return;
+    setErrorEnvio(null);
     onClose();
+  };
+
+  const handleSubmit = async () => {
+    const equipos = numEquipos === 1 ? [equipo1] : [equipo1, equipo2];
+    if (numEquipos === 2 && equipo1.codigo.trim().toUpperCase() === equipo2.codigo.trim().toUpperCase()) {
+      setErrorEnvio('Los dos equipos tienen el mismo código interno.');
+      return;
+    }
+
+    setGuardando(true);
+    setErrorEnvio(null);
+    // TODO: registrar destino, motivo y observaciones cuando exista dónde guardarlos
+    let creados = 0;
+    try {
+      for (const equipo of equipos) {
+        await crearMaquina(aCrearMaquina(equipo));
+        creados++;
+        onCreated?.();
+      }
+      reiniciar();
+      onClose();
+    } catch (err) {
+      const mensaje = err instanceof Error ? err.message : 'No se pudo incorporar el equipo.';
+      if (creados === 1) {
+        // El equipo #1 ya quedó registrado: se deja en el formulario solo el que falló
+        setErrorEnvio(`${equipo1.codigo.trim().toUpperCase()} se incorporó, pero el equipo #2 no: ${mensaje}`);
+        setEquipo1(equipo2);
+        setEquipo2(EQUIPO_FORM_INICIAL);
+        setNumEquipos(1);
+        setActiveTabIdx(0);
+      } else {
+        setErrorEnvio(mensaje);
+      }
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const headerTop = (
@@ -108,18 +144,19 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) 
     <>
       <TouchableOpacity
         style={[styles.btnSecundario, { backgroundColor: theme.cardAlt }]}
-        onPress={onClose}
+        onPress={cerrar}
+        disabled={guardando}
       >
         <Text style={[styles.btnSecundarioText, { color: theme.text }]}>Cancelar</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.btnPrimario, { backgroundColor: theme.primary, opacity: isFormValid() ? 1 : 0.5 }]}
+        style={[styles.btnPrimario, { backgroundColor: theme.primary, opacity: isFormValid() && !guardando ? 1 : 0.5 }]}
         onPress={handleSubmit}
-        disabled={!isFormValid()}
+        disabled={!isFormValid() || guardando}
       >
-        <CheckCircle size={18} color="#FFF" />
-        <Text style={styles.btnPrimarioText}>Incorporar {numEquipos} a Planta</Text>
+        {guardando ? <ActivityIndicator color="#FFF" /> : <CheckCircle size={18} color="#FFF" />}
+        <Text style={styles.btnPrimarioText}>{guardando ? 'Incorporando...' : `Incorporar ${numEquipos} a Planta`}</Text>
       </TouchableOpacity>
     </>
   );
@@ -127,7 +164,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) 
   return (
     <AppBottomSheetModal
       visible={visible}
-      onClose={onClose}
+      onClose={cerrar}
       title="Incorporación de Equipo a Planta"
       subtitle={`Suma ${numEquipos} equipo${numEquipos > 1 ? 's' : ''} nuev${numEquipos > 1 ? 'os' : 'o'} a la flota activa`}
       icon={<PlusCircle size={22} color={theme.primary} />}
@@ -259,6 +296,13 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose }) 
         </View>
 
       </View>
+
+      {!!errorEnvio && (
+        <View style={[styles.errorBox, { backgroundColor: theme.danger + '15', borderColor: theme.danger }]}>
+          <AlertTriangle size={16} color={theme.danger} />
+          <Text style={[styles.errorText, { color: theme.danger }]}>{errorEnvio}</Text>
+        </View>
+      )}
     </AppBottomSheetModal>
   );
 };

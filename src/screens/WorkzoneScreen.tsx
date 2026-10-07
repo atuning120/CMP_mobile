@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView, TouchableOpacity, ImageBackground, Alert } from 'react-native';
+import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Play, Square, Camera, AlertTriangle } from 'lucide-react-native';
@@ -13,7 +13,10 @@ import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdow
 import { StartShiftModal } from '../components/workzone/StartShiftModal';
 import { EndShiftModal } from '../components/workzone/EndShiftModal';
 import { ChangeStateModal } from '../components/workzone/ChangeStateModal';
+import { ResumenCierreTurno, ShiftClosedModal } from '../components/workzone/ShiftClosedModal';
 import { cerrarSesion } from '../services/authService';
+import { ConfirmLogoutModal } from '../components/common/ConfirmLogoutModal';
+import { useSyncStatus } from '../hooks/useSyncStatus';
 import { FOTOS_HABILITADAS } from '../constants/features';
 import { FinalizarTurnoDatos, IniciarTurnoDatos } from '../types/turno';
 
@@ -40,10 +43,14 @@ export default function WorkzoneScreen() {
   const [isStartShiftModalVisible, setIsStartShiftModalVisible] = useState(false);
   const [isEndShiftModalVisible, setIsEndShiftModalVisible] = useState(false);
   const [isChangeStateModalVisible, setIsChangeStateModalVisible] = useState(false);
+  const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
+  const [resumenCierre, setResumenCierre] = useState<ResumenCierreTurno | null>(null);
+  const { pendientes } = useSyncStatus();
 
   // Cerrar sesión NO cierra el turno: sigue EN_CURSO en el teléfono y en el Backend
   const handleLogout = async () => {
     await cerrarSesion();
+    setIsLogoutModalVisible(false);
     router.replace('/');
   };
 
@@ -53,16 +60,22 @@ export default function WorkzoneScreen() {
   };
 
   const handleFinalizarTurno = async (datos: FinalizarTurnoDatos) => {
+    if (!turno) return;
+    // Se toma el resumen antes del cierre: después el hook deja de exponer el turno
+    const resumen = {
+      codigoMaquina: turno.maquina.codigoCorto,
+      fechaInicio: turno.fechaInicio,
+      horometroInicial: turno.horometroInicial,
+      horometroFinal: datos.horometroFinal,
+    };
     const estado = await finalizarTurno(datos);
     setIsEndShiftModalVisible(false);
-    if (estado === 'CERRADO_AUTO') {
-      Alert.alert(
-        'Turno cerrado automáticamente',
-        'El turno superó las 12 horas, por lo que se cerró en el límite. Se registró tu horómetro final; informa a tu jefe de turno.',
-      );
-    } else {
-      Alert.alert('Turno cerrado', 'El turno se cerró correctamente. Se sincronizará con el servidor en segundo plano.');
-    }
+    const automatico = estado === 'CERRADO_AUTO';
+    // En el cierre automático el turno termina en el límite de 12 h, no en el momento actual
+    const fechaFin = automatico
+      ? new Date(Math.min(Date.now(), new Date(turno.fechaInicio).getTime() + 12 * 60 * 60 * 1000)).toISOString()
+      : new Date().toISOString();
+    setResumenCierre({ ...resumen, automatico, fechaFin });
   };
 
   const renderContent = () => {
@@ -93,7 +106,7 @@ export default function WorkzoneScreen() {
 
     return (
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <TurnoSummaryDropdown turno={turno} onLogout={handleLogout} />
+        <TurnoSummaryDropdown turno={turno} onLogout={() => setIsLogoutModalVisible(true)} />
 
         {!hayTurnoEnCurso && turnoCerradoAutomaticamente && (
           <View style={[styles.autoCloseBanner, { backgroundColor: theme.card, borderColor: theme.warning }]}>
@@ -130,11 +143,12 @@ export default function WorkzoneScreen() {
             icon={Camera}
             iconColor={theme.warning}
             title="Evidencias"
-            subtitle="Subir fotos de inspección, cancha o falla mecánica."
+            subtitle={hayTurnoEnCurso ? 'Subir fotos de inspección, cancha o falla mecánica.' : 'Disponible al iniciar un turno.'}
             badgeText={FOTOS_HABILITADAS ? `${cantidadEvidencias} FOTO${cantidadEvidencias === 1 ? '' : 'S'}` : 'PRÓXIMAMENTE'}
             onPress={() => {
               if (FOTOS_HABILITADAS) router.push('/evidencias');
             }}
+            disabled={!hayTurnoEnCurso}
           />
         </View>
 
@@ -181,6 +195,20 @@ export default function WorkzoneScreen() {
         // El panel queda abierto tras cambiar de estado: solo se cierra cuando el operador lo decide
         onStateChange={updateEstadoActual}
       />
+
+      <ConfirmLogoutModal
+        visible={isLogoutModalVisible}
+        onCancel={() => setIsLogoutModalVisible(false)}
+        onConfirm={handleLogout}
+        avisoTurno={
+          turno
+            ? `Tu turno en ${turno.maquina.codigoCorto} seguirá en curso. Podrás retomarlo al volver a ingresar.`
+            : null
+        }
+        pendientesSincronizar={pendientes}
+      />
+
+      <ShiftClosedModal resumen={resumenCierre} onClose={() => setResumenCierre(null)} />
     </SafeAreaView>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ImageBackground, useColorScheme, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ImageBackground, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { darkTheme, lightTheme } from '../constants/theme';
@@ -17,6 +17,7 @@ import { ReemplazoEquipoModal } from '../components/supervisor/ReemplazoEquipoMo
 import { EditarEquipoModal } from '../components/supervisor/EditarEquipoModal';
 import { styles } from './ShipSupervisorScreen.styles';
 import { cerrarSesion } from '../services/authService';
+import { ConfirmLogoutModal } from '../components/common/ConfirmLogoutModal';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
@@ -35,10 +36,14 @@ export const ShipSupervisorScreen = () => {
   const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false);
   const [maquinaAToggle, setMaquinaAToggle] = useState<MaquinaFlota | null>(null);
 
-  const { maquinas, contadorFlota, isLoading, actualizarMaquina } = useFlotaResumen();
+  // La búsqueda la resuelve el Backend; el filtro por estado se aplica sobre el resultado
+  const { maquinas, contadorFlota, isLoading, error, refetch, actualizarMaquina } = useFlotaResumen(searchQuery);
+
+  const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
 
   const handleLogout = async () => {
     await cerrarSesion();
+    setIsLogoutModalVisible(false);
     router.replace('/');
   };
 
@@ -56,21 +61,15 @@ export const ShipSupervisorScreen = () => {
     setIsConfirmModalVisible(true);
   };
 
-  const filteredMaquinas = useMemo(() => {
-    return maquinas.filter(m => {
-      const matchesSearch =
-        m.codigo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.patente.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.marcaModelo.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesFilter =
+  const filteredMaquinas = useMemo(
+    () =>
+      maquinas.filter(m =>
         activeFilter === 'Todos' ? true :
           activeFilter === 'Operativos' ? m.estadoOperativo === 'OPERATIVO' :
-            activeFilter === 'Fuera de Servicio' ? m.estadoOperativo === 'FUERA_DE_SERVICIO' : true;
-
-      return matchesSearch && matchesFilter;
-    });
-  }, [maquinas, searchQuery, activeFilter]);
+            activeFilter === 'Fuera de Servicio' ? m.estadoOperativo === 'FUERA_DE_SERVICIO' : true,
+      ),
+    [maquinas, activeFilter],
+  );
 
   const renderTabs = () => (
     <View style={[styles.tabsContainer, { backgroundColor: theme.cardAlt }]}>
@@ -140,6 +139,15 @@ export const ShipSupervisorScreen = () => {
 
         {isLoading ? (
           <ActivityIndicator size="large" color={theme.warning} style={{ marginTop: 40 }} />
+        ) : error ? (
+          <View style={{ alignItems: 'center', marginTop: 40, gap: 12 }}>
+            <Text style={{ textAlign: 'center', color: theme.danger }}>{error.message}</Text>
+            <TouchableOpacity onPress={refetch} style={{ backgroundColor: theme.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}>
+              <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        ) : filteredMaquinas.length === 0 ? (
+          <Text style={{ textAlign: 'center', marginTop: 40, color: theme.textSecondary }}>No se encontraron máquinas.</Text>
         ) : (
           filteredMaquinas.map(maquina => (
             <MachineFleetCard
@@ -150,10 +158,6 @@ export const ShipSupervisorScreen = () => {
               onToggleEstado={handleToggleEstado}
             />
           ))
-        )}
-
-        {!isLoading && filteredMaquinas.length === 0 && (
-          <Text style={{ textAlign: 'center', marginTop: 40, color: theme.textSecondary }}>No se encontraron máquinas.</Text>
         )}
       </View>
     );
@@ -169,7 +173,7 @@ export const ShipSupervisorScreen = () => {
         imageStyle={{ opacity: colorScheme === 'dark' ? 0.3 : 0.9 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <TurnoSummaryDropdown turno={null} onLogout={handleLogout} />
+          <TurnoSummaryDropdown turno={null} onLogout={() => setIsLogoutModalVisible(true)} />
 
           <View style={styles.buttonsRow}>
             <TouchableOpacity
@@ -230,6 +234,7 @@ export const ShipSupervisorScreen = () => {
       <IncorporacionEquipoModal
         visible={isModalVisible}
         onClose={() => setIsModalVisible(false)}
+        onCreated={refetch}
       />
 
       <ReemplazoEquipoModal
@@ -300,6 +305,11 @@ export const ShipSupervisorScreen = () => {
             : `¿Confirmas que el equipo ${maquinaAToggle?.codigo} está reparado y listo para operar?`}
         </Text>
       </AppBottomSheetModal>
+      <ConfirmLogoutModal
+        visible={isLogoutModalVisible}
+        onCancel={() => setIsLogoutModalVisible(false)}
+        onConfirm={handleLogout}
+      />
     </SafeAreaView>
   );
 };

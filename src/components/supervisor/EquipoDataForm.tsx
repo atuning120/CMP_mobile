@@ -9,7 +9,10 @@ export type FuenteDatos = 'NUEVO' | 'PLANTILLA';
 export interface EquipoFormState {
   codigo: string;
   patente: string;
-  marcaModelo: string;
+  marca: string;
+  modelo: string;
+  tipoMaquina: string;
+  anio: string;
   horometro: string;
   combustible: string;
   chasis: string;
@@ -21,9 +24,26 @@ export interface EquipoFormState {
 export interface PlantillaEquipo {
   id: string;
   nombreCorto: string;
-  marcaModelo: string;
+  marca: string;
+  modelo: string;
+  tipoMaquina: string;
   horometroSugerido: number;
 }
+
+export const EQUIPO_FORM_INICIAL: EquipoFormState = {
+  codigo: '',
+  patente: '',
+  marca: '',
+  modelo: '',
+  tipoMaquina: '',
+  anio: '',
+  horometro: '',
+  combustible: '',
+  chasis: '',
+  operadorId: '',
+  contratista: false,
+  fuenteDatos: 'NUEVO',
+};
 
 
 interface Props {
@@ -45,7 +65,9 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
   const handleApplyPlantilla = (plantilla: PlantillaEquipo) => {
     onChange({
       ...state,
-      marcaModelo: plantilla.marcaModelo,
+      marca: plantilla.marca,
+      modelo: plantilla.modelo,
+      tipoMaquina: plantilla.tipoMaquina,
       horometro: plantilla.horometroSugerido.toString(),
       fuenteDatos: 'PLANTILLA',
     });
@@ -121,6 +143,7 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
               style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
               value={state.codigo}
               onChangeText={(v) => updateField('codigo', v)}
+              autoCapitalize="characters"
               placeholder="Ej. CAEX-206"
               placeholderTextColor={theme.textTertiary}
             />
@@ -131,21 +154,58 @@ export const EquipoDataForm: React.FC<Props> = ({ equipoIdx, state, onChange, pl
               style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
               value={state.patente}
               onChangeText={(v) => updateField('patente', v)}
+              autoCapitalize="characters"
               placeholder="AA-BB-11"
               placeholderTextColor={theme.textTertiary}
             />
           </View>
         </View>
 
-        <View style={styles.fieldFull}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>MODELO Y VERSIÓN DE MAQUINARIA *</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
-            value={state.marcaModelo}
-            onChangeText={(v) => updateField('marcaModelo', v)}
-            placeholder="Ej. Komatsu 930E-4"
-            placeholderTextColor={theme.textTertiary}
-          />
+        <View style={styles.row}>
+          <View style={styles.fieldCol}>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>MARCA *</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
+              value={state.marca}
+              onChangeText={(v) => updateField('marca', v)}
+              placeholder="Ej. Komatsu"
+              placeholderTextColor={theme.textTertiary}
+            />
+          </View>
+          <View style={styles.fieldCol}>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>MODELO Y VERSIÓN *</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
+              value={state.modelo}
+              onChangeText={(v) => updateField('modelo', v)}
+              placeholder="Ej. 930E-4"
+              placeholderTextColor={theme.textTertiary}
+            />
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.fieldCol}>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>TIPO DE MÁQUINA *</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
+              value={state.tipoMaquina}
+              onChangeText={(v) => updateField('tipoMaquina', v)}
+              placeholder="Ej. Camión Tolva"
+              placeholderTextColor={theme.textTertiary}
+            />
+          </View>
+          <View style={styles.fieldCol}>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>AÑO DE FABRICACIÓN</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
+              value={state.anio}
+              onChangeText={(v) => updateField('anio', v.replace(/[^0-9]/g, '').slice(0, 4))}
+              keyboardType="number-pad"
+              placeholder="Opcional"
+              placeholderTextColor={theme.textTertiary}
+            />
+          </View>
         </View>
 
         <View style={styles.row}>

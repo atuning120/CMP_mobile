@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { listarFlota, MaquinaFlotaApi } from '../services/flotaService';
 
 export type EstadoOperativo = 'OPERATIVO' | 'FUERA_DE_SERVICIO';
 
@@ -24,76 +25,59 @@ export interface UseFlotaResumenResult {
   actualizarMaquina: (maquina: MaquinaFlota) => void;
 }
 
-const MOCK_FLOTA: MaquinaFlota[] = [
-  {
-    id: 1,
-    codigo: 'CAEX-204',
-    patente: 'JJ-PR-44',
-    marcaModelo: 'Caterpillar 793F High Altitude',
-    estadoOperativo: 'FUERA_DE_SERVICIO',
-    fallaActiva: 'Sobretemperatura en convertidor de torque y fuga hidráulica activa',
-    operadorAsignado: 'Sin operador asignado',
-    zonaActual: 'Taller Central',
-    horometroActual: 14280.5,
-    combustible: { porcentaje: 42, tipo: 'Petróleo' }
-  },
-  {
-    id: 2,
-    codigo: 'CAEX-205',
-    patente: 'KT-RS-12',
-    marcaModelo: 'Komatsu 930E-4',
-    estadoOperativo: 'OPERATIVO',
-    fallaActiva: null,
-    operadorAsignado: 'María López',
-    zonaActual: 'Fase 4 - Banco 320',
-    horometroActual: 8940.2,
-    combustible: { porcentaje: 78, tipo: 'Petróleo' }
-  },
-  {
-    id: 3,
-    codigo: 'PALA-02',
-    patente: 'XX-YY-99',
-    marcaModelo: 'P&H 4100XPC',
-    estadoOperativo: 'OPERATIVO',
-    fallaActiva: null,
-    operadorAsignado: 'Carlos Díaz',
-    zonaActual: 'Fase 4 - Frente de Carguío',
-    horometroActual: 21050.0,
-    combustible: null
-  }
-];
+// Espera tras la última tecla antes de consultar al Backend
+const DEBOUNCE_BUSQUEDA_MS = 300;
 
-export const useFlotaResumen = (): UseFlotaResumenResult => {
+// TODO: fallas mecánicas y combustible aún no existen en la base de datos
+const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
+  id: maquina.idMaquina,
+  codigo: maquina.nombre,
+  patente: maquina.patente ?? '',
+  marcaModelo: [[maquina.marca, maquina.modelo].filter(Boolean).join(' '), maquina.tipoMaquina].filter(Boolean).join(' · '),
+  estadoOperativo: maquina.estado === 'BAJA' ? 'FUERA_DE_SERVICIO' : 'OPERATIVO',
+  fallaActiva: null,
+  operadorAsignado: maquina.operadorActual,
+  zonaActual: maquina.ubicacionActual,
+  horometroActual: maquina.horometroActual ?? 0,
+  combustible: null,
+});
+
+export const useFlotaResumen = (busqueda: string): UseFlotaResumenResult => {
   const [maquinas, setMaquinas] = useState<MaquinaFlota[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-
-  const loadData = async () => {
-    try {
-      // TODO: reemplazar por datos reales cuando se definan patente, estado_operativo, fallas mecánicas y combustible en el backend
-      await new Promise(resolve => setTimeout(resolve, 600)); // Simulate latency
-      setMaquinas(MOCK_FLOTA);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Error al cargar la flota'));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [recargas, setRecargas] = useState(0);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadData();
+    // Solo marca la consulta como obsoleta: fetchBackend maneja su propio timeout
+    const controlador = new AbortController();
+    const timer = setTimeout(async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const respuesta = await listarFlota(busqueda);
+        if (controlador.signal.aborted) return;
+        setMaquinas(respuesta.map(mapMaquinaFlota));
+      } catch (err) {
+        // Una búsqueda más nueva reemplazó a esta: se descarta su resultado
+        if (controlador.signal.aborted) return;
+        setError(err instanceof Error ? err : new Error('Error al cargar la flota'));
+      } finally {
+        if (!controlador.signal.aborted) setIsLoading(false);
+      }
+    }, DEBOUNCE_BUSQUEDA_MS);
+    return () => {
+      clearTimeout(timer);
+      controlador.abort();
+    };
+  }, [busqueda, recargas]);
+
+  const refetch = useCallback(() => setRecargas((n) => n + 1), []);
+
+  // TODO: persistir en el Backend cuando exista el endpoint de edición / cambio de estado
+  const actualizarMaquina = useCallback((maquinaActualizada: MaquinaFlota) => {
+    setMaquinas((prev) => prev.map((m) => (m.id === maquinaActualizada.id ? maquinaActualizada : m)));
   }, []);
-
-  const refetch = () => {
-    setIsLoading(true);
-    setError(null);
-    loadData();
-  };
-
-  const actualizarMaquina = (maquinaActualizada: MaquinaFlota) => {
-    setMaquinas(prev => prev.map(m => m.id === maquinaActualizada.id ? maquinaActualizada : m));
-  };
 
   const contadorFlota = useMemo(() => maquinas.length, [maquinas]);
 
