@@ -5,21 +5,23 @@ import { styles } from './FleetFilterChips.styles';
 
 export type FilterOption = 'Todos' | 'Operativos' | 'Fuera de Servicio';
 
-interface Props {
-  activeFilter: FilterOption;
-  onFilterChange: (filter: FilterOption) => void;
+interface Props<T extends string> {
+  activeFilter: T;
+  onFilterChange: (filter: T) => void;
+  // Por defecto los filtros de la flota; el historial pasa los suyos
+  filters?: readonly T[];
 }
 
 const FILTERS: FilterOption[] = ['Todos', 'Operativos', 'Fuera de Servicio'];
 
-export const FleetFilterChips: React.FC<Props> = ({ activeFilter, onFilterChange }) => {
+export function FleetFilterChips<T extends string = FilterOption>({ activeFilter, onFilterChange, filters }: Props<T>) {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
   return (
     <View style={styles.container}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {FILTERS.map(filter => {
+        {(filters ?? (FILTERS as unknown as readonly T[])).map(filter => {
           const isActive = activeFilter === filter;
           
           return (
@@ -52,5 +54,4 @@ export const FleetFilterChips: React.FC<Props> = ({ activeFilter, onFilterChange
       </ScrollView>
     </View>
   );
-};
-
+}

@@ -109,25 +109,6 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     minHeight: 80,
   },
-  dropdownSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  dropdownSelectorInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  dropdownText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
   authBlock: {
     flexDirection: 'row',
     justifyContent: 'space-between',

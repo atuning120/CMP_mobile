@@ -34,6 +34,8 @@ export interface CrearMaquinaApi {
   numeroChasis: string | null;
   horometroInicial: number;
   esContratista: boolean;
+  motivo: string;
+  observacion: string | null;
 }
 
 export const crearMaquina = (datos: CrearMaquinaApi) =>

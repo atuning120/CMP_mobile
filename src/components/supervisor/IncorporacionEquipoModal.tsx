@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, useColorScheme, TextInput, ActivityIndicator } from 'react-native';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
-import { PlusCircle, CheckCircle, MapPin, Truck, Wrench, ChevronDown, AlertTriangle } from 'lucide-react-native';
+import { PlusCircle, CheckCircle, Truck, ClipboardList, AlertTriangle } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
 import { useModelosMaquina } from '../../hooks/useModelosMaquina';
 import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 import { styles } from './IncorporacionEquipoModal.styles';
 import { crearMaquina } from '../../services/flotaService';
+import { SearchableSelect } from '../common/SearchableSelect';
+import { MOTIVOS_INCORPORACION } from '../../constants/motivosJefeTurno';
 
 interface Props {
   visible: boolean;
@@ -28,17 +30,8 @@ const aCrearMaquina = (eq: EquipoFormState) => ({
   esContratista: eq.contratista,
 });
 
-
-
-const MOCK_ZONAS = [
-  { id_area: 1, id_zona: 1, nombre: 'Fase 4 - Banco 320' },
-  { id_area: 1, id_zona: 2, nombre: 'Fase 4 - Rampa Sur' },
-  { id_area: 2, id_zona: 3, nombre: 'Botadero Norte' },
-  { id_area: 3, id_zona: 4, nombre: 'Chancador Primario' },
-];
-
-
-
+// Accesor estable para SearchableSelect (evita recalcular la búsqueda en cada render)
+const comoTexto = (valor: string) => valor;
 
 export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, onCreated }) => {
   const colorScheme = useColorScheme();
@@ -53,7 +46,6 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
   const [equipo1, setEquipo1] = useState<EquipoFormState>(EQUIPO_FORM_INICIAL);
   const [equipo2, setEquipo2] = useState<EquipoFormState>(EQUIPO_FORM_INICIAL);
 
-  const [destinoZonaId, setDestinoZonaId] = useState<number | null>(null);
   const [motivo, setMotivo] = useState<string>('');
   const [observaciones, setObservaciones] = useState<string>('');
   const [guardando, setGuardando] = useState(false);
@@ -71,11 +63,11 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
       (eq.anio === '' || eq.anio.length === 4);
   };
 
-  // El destino y el motivo aún no se guardan en el Backend, por eso no se exigen
+  // El motivo es obligatorio: justifica la incorporación en la bitácora del jefe de turno
   const isFormValid = () => {
     const isE1Valid = isEquipoValid(equipo1);
     const isE2Valid = numEquipos === 2 ? isEquipoValid(equipo2) : true;
-    return isE1Valid && isE2Valid;
+    return isE1Valid && isE2Valid && motivo !== '';
   };
 
   const reiniciar = () => {
@@ -83,7 +75,6 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
     setEquipo2(EQUIPO_FORM_INICIAL);
     setNumEquipos(1);
     setActiveTabIdx(0);
-    setDestinoZonaId(null);
     setMotivo('');
     setObservaciones('');
     setErrorEnvio(null);
@@ -104,11 +95,11 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
 
     setGuardando(true);
     setErrorEnvio(null);
-    // TODO: registrar destino, motivo y observaciones cuando exista dónde guardarlos
     let creados = 0;
     try {
       for (const equipo of equipos) {
-        await crearMaquina(aCrearMaquina(equipo));
+        // En una dupla ambos equipos quedan en la bitácora con el mismo motivo y observación
+        await crearMaquina({ ...aCrearMaquina(equipo), motivo, observacion: observaciones.trim() || null });
         creados++;
         onCreated?.();
       }
@@ -255,49 +246,37 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
       <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
-            <Wrench size={16} color={theme.warning} />
-            <Text style={[styles.sectionTitle, { color: theme.textSecondary, marginBottom: 0 }]}>3. DESTINO EN PLANTA Y OBSERVACIONES</Text>
+            <ClipboardList size={16} color={theme.warning} />
+            <Text style={[styles.sectionTitle, { color: theme.textSecondary, marginBottom: 0 }]}>3. JUSTIFICACIÓN DEL JEFE DE TURNO</Text>
           </View>
         </View>
 
         <View style={styles.fieldFull}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>UBICACIÓN / FASE DESTINO EN MINA:</Text>
-          <TouchableOpacity style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: theme.border }]}>
-            <View style={styles.dropdownSelectorInner}>
-              <MapPin size={16} color={theme.textSecondary} />
-              <Text style={[styles.dropdownText, { color: theme.text }]}>
-                {destinoZonaId ? MOCK_ZONAS.find(z => z.id_zona === destinoZonaId)?.nombre : 'Fase 4 - Banco 320 (Rampa Sur)'}
-              </Text>
-            </View>
-            <ChevronDown size={20} color={theme.textSecondary} />
-          </TouchableOpacity>
+          <SearchableSelect
+            label="MOTIVO *"
+            placeholder="Buscar o seleccionar motivo..."
+            options={MOTIVOS_INCORPORACION}
+            value={motivo || null}
+            onChange={(opcion) => setMotivo(opcion ?? '')}
+            getOptionKey={comoTexto}
+            getOptionLabel={comoTexto}
+          />
         </View>
 
         <View style={styles.fieldFull}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>MOTIVO / JUSTIFICACIÓN DEL JEFE DE TURNO:</Text>
-          <TouchableOpacity style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: theme.border }]}>
-            <View style={styles.dropdownSelectorInner}>
-              <Text style={[styles.dropdownText, { color: theme.text }]}>
-                {motivo || 'Aumento de Capacidad / Flota de Producción Planta'}
-              </Text>
-            </View>
-            <ChevronDown size={20} color={theme.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.fieldFull}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>OBSERVACIONES</Text>
           <TextInput
             style={[styles.textarea, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
             value={observaciones}
             onChangeText={setObservaciones}
-            placeholder="Incorporación autorizada de maquinaria adicional para reforzar frente de carguío y cumplir meta diaria de tonelaje."
+            placeholder="Ej. Refuerzo del frente de carguío para cumplir la meta diaria de tonelaje."
             placeholderTextColor={theme.textTertiary}
             multiline
             numberOfLines={3}
+            maxLength={500}
             textAlignVertical="top"
           />
         </View>
-
       </View>
 
       {!!errorEnvio && (
