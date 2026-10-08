@@ -34,6 +34,8 @@ export interface Maquina {
   nombreCompleto: string;
   tipoMaquina: string;
   modelo: string;
+  // Operador a cargo de la máquina: la tiene preseleccionada al iniciar turno
+  idOperadorAsignado: number | null;
 }
 
 export type EstadoTurno = 'EN_CURSO' | 'CERRADO' | 'CERRADO_AUTO';

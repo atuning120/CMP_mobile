@@ -67,7 +67,8 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
         <View style={styles.metaItem}>
           <User size={14} color={theme.textTertiary} />
           <Text style={[styles.metaText, { color: theme.text }]} numberOfLines={1}>
-            {maquina.operadorAsignado || 'Sin operador asignado'}
+            {/* Quien la opera ahora; si nadie, el operador a cargo */}
+            {maquina.operadorEnTurno || maquina.operadorAsignado || 'Sin operador asignado'}
           </Text>
         </View>
         <View style={styles.metaItem}>

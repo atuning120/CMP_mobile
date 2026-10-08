@@ -7,7 +7,7 @@ import { darkTheme, lightTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
-import { Truck, History, ShieldAlert, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { Truck, History, ShieldAlert, AlertTriangle, CheckCircle, CalendarRange, LayoutList, UserRound } from 'lucide-react-native';
 import { AppBottomSheetModal } from '../components/common/AppBottomSheetModal';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
@@ -24,12 +24,29 @@ import { NuevaMaquinaFab } from '../components/supervisor/NuevaMaquinaFab';
 import { HistorialEventoCard } from '../components/supervisor/HistorialEventoCard';
 import { useHistorial } from '../hooks/useHistorial';
 import type { FiltroHistorial } from '../services/historialService';
+import { RangoFechasModal } from '../components/supervisor/RangoFechasModal';
+import { SegmentedControl } from '../components/supervisor/SegmentedControl';
+import {
+  agruparPorDia,
+  etiquetaRango,
+  inicioDelDia,
+  RANGOS_HISTORIAL,
+  RangoHistorialUI,
+  rangoPersonalizado,
+  rangoPredefinido,
+} from '../utils/historialFechas';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
-const FILTROS_HISTORIAL = ['Todo', 'Turnos', 'Flota'] as const;
-type FiltroHistorialUI = (typeof FILTROS_HISTORIAL)[number];
+type FiltroHistorialUI = 'Todo' | 'Turnos' | 'Flota';
+const FILTROS_HISTORIAL = [
+  { valor: 'Todo', icono: LayoutList },
+  { valor: 'Turnos', icono: UserRound },
+  { valor: 'Flota', icono: Truck },
+] as const satisfies readonly { valor: FiltroHistorialUI; icono: unknown }[];
 const FILTRO_HISTORIAL_API: Record<FiltroHistorialUI, FiltroHistorial> = { Todo: 'TODO', Turnos: 'TURNOS', Flota: 'FLOTA' };
+// Distancia al final (px) desde la que se pide la siguiente página del historial
+const DISTANCIA_CARGA_MAS = 600;
 
 export const ShipSupervisorScreen = () => {
   const colorScheme = useColorScheme();
@@ -41,7 +58,13 @@ export const ShipSupervisorScreen = () => {
   const [fabExpandido, setFabExpandido] = useState(true);
   const ultimoScrollY = useRef(0);
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const y = e.nativeEvent.contentOffset.y;
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    const y = contentOffset.y;
+    // Scroll infinito del historial: pide la página siguiente antes de llegar al final.
+    // Si la última carga falló no se reintenta sola (se repetiría en cada evento de scroll)
+    if (activeTab === 'HISTORIAL' && !historial.errorMas && y + layoutMeasurement.height >= contentSize.height - DISTANCIA_CARGA_MAS) {
+      historial.cargarMas();
+    }
     const delta = y - ultimoScrollY.current;
     ultimoScrollY.current = y;
     if (y < 40) setFabExpandido(true);
@@ -63,7 +86,16 @@ export const ShipSupervisorScreen = () => {
   const { maquinas, contadorFlota, isLoading, error, refetch, actualizarMaquina } = useFlotaResumen(searchQuery);
 
   const [filtroHistorial, setFiltroHistorial] = useState<FiltroHistorialUI>('Todo');
-  const historial = useHistorial(FILTRO_HISTORIAL_API[filtroHistorial]);
+  const [rangoHistorial, setRangoHistorial] = useState<RangoHistorialUI>('7 días');
+  // Días elegidos en "Personalizado" (inclusive); por defecto, hoy
+  const [rangoElegido, setRangoElegido] = useState(() => ({ desde: inicioDelDia(new Date()), hasta: inicioDelDia(new Date()) }));
+  const [isRangoModalVisible, setIsRangoModalVisible] = useState(false);
+  const rango = useMemo(
+    () => (rangoHistorial === 'Personalizado' ? rangoPersonalizado(rangoElegido.desde, rangoElegido.hasta) : rangoPredefinido(rangoHistorial)),
+    [rangoHistorial, rangoElegido],
+  );
+  const historial = useHistorial(FILTRO_HISTORIAL_API[filtroHistorial], rango);
+  const diasHistorial = useMemo(() => agruparPorDia(historial.eventos), [historial.eventos]);
 
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
 
@@ -157,7 +189,25 @@ export const ShipSupervisorScreen = () => {
 
   const renderHistorial = () => (
     <GlassCapsule blurTarget={fondoRef}>
-      <FleetFilterChips filters={FILTROS_HISTORIAL} activeFilter={filtroHistorial} onFilterChange={setFiltroHistorial} />
+      {/* Qué se ve (segmentos) va separado de cuándo (chips de rango) */}
+      <SegmentedControl opciones={FILTROS_HISTORIAL} activo={filtroHistorial} onChange={setFiltroHistorial} />
+      <FleetFilterChips
+        filters={RANGOS_HISTORIAL}
+        activeFilter={rangoHistorial}
+        onFilterChange={(opcion) => {
+          // Personalizado se aplica recién al confirmar las fechas en el modal
+          if (opcion === 'Personalizado') setIsRangoModalVisible(true);
+          else setRangoHistorial(opcion);
+        }}
+      />
+      {rangoHistorial === 'Personalizado' && (
+        <TouchableOpacity style={styles.rangoResumen} onPress={() => setIsRangoModalVisible(true)} activeOpacity={0.7}>
+          <CalendarRange size={14} color={theme.primary} />
+          <Text style={[styles.rangoResumenTexto, { color: theme.primary }]}>
+            {etiquetaRango(rangoElegido.desde, rangoElegido.hasta)} · Cambiar
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {historial.isLoading ? (
         <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
@@ -169,25 +219,29 @@ export const ShipSupervisorScreen = () => {
           </TouchableOpacity>
         </View>
       ) : historial.eventos.length === 0 ? (
-        <Text style={{ textAlign: 'center', marginTop: 40, color: theme.textSecondary }}>Aún no hay eventos registrados.</Text>
+        <Text style={{ textAlign: 'center', marginTop: 40, color: theme.textSecondary }}>No hay eventos en este rango de fechas.</Text>
       ) : (
         <>
-          {historial.eventos.map(evento => (
-            <HistorialEventoCard key={evento.id} evento={evento} />
+          {diasHistorial.map(dia => (
+            <View key={dia.clave}>
+              <Text style={[styles.diaTitulo, { color: theme.textSecondary }]}>{dia.titulo}</Text>
+              {dia.eventos.map(evento => (
+                <HistorialEventoCard key={evento.id} evento={evento} />
+              ))}
+            </View>
           ))}
-          {historial.hayMas && (
+          {historial.isLoadingMas ? (
+            <ActivityIndicator color={theme.primary} style={styles.finLista} />
+          ) : historial.errorMas ? (
             <TouchableOpacity
               onPress={historial.cargarMas}
-              disabled={historial.isLoadingMas}
               style={[styles.cargarMas, { borderColor: theme.glassSurfaceBorder, backgroundColor: theme.glassSurface }]}
             >
-              {historial.isLoadingMas ? (
-                <ActivityIndicator color={theme.primary} />
-              ) : (
-                <Text style={[styles.cargarMasTexto, { color: theme.primary }]}>Cargar eventos anteriores</Text>
-              )}
+              <Text style={[styles.cargarMasTexto, { color: theme.danger }]}>No se pudieron cargar más eventos. Reintentar</Text>
             </TouchableOpacity>
-          )}
+          ) : !historial.hayMas ? (
+            <Text style={[styles.finLista, styles.finListaTexto, { color: theme.textTertiary }]}>No hay más eventos en este rango</Text>
+          ) : null}
         </>
       )}
     </GlassCapsule>
@@ -299,7 +353,13 @@ export const ShipSupervisorScreen = () => {
           setMaquinaAEditar(null);
         }}
         maquina={maquinaAEditar}
-        onSave={(maquinaActualizada) => actualizarMaquina(maquinaActualizada)}
+        onSave={(maquinaActualizada) => {
+          actualizarMaquina(maquinaActualizada);
+          // Si se reasignó un operador, otra máquina pudo quedar sin él: se recarga la flota completa
+          refetch();
+          // La edición queda en la bitácora: aparece en el historial
+          historial.refetch();
+        }}
       />
 
       <AppBottomSheetModal
@@ -355,6 +415,17 @@ export const ShipSupervisorScreen = () => {
             : `¿Confirmas que el equipo ${maquinaAToggle?.codigo} está reparado y listo para operar?`}
         </Text>
       </AppBottomSheetModal>
+      <RangoFechasModal
+        visible={isRangoModalVisible}
+        desde={rangoElegido.desde}
+        hasta={rangoElegido.hasta}
+        onClose={() => setIsRangoModalVisible(false)}
+        onAplicar={(desde, hasta) => {
+          setRangoElegido({ desde, hasta });
+          setRangoHistorial('Personalizado');
+          setIsRangoModalVisible(false);
+        }}
+      />
       <ConfirmLogoutModal
         visible={isLogoutModalVisible}
         onCancel={() => setIsLogoutModalVisible(false)}

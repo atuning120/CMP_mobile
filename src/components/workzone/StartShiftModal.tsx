@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, useColorScheme, ActivityIndicator } from 'react-native';
-import { CheckCircle, ClipboardCheck } from 'lucide-react-native';
+import { CheckCircle, ClipboardCheck, UserCheck } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { SearchableSelect } from '../common/SearchableSelect';
@@ -9,6 +9,8 @@ import { FOTOS_HABILITADAS } from '../../constants/features';
 import { useMaquinasActivas } from '../../hooks/useMaquinasActivas';
 import { useAreasActivas } from '../../hooks/useAreasActivas';
 import { useZonasPorArea } from '../../hooks/useZonasPorArea';
+import { leerSesion } from '../../services/authStorage';
+import { sincronizarCatalogos } from '../../sync/syncEngine';
 import { Area, FotoCapturada, IniciarTurnoDatos, ZonaTrabajo } from '../../types/turno';
 
 interface Props {
@@ -37,6 +39,32 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
   const [areaSeleccionada, setAreaSeleccionada] = useState<Area | null>(null);
   const [zonaSeleccionada, setZonaSeleccionada] = useState<ZonaTrabajo | null>(null);
   const { zonas, isLoading: isLoadingZonas, error: zonasError, refetch: refetchZonas } = useZonasPorArea(areaSeleccionada?.id ?? null);
+
+  // La máquina que el jefe de turno le asignó al operador queda preseleccionada. Viene en el catálogo
+  // guardado, así que funciona sin conexión; con conexión se refresca al abrir, porque la asignación
+  // pudo cambiar hace minutos (el catálogo solo se renueva solo cada 30 min)
+  const [idOperador, setIdOperador] = useState<number | null>(null);
+  useEffect(() => {
+    if (!visible) return;
+    let cancelado = false;
+    leerSesion().then((sesion) => {
+      if (!cancelado) setIdOperador(sesion?.idOperador ?? null);
+    });
+    // Sin red falla y se queda con el catálogo guardado
+    sincronizarCatalogos(true, ['maquina']).catch(() => undefined);
+    return () => {
+      cancelado = true;
+    };
+  }, [visible]);
+  const maquinaAsignada = idOperador === null ? undefined : maquinas.find((m) => m.idOperadorAsignado === idOperador);
+  // Se sigue la asignación mientras el operador no elija otra máquina a mano (el catálogo refrescado
+  // puede traer una asignación distinta a la guardada)
+  const [preseleccion, setPreseleccion] = useState<number | null>(null);
+  if (visible && maquinaAsignada && maquinaAsignada.id !== preseleccion && (selectedMaquina === null || selectedMaquina === preseleccion)) {
+    setPreseleccion(maquinaAsignada.id);
+    setSelectedMaquina(maquinaAsignada.id);
+  }
+  if (!visible && preseleccion !== null) setPreseleccion(null);
 
   const handleHorometroChange = (text: string) => {
     let formattedText = text.replace(',', '.');
@@ -134,6 +162,7 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
       <View style={styles.gridContainer}>
         {maquinas.map((maq) => {
           const isSelected = selectedMaquina === maq.id;
+          const esAsignada = maq.id === maquinaAsignada?.id;
           return (
             <TouchableOpacity
               key={maq.id}
@@ -157,6 +186,12 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
                 <Text style={[styles.maquinaTipo, { color: theme.warning }]}>{maq.tipoMaquina}</Text>
               </View>
               <Text style={[styles.maquinaModelo, { color: theme.textSecondary }]} numberOfLines={1}>{maq.modelo}</Text>
+              {esAsignada && (
+                <View style={styles.asignadaFila}>
+                  <UserCheck size={12} color={theme.success} />
+                  <Text style={[styles.asignadaTexto, { color: theme.success }]}>Tu máquina asignada</Text>
+                </View>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -306,6 +341,16 @@ const styles = StyleSheet.create({
   maquinaTipo: {
     fontSize: 10,
     opacity: 0.8,
+  },
+  asignadaFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  asignadaTexto: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   maquinaModelo: {
     fontSize: 12,

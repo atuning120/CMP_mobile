@@ -5,6 +5,9 @@ import { darkTheme, lightTheme } from '../../constants/theme';
 import { styles } from './EquipoDataForm.styles';
 import { SelectorConCreacion } from './SelectorConCreacion';
 import type { OpcionesMaquina } from '../../hooks/useOpcionesMaquina';
+import type { OperadoresAsignables } from '../../hooks/useOperadoresAsignables';
+import type { OperadorAsignableApi } from '../../services/flotaService';
+import { SearchableSelect } from '../common/SearchableSelect';
 
 export type FuenteDatos = 'NUEVO' | 'PLANTILLA';
 
@@ -55,7 +58,19 @@ interface Props {
   cargandoPlantillas?: boolean;
   errorPlantillas?: string | null;
   opciones: OpcionesMaquina;
+  // editar: ficha de una máquina existente (sin "Datos Previos" y con el horómetro de solo lectura,
+  // porque se actualiza con los turnos)
+  modo?: 'incorporar' | 'editar';
+  // Selector opcional "Operador asignado"; idMaquina: la máquina que se edita (su operador no "se mueve")
+  operadores?: OperadoresAsignables;
+  idMaquina?: number;
 }
+
+// Accesores estables para SearchableSelect (evitan recalcular la búsqueda en cada render)
+const idOperador = (operador: OperadorAsignableApi) => operador.idOperador;
+const nombreOperador = (operador: OperadorAsignableApi) => operador.nombre;
+const descripcionOperador = (operador: OperadorAsignableApi) =>
+  `${operador.rut} · ${operador.maquinaAsignada ? `a cargo de ${operador.maquinaAsignada.nombre}` : 'sin máquina asignada'}`;
 
 const existeEn = (opciones: string[], valor: string) => opciones.some((o) => o.toUpperCase() === valor.trim().toUpperCase());
 
@@ -68,6 +83,9 @@ export const EquipoDataForm: React.FC<Props> = ({
   cargandoPlantillas,
   errorPlantillas,
   opciones,
+  modo = 'incorporar',
+  operadores,
+  idMaquina,
 }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
@@ -75,6 +93,11 @@ export const EquipoDataForm: React.FC<Props> = ({
   // Marca o tipo nuevo: el campo pasa a texto libre; al incorporar la máquina el Backend lo registra en modelo_maquina
   const [creandoMarca, setCreandoMarca] = useState(() => state.marca !== '' && !existeEn(opciones.marcas, state.marca));
   const [creandoTipo, setCreandoTipo] = useState(() => state.tipoMaquina !== '' && !existeEn(opciones.tipos, state.tipoMaquina));
+
+  const editando = modo === 'editar';
+  const operadorElegido = operadores?.operadores.find((o) => String(o.idOperador) === state.operadorId) ?? null;
+  const seMueve = !!operadorElegido?.maquinaAsignada && operadorElegido.maquinaAsignada.idMaquina !== idMaquina;
+  const alGuardar = editando ? 'al guardar los cambios' : 'al incorporar la máquina';
 
   const updateField = (field: keyof EquipoFormState, value: any) => {
     onChange({ ...state, [field]: value });
@@ -97,40 +120,42 @@ export const EquipoDataForm: React.FC<Props> = ({
   return (
     <View style={styles.container}>
       {/* Fuente de Datos Selector */}
-      <View style={styles.sourceSelectorRow}>
-        <TouchableOpacity
-          style={[
-            styles.sourceBtn,
-            { backgroundColor: theme.cardAlt, borderColor: theme.border },
-            state.fuenteDatos === 'NUEVO' && { backgroundColor: theme.primary + '10', borderColor: theme.primary }
-          ]}
-          onPress={() => updateField('fuenteDatos', 'NUEVO')}
-        >
-          <PlusCircle size={20} color={state.fuenteDatos === 'NUEVO' ? theme.primary : theme.textSecondary} />
-          <Text style={[styles.sourceBtnText, { color: state.fuenteDatos === 'NUEVO' ? theme.primary : theme.textSecondary }]}>Desde Cero</Text>
-          <Text style={[styles.sourceBtnSubtitle, { color: state.fuenteDatos === 'NUEVO' ? theme.primary : theme.textTertiary }]}>
-            (Formulario Limpio)
-          </Text>
-        </TouchableOpacity>
+      {!editando && (
+        <View style={styles.sourceSelectorRow}>
+          <TouchableOpacity
+            style={[
+              styles.sourceBtn,
+              { backgroundColor: theme.cardAlt, borderColor: theme.border },
+              state.fuenteDatos === 'NUEVO' && { backgroundColor: theme.primary + '10', borderColor: theme.primary }
+            ]}
+            onPress={() => updateField('fuenteDatos', 'NUEVO')}
+          >
+            <PlusCircle size={20} color={state.fuenteDatos === 'NUEVO' ? theme.primary : theme.textSecondary} />
+            <Text style={[styles.sourceBtnText, { color: state.fuenteDatos === 'NUEVO' ? theme.primary : theme.textSecondary }]}>Desde Cero</Text>
+            <Text style={[styles.sourceBtnSubtitle, { color: state.fuenteDatos === 'NUEVO' ? theme.primary : theme.textTertiary }]}>
+              (Formulario Limpio)
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.sourceBtn,
-            { backgroundColor: theme.cardAlt, borderColor: theme.border },
-            state.fuenteDatos === 'PLANTILLA' && { backgroundColor: theme.primary + '10', borderColor: theme.primary }
-          ]}
-          onPress={() => updateField('fuenteDatos', 'PLANTILLA')}
-        >
-          <Sparkles size={20} color={state.fuenteDatos === 'PLANTILLA' ? theme.primary : theme.textSecondary} />
-          <Text style={[styles.sourceBtnText, { color: state.fuenteDatos === 'PLANTILLA' ? theme.primary : theme.textSecondary }]}>Datos Previos</Text>
-          <Text style={[styles.sourceBtnSubtitle, { color: state.fuenteDatos === 'PLANTILLA' ? theme.primary : theme.textTertiary }]}>
-            (Solo Modificar)
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[
+              styles.sourceBtn,
+              { backgroundColor: theme.cardAlt, borderColor: theme.border },
+              state.fuenteDatos === 'PLANTILLA' && { backgroundColor: theme.primary + '10', borderColor: theme.primary }
+            ]}
+            onPress={() => updateField('fuenteDatos', 'PLANTILLA')}
+          >
+            <Sparkles size={20} color={state.fuenteDatos === 'PLANTILLA' ? theme.primary : theme.textSecondary} />
+            <Text style={[styles.sourceBtnText, { color: state.fuenteDatos === 'PLANTILLA' ? theme.primary : theme.textSecondary }]}>Datos Previos</Text>
+            <Text style={[styles.sourceBtnSubtitle, { color: state.fuenteDatos === 'PLANTILLA' ? theme.primary : theme.textTertiary }]}>
+              (Solo Modificar)
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Vistas dinámicas según fuente de datos */}
-      {state.fuenteDatos === 'PLANTILLA' && (
+      {!editando && state.fuenteDatos === 'PLANTILLA' && (
         <View style={[styles.sourceDataContainer, { backgroundColor: theme.cardAlt, borderWidth: 1, borderColor: theme.border }]}>
           <View style={styles.plantillaHeaderRow}>
             <View style={styles.plantillaHeaderTitleRow}>
@@ -211,7 +236,7 @@ export const EquipoDataForm: React.FC<Props> = ({
             placeholder="Buscar o seleccionar marca..."
             placeholderNuevo="Ej. Liebherr"
             textoCrear="Crear nueva marca"
-            hintNuevo="Se guardará como marca nueva, junto con el modelo y el tipo, al incorporar la máquina."
+            hintNuevo={`Se guardará como marca nueva, junto con el modelo y el tipo, ${alGuardar}.`}
             emptyMessage="Aún no hay marcas registradas"
             opciones={opciones.marcas}
             valor={state.marca}
@@ -242,7 +267,7 @@ export const EquipoDataForm: React.FC<Props> = ({
             placeholder="Buscar o seleccionar tipo..."
             placeholderNuevo="Ej. Pala Hidráulica"
             textoCrear="Crear nuevo tipo de máquina"
-            hintNuevo="Se guardará como tipo nuevo, junto con la marca y el modelo, al incorporar la máquina."
+            hintNuevo={`Se guardará como tipo nuevo, junto con la marca y el modelo, ${alGuardar}.`}
             emptyMessage="Aún no hay tipos de máquina registrados"
             opciones={opciones.tipos}
             valor={state.tipoMaquina}
@@ -257,9 +282,13 @@ export const EquipoDataForm: React.FC<Props> = ({
 
         <View style={styles.row}>
           <View style={styles.fieldCol}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>HORÓMETRO *</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>{editando ? 'HORÓMETRO ACTUAL' : 'HORÓMETRO *'}</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.border }]}
+              style={[
+                styles.input,
+                { backgroundColor: theme.cardAlt, color: editando ? theme.textSecondary : theme.text, borderColor: theme.border },
+              ]}
+              editable={!editando}
               value={state.horometro}
               onChangeText={(v) => updateField('horometro', v.replace(/[^0-9.]/g, ''))}
               keyboardType="numeric"
@@ -291,28 +320,29 @@ export const EquipoDataForm: React.FC<Props> = ({
           />
         </View>
 
-        {/* <View style={styles.fieldFull}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>OPERADOR ASIGNADO A CABINA (EQUIPO #{equipoIdx + 1}):</Text>
-          {/* Usamos un selector horizontal temporalmente o botones para el mock 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {MOCK_OPERADORES.map(op => (
-              <TouchableOpacity
-                key={op.id}
-                style={[
-                  styles.operatorChip,
-                  { backgroundColor: theme.cardAlt, borderColor: theme.border },
-                  state.operadorId === op.id && { backgroundColor: theme.primary + '20', borderColor: theme.primary }
-                ]}
-                onPress={() => updateField('operadorId', op.id)}
-              >
-                <Text style={[styles.operatorText, { color: state.operadorId === op.id ? theme.primary : theme.text }]}>
-                  {op.nombre} ({op.rut})
-                </Text>
-                <Text style={[styles.operatorTurno, { color: theme.textSecondary }]}>{op.turno}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View> */}
+        {operadores && (
+          <View style={styles.fieldFull}>
+            <SearchableSelect
+              label="OPERADOR ASIGNADO (OPCIONAL)"
+              placeholder="Buscar operador por nombre o RUT..."
+              options={operadores.operadores}
+              value={operadorElegido}
+              onChange={(operador) => updateField('operadorId', operador ? String(operador.idOperador) : '')}
+              getOptionKey={idOperador}
+              getOptionLabel={nombreOperador}
+              getOptionDescription={descripcionOperador}
+              isLoading={operadores.cargando}
+              error={operadores.error}
+              onRetry={operadores.reintentar}
+              emptyMessage="No hay operadores registrados"
+              hint={
+                seMueve
+                  ? `${operadorElegido.nombre} está a cargo de ${operadorElegido.maquinaAsignada?.nombre}: pasará a esta máquina.`
+                  : 'Tendrá esta máquina preseleccionada al iniciar turno.'
+              }
+            />
+          </View>
+        )}
 
         <View style={styles.switchRow}>
           <Text style={[styles.switchLabel, { color: theme.text }]}>Equipo Contratista / Arriendo</Text>

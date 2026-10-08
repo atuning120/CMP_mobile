@@ -112,6 +112,31 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  rangoResumen: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  rangoResumenTexto: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  diaTitulo: {
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  finLista: {
+    marginVertical: 16,
+  },
+  finListaTexto: {
+    fontSize: 13,
+    textAlign: 'center',
+  },
   placeholderContainer: {
     padding: 40,
     alignItems: 'center',

@@ -28,6 +28,7 @@ interface MaquinaApi {
   modelo: string | null;
   tipoMaquina: string | null;
   estado: string | null;
+  idOperadorAsignado?: number | null; // solo en el catálogo (GET /maquinas)
 }
 
 interface EstadoOperacionalApi {
@@ -70,6 +71,7 @@ export const mapMaquina = (maquina: MaquinaApi): Maquina => ({
   nombreCompleto: [maquina.tipoMaquina, maquina.modelo].filter(Boolean).join(' ') || maquina.nombre,
   tipoMaquina: maquina.tipoMaquina ?? '',
   modelo: maquina.modelo ?? '',
+  idOperadorAsignado: maquina.idOperadorAsignado ?? null,
 });
 
 export const mapArea = (area: AreaApi): Area => ({ id: area.idArea, nombre: area.nombre, descripcion: area.descripcion });

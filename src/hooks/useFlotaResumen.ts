@@ -8,9 +8,18 @@ export interface MaquinaFlota {
   codigo: string;
   patente: string;
   marcaModelo: string;
+  // Datos de la ficha tal como están en el Backend (para editarla)
+  marca: string;
+  modelo: string;
+  tipoMaquina: string;
+  anio: number | null;
+  numeroChasis: string | null;
+  esContratista: boolean;
   estadoOperativo: EstadoOperativo;
   fallaActiva: string | null;
-  operadorAsignado: string | null;
+  idOperadorAsignado: number | null;
+  operadorAsignado: string | null; // a cargo de la máquina
+  operadorEnTurno: string | null; // con turno en curso (puede ser otro, p. ej. en un relevo)
   zonaActual: string | null;
   horometroActual: number;
   combustible: { porcentaje: number; tipo: string } | null;
@@ -29,14 +38,22 @@ export interface UseFlotaResumenResult {
 const DEBOUNCE_BUSQUEDA_MS = 300;
 
 // TODO: fallas mecánicas y combustible aún no existen en la base de datos
-const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
+export const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
   id: maquina.idMaquina,
   codigo: maquina.nombre,
   patente: maquina.patente ?? '',
   marcaModelo: [[maquina.marca, maquina.modelo].filter(Boolean).join(' '), maquina.tipoMaquina].filter(Boolean).join(' · '),
+  marca: maquina.marca ?? '',
+  modelo: maquina.modelo ?? '',
+  tipoMaquina: maquina.tipoMaquina ?? '',
+  anio: maquina.anio,
+  numeroChasis: maquina.numeroChasis,
+  esContratista: maquina.esContratista,
   estadoOperativo: maquina.estado === 'BAJA' ? 'FUERA_DE_SERVICIO' : 'OPERATIVO',
   fallaActiva: null,
-  operadorAsignado: maquina.operadorActual,
+  idOperadorAsignado: maquina.operadorAsignado?.idOperador ?? null,
+  operadorAsignado: maquina.operadorAsignado?.nombre ?? null,
+  operadorEnTurno: maquina.operadorActual,
   zonaActual: maquina.ubicacionActual,
   horometroActual: maquina.horometroActual ?? 0,
   combustible: null,
@@ -74,7 +91,7 @@ export const useFlotaResumen = (busqueda: string): UseFlotaResumenResult => {
 
   const refetch = useCallback(() => setRecargas((n) => n + 1), []);
 
-  // TODO: persistir en el Backend cuando exista el endpoint de edición / cambio de estado
+  // Reemplaza en la lista una máquina ya guardada en el Backend (sin recargar toda la flota)
   const actualizarMaquina = useCallback((maquinaActualizada: MaquinaFlota) => {
     setMaquinas((prev) => prev.map((m) => (m.id === maquinaActualizada.id ? maquinaActualizada : m)));
   }, []);

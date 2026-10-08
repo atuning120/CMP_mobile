@@ -13,7 +13,11 @@ export interface MaquinaFlotaApi {
   tipoMaquina: string | null;
   estado: string | null; // 'ACTIVA' | 'BAJA'
   patente: string | null;
-  operadorActual: string | null;
+  anio: number | null;
+  numeroChasis: string | null;
+  esContratista: boolean;
+  operadorAsignado: { idOperador: number; nombre: string } | null; // a cargo de la máquina
+  operadorActual: string | null; // con turno en curso
   ubicacionActual: string | null;
   horometroActual: number | null;
 }
@@ -34,12 +38,42 @@ export interface CrearMaquinaApi {
   numeroChasis: string | null;
   horometroInicial: number;
   esContratista: boolean;
+  idOperador: number | null;
   motivo: string;
   observacion: string | null;
 }
 
 export const crearMaquina = (datos: CrearMaquinaApi) =>
   apiRequest<MaquinaFlotaApi>('/maquinas', { method: 'POST', body: JSON.stringify(datos) });
+
+// Edición de la ficha: solo se envían los campos editables; el motivo queda en la bitácora
+export interface EditarMaquinaApi {
+  nombre: string;
+  marca: string;
+  modelo: string;
+  tipoMaquina: string;
+  anio: number | null;
+  patente: string | null;
+  numeroChasis: string | null;
+  esContratista: boolean;
+  idOperador: number | null; // null deja la máquina sin operador
+  estado: 'ACTIVA' | 'BAJA';
+  motivo: string;
+  observacion: string | null;
+}
+
+export const editarMaquina = (idMaquina: number, datos: EditarMaquinaApi) =>
+  apiRequest<MaquinaFlotaApi>(`/maquinas/${idMaquina}`, { method: 'PATCH', body: JSON.stringify(datos) });
+
+// Operador que se puede asignar a una máquina, con la que tiene hoy (al asignarlo a otra, se mueve)
+export interface OperadorAsignableApi {
+  idOperador: number;
+  nombre: string;
+  rut: string;
+  maquinaAsignada: { idMaquina: number; nombre: string } | null;
+}
+
+export const listarOperadoresAsignables = () => apiRequest<OperadorAsignableApi[]>('/maquinas/operadores');
 
 export interface ModeloMaquinaApi {
   idModelo: number;

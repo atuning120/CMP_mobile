@@ -6,3 +6,12 @@ export const MOTIVOS_INCORPORACION = [
   'Retorno desde mantención',
   'Otro',
 ];
+
+export const MOTIVOS_EDICION = [
+  'Corrección de datos',
+  'Cambio de patente',
+  'Actualización de ficha técnica',
+  'Equipo en mantención',
+  'Retorno desde mantención',
+  'Otro',
+];
