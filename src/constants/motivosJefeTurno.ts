@@ -28,3 +28,14 @@ export const MOTIVOS_DESHABILITAR = [
 ];
 
 export const MOTIVOS_HABILITAR = ['Reparación finalizada', 'Retorno desde mantención', 'Operador disponible', 'Otro'];
+
+export const MOTIVOS_REEMPLAZO = [
+  'Falla mecánica',
+  'Falla eléctrica',
+  'Falla hidráulica',
+  'Mantención programada',
+  'Accidente o incidente',
+  'Renovación de equipo',
+  'Fin de contrato (contratista)',
+  'Otro',
+];

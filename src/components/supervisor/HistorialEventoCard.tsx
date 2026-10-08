@@ -40,6 +40,7 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
   const Icono = horaTermino ? Square : presentacion.icono;
   const acento = horaTermino ? theme.danger : presentacion.color(theme);
   const verbo = presentacion.verbo;
+  const reemplazadaPor = evento.tipo === 'REEMPLAZAR' ? texto(evento.detalle?.entrante) : null;
   // El sistema lo cerró al pasar las 12 h (probablemente el operador olvidó finalizarlo)
   const cierreAutomatico = esTurno && evento.detalle?.estadoTurno === 'CERRADO_AUTO';
 
@@ -62,6 +63,13 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
       <View style={styles.cuerpo}>
         <Text style={[styles.titulo, { color: theme.text }]}>
           <Text style={styles.actor}>{evento.actor}</Text> {verbo} <Text style={[styles.maquina, { color: acento }]}>{evento.maquina.nombre}</Text>
+          {/* Reemplazo: qué máquina entró en su lugar */}
+          {!!reemplazadaPor && (
+            <>
+              {' por '}
+              <Text style={[styles.maquina, { color: acento }]}>{reemplazadaPor}</Text>
+            </>
+          )}
         </Text>
 
         {!!evento.motivo && (

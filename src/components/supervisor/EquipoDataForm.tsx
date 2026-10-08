@@ -6,8 +6,7 @@ import { styles } from './EquipoDataForm.styles';
 import { SelectorConCreacion } from './SelectorConCreacion';
 import type { OpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 import type { OperadoresAsignables } from '../../hooks/useOperadoresAsignables';
-import type { OperadorAsignableApi } from '../../services/flotaService';
-import { SearchableSelect } from '../common/SearchableSelect';
+import { OperadorSelect } from './OperadorSelect';
 
 export type FuenteDatos = 'NUEVO' | 'PLANTILLA';
 
@@ -66,11 +65,6 @@ interface Props {
   idMaquina?: number;
 }
 
-// Accesores estables para SearchableSelect (evitan recalcular la búsqueda en cada render)
-const idOperador = (operador: OperadorAsignableApi) => operador.idOperador;
-const nombreOperador = (operador: OperadorAsignableApi) => operador.nombre;
-const descripcionOperador = (operador: OperadorAsignableApi) =>
-  `${operador.rut} · ${operador.maquinaAsignada ? `a cargo de ${operador.maquinaAsignada.nombre}` : 'sin máquina asignada'}`;
 
 const existeEn = (opciones: string[], valor: string) => opciones.some((o) => o.toUpperCase() === valor.trim().toUpperCase());
 
@@ -95,8 +89,6 @@ export const EquipoDataForm: React.FC<Props> = ({
   const [creandoTipo, setCreandoTipo] = useState(() => state.tipoMaquina !== '' && !existeEn(opciones.tipos, state.tipoMaquina));
 
   const editando = modo === 'editar';
-  const operadorElegido = operadores?.operadores.find((o) => String(o.idOperador) === state.operadorId) ?? null;
-  const seMueve = !!operadorElegido?.maquinaAsignada && operadorElegido.maquinaAsignada.idMaquina !== idMaquina;
   const alGuardar = editando ? 'al guardar los cambios' : 'al incorporar la máquina';
 
   const updateField = (field: keyof EquipoFormState, value: any) => {
@@ -322,24 +314,11 @@ export const EquipoDataForm: React.FC<Props> = ({
 
         {operadores && (
           <View style={styles.fieldFull}>
-            <SearchableSelect
-              label="OPERADOR ASIGNADO (OPCIONAL)"
-              placeholder="Buscar operador por nombre o RUT..."
-              options={operadores.operadores}
-              value={operadorElegido}
-              onChange={(operador) => updateField('operadorId', operador ? String(operador.idOperador) : '')}
-              getOptionKey={idOperador}
-              getOptionLabel={nombreOperador}
-              getOptionDescription={descripcionOperador}
-              isLoading={operadores.cargando}
-              error={operadores.error}
-              onRetry={operadores.reintentar}
-              emptyMessage="No hay operadores registrados"
-              hint={
-                seMueve
-                  ? `${operadorElegido.nombre} está a cargo de ${operadorElegido.maquinaAsignada?.nombre}: pasará a esta máquina.`
-                  : 'Tendrá esta máquina preseleccionada al iniciar turno.'
-              }
+            <OperadorSelect
+              operadores={operadores}
+              valor={state.operadorId}
+              onChange={(id) => updateField('operadorId', id)}
+              idMaquina={idMaquina}
             />
           </View>
         )}

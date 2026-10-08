@@ -85,7 +85,7 @@ export const ShipSupervisorScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterOption>('Todos');
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isModificacionModalVisible, setIsModificacionModalVisible] = useState(false);
+  const [maquinaAReemplazar, setMaquinaAReemplazar] = useState<MaquinaFlota | null>(null);
   const [isEditarModalVisible, setIsEditarModalVisible] = useState(false);
   const [maquinaAEditar, setMaquinaAEditar] = useState<MaquinaFlota | null>(null);
   const [maquinaAToggle, setMaquinaAToggle] = useState<MaquinaFlota | null>(null);
@@ -110,7 +110,7 @@ export const ShipSupervisorScreen = () => {
   };
 
   const handleSustituir = (maquina: MaquinaFlota) => {
-    setIsModificacionModalVisible(true);
+    setMaquinaAReemplazar(maquina);
   };
 
   const handleEditar = (maquina: MaquinaFlota) => {
@@ -300,8 +300,13 @@ export const ShipSupervisorScreen = () => {
       />
 
       <ReemplazoEquipoModal
-        visible={isModificacionModalVisible}
-        onClose={() => setIsModificacionModalVisible(false)}
+        maquina={maquinaAReemplazar}
+        onClose={() => setMaquinaAReemplazar(null)}
+        onReemplazado={() => {
+          // Cambian dos máquinas (y quizá un operador): se recarga la flota completa
+          refetch();
+          historial.refetch();
+        }}
       />
 
       <EditarEquipoModal

@@ -52,7 +52,13 @@ export const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
   estadoOperativo: maquina.estado === 'BAJA' ? 'FUERA_DE_SERVICIO' : 'OPERATIVO',
   // Motivo con que se dejó fuera de servicio (y su observación, si la hay)
   fallaActiva: maquina.fueraDeServicio
-    ? [maquina.fueraDeServicio.motivo, maquina.fueraDeServicio.observacion].filter(Boolean).join(': ')
+    ? [
+        maquina.fueraDeServicio.motivo +
+          (maquina.fueraDeServicio.reemplazadaPor ? ` · reemplazada por ${maquina.fueraDeServicio.reemplazadaPor}` : ''),
+        maquina.fueraDeServicio.observacion,
+      ]
+        .filter(Boolean)
+        .join(': ')
     : null,
   idOperadorAsignado: maquina.operadorAsignado?.idOperador ?? null,
   operadorAsignado: maquina.operadorAsignado?.nombre ?? null,
