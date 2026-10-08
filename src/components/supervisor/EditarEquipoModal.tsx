@@ -9,7 +9,7 @@ import { useOperadoresAsignables } from '../../hooks/useOperadoresAsignables';
 import { editarMaquina } from '../../services/flotaService';
 import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
 import { SearchableSelect } from '../common/SearchableSelect';
-import { MOTIVOS_EDICION } from '../../constants/motivosJefeTurno';
+import { MOTIVOS_DESHABILITAR, MOTIVOS_EDICION, MOTIVOS_HABILITAR } from '../../constants/motivosJefeTurno';
 import { styles } from './EditarEquipoModal.styles';
 
 interface Props {
@@ -83,6 +83,11 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
 
   const hayCambios = huella(equipo, estadoOperativo) !== huella(aFormulario(maquina), maquina.estadoOperativo);
   const anioValido = equipo.anio === '' || equipo.anio.length === 4;
+  // Si cambia el estado, el motivo explica el cambio de estado (queda también en la tarjeta si se deshabilita)
+  const motivosPara = (estado: EstadoOperativo) =>
+    estado === maquina.estadoOperativo ? MOTIVOS_EDICION : estado === 'FUERA_DE_SERVICIO' ? MOTIVOS_DESHABILITAR : MOTIVOS_HABILITAR;
+  const motivos = motivosPara(estadoOperativo);
+
   const isValid =
     hayCambios &&
     anioValido &&
@@ -148,6 +153,8 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
       style={[styles.dropdownOption, conBorde && styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
       onPress={() => {
         setEstadoOperativo(estado);
+        // Un motivo de la otra lista ya no corresponde
+        if (!motivosPara(estado).includes(motivo)) setMotivo('');
         setEstadoAbierto(false);
       }}
     >
@@ -231,7 +238,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
           <SearchableSelect
             label="MOTIVO *"
             placeholder="Buscar o seleccionar motivo..."
-            options={MOTIVOS_EDICION}
+            options={motivos}
             value={motivo || null}
             onChange={(opcion) => setMotivo(opcion ?? '')}
             getOptionKey={comoTexto}

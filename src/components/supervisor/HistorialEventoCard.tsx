@@ -4,6 +4,7 @@ import { AlarmClockOff, Ban, CheckCircle, Clock, Edit2, MapPin, Play, PlusCircle
 import { darkTheme, lightTheme, ThemeColors } from '../../constants/theme';
 import type { EventoHistorial, TipoEventoHistorial } from '../../services/historialService';
 import { styles } from './HistorialEventoCard.styles';
+import { formatearFecha } from '../../utils/historialFechas';
 
 interface Props {
   evento: EventoHistorial;
@@ -16,21 +17,6 @@ const PRESENTACION: Record<TipoEventoHistorial, { icono: LucideIcon; verbo: stri
   HABILITAR: { icono: CheckCircle, verbo: 'habilitó', color: (t) => t.success },
   DESHABILITAR: { icono: Ban, verbo: 'deshabilitó', color: (t) => t.danger },
   REEMPLAZAR: { icono: RefreshCw, verbo: 'reemplazó', color: (t) => t.warning },
-};
-
-// "hace 5 min", "hace 3 h", "ayer 14:30" o "05/10 14:30"
-const formatearFecha = (iso: string) => {
-  const fecha = new Date(iso);
-  const minutos = Math.floor((Date.now() - fecha.getTime()) / 60000);
-  const hora = fecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-  if (minutos < 1) return 'recién';
-  if (minutos < 60) return `hace ${minutos} min`;
-  if (minutos < 12 * 60) return `hace ${Math.floor(minutos / 60)} h`;
-  const ayer = new Date();
-  ayer.setDate(ayer.getDate() - 1);
-  if (fecha.toDateString() === new Date().toDateString()) return `hoy ${hora}`;
-  if (fecha.toDateString() === ayer.toDateString()) return `ayer ${hora}`;
-  return `${fecha.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' })} ${hora}`;
 };
 
 const texto = (valor: unknown) => (typeof valor === 'string' && valor.trim() !== '' ? valor : null);

@@ -18,6 +18,7 @@ export interface MaquinaFlotaApi {
   esContratista: boolean;
   operadorAsignado: { idOperador: number; nombre: string } | null; // a cargo de la máquina
   operadorActual: string | null; // con turno en curso
+  fueraDeServicio: { motivo: string; observacion: string | null; fecha: string } | null; // por qué está en BAJA
   ubicacionActual: string | null;
   horometroActual: number | null;
 }
@@ -66,6 +67,10 @@ export const editarMaquina = (idMaquina: number, datos: EditarMaquinaApi) =>
   apiRequest<MaquinaFlotaApi>(`/maquinas/${idMaquina}`, { method: 'PATCH', body: JSON.stringify(datos) });
 
 // Operador que se puede asignar a una máquina, con la que tiene hoy (al asignarlo a otra, se mueve)
+// Habilitar / deshabilitar: el mismo PATCH, enviando solo el estado (lo demás no se toca)
+export const cambiarEstadoMaquina = (idMaquina: number, estado: 'ACTIVA' | 'BAJA', motivo: string, observacion: string | null) =>
+  apiRequest<MaquinaFlotaApi>(`/maquinas/${idMaquina}`, { method: 'PATCH', body: JSON.stringify({ estado, motivo, observacion }) });
+
 export interface OperadorAsignableApi {
   idOperador: number;
   nombre: string;

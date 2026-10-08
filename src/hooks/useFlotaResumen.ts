@@ -37,7 +37,7 @@ export interface UseFlotaResumenResult {
 // Espera tras la última tecla antes de consultar al Backend
 const DEBOUNCE_BUSQUEDA_MS = 300;
 
-// TODO: fallas mecánicas y combustible aún no existen en la base de datos
+// TODO: el combustible aún no existe en la base de datos
 export const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
   id: maquina.idMaquina,
   codigo: maquina.nombre,
@@ -50,7 +50,10 @@ export const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
   numeroChasis: maquina.numeroChasis,
   esContratista: maquina.esContratista,
   estadoOperativo: maquina.estado === 'BAJA' ? 'FUERA_DE_SERVICIO' : 'OPERATIVO',
-  fallaActiva: null,
+  // Motivo con que se dejó fuera de servicio (y su observación, si la hay)
+  fallaActiva: maquina.fueraDeServicio
+    ? [maquina.fueraDeServicio.motivo, maquina.fueraDeServicio.observacion].filter(Boolean).join(': ')
+    : null,
   idOperadorAsignado: maquina.operadorAsignado?.idOperador ?? null,
   operadorAsignado: maquina.operadorAsignado?.nombre ?? null,
   operadorEnTurno: maquina.operadorActual,

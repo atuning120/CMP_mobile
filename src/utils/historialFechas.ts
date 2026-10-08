@@ -1,4 +1,4 @@
-import type { EventoHistorial, RangoHistorial } from '../services/historialService';
+import type { RangoHistorial } from '../services/historialService';
 
 export const RANGOS_HISTORIAL = ['Hoy', '7 días', '30 días', 'Personalizado'] as const;
 export type RangoHistorialUI = (typeof RANGOS_HISTORIAL)[number];
@@ -41,15 +41,15 @@ const etiquetaDia = (dia: Date) => {
   return `${semana.charAt(0).toUpperCase()}${semana.slice(1)} ${formatoCorto(dia)}`;
 };
 
-export interface DiaHistorial {
+export interface DiaHistorial<T> {
   clave: string;
   titulo: string;
-  eventos: EventoHistorial[];
+  eventos: T[];
 }
 
 // Los eventos vienen del más reciente al más antiguo: basta con cortar cuando cambia el día
-export const agruparPorDia = (eventos: EventoHistorial[]): DiaHistorial[] => {
-  const dias: DiaHistorial[] = [];
+export const agruparPorDia = <T extends { fecha: string }>(eventos: T[]): DiaHistorial<T>[] => {
+  const dias: DiaHistorial<T>[] = [];
   for (const evento of eventos) {
     const dia = inicioDelDia(new Date(evento.fecha));
     const clave = dia.toISOString();
@@ -58,4 +58,27 @@ export const agruparPorDia = (eventos: EventoHistorial[]): DiaHistorial[] => {
     else dias.push({ clave, titulo: etiquetaDia(dia), eventos: [evento] });
   }
   return dias;
+};
+
+// "hace 5 min", "hace 3 h", "ayer 14:30" o "05/10 14:30"
+export const formatearFecha = (iso: string) => {
+  const fecha = new Date(iso);
+  const minutos = Math.floor((Date.now() - fecha.getTime()) / 60000);
+  const hora = fecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+  if (minutos < 1) return 'recién';
+  if (minutos < 60) return `hace ${minutos} min`;
+  if (minutos < 12 * 60) return `hace ${Math.floor(minutos / 60)} h`;
+  const ayer = new Date();
+  ayer.setDate(ayer.getDate() - 1);
+  if (fecha.toDateString() === new Date().toDateString()) return `hoy ${hora}`;
+  if (fecha.toDateString() === ayer.toDateString()) return `ayer ${hora}`;
+  return `${fecha.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' })} ${hora}`;
+};
+
+// "45 min" o "10 h 20 min"
+export const formatearDuracion = (minutos: number) => {
+  const horas = Math.floor(minutos / 60);
+  const resto = Math.floor(minutos % 60);
+  if (horas === 0) return `${resto} min`;
+  return resto === 0 ? `${horas} h` : `${horas} h ${resto} min`;
 };
