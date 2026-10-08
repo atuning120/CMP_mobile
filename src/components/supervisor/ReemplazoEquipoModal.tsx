@@ -1,93 +1,158 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, useColorScheme, TextInput } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, useColorScheme, TextInput, ActivityIndicator } from 'react-native';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
-import { CheckCircle, MapPin, Truck, Wrench, ChevronDown, AlertCircle, Gauge, RefreshCw } from 'lucide-react-native';
+import { SearchableSelect } from '../common/SearchableSelect';
+import { AlertCircle, AlertTriangle, CheckCircle, ClipboardList, Gauge, ListChecks, PlusCircle, RefreshCw, Truck, User } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
+import { MOTIVOS_REEMPLAZO } from '../../constants/motivosJefeTurno';
 import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
+import { OperadorSelect } from './OperadorSelect';
+import { SegmentedControl } from './SegmentedControl';
 import { useModelosMaquina } from '../../hooks/useModelosMaquina';
 import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
+import { useOperadoresAsignables } from '../../hooks/useOperadoresAsignables';
+import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
+import { listarFlota, reemplazarMaquina } from '../../services/flotaService';
 import { styles } from './ReemplazoEquipoModal.styles';
 
 interface Props {
-  visible: boolean;
+  // Máquina que sale (la de la tarjeta); null = modal cerrado
+  maquina: MaquinaFlota | null;
   onClose: () => void;
+  // El Backend registró el reemplazo: hay que refrescar la flota y el historial
+  onReemplazado: () => void;
 }
 
+type Origen = 'De la flota' | 'Nueva';
+const ORIGENES = [
+  { valor: 'De la flota', icono: ListChecks },
+  { valor: 'Nueva', icono: PlusCircle },
+] as const satisfies readonly { valor: Origen; icono: unknown }[];
 
+// Accesores estables para SearchableSelect (evitan recalcular la búsqueda en cada render)
+const comoTexto = (valor: string) => valor;
+const idDe = (m: MaquinaFlota) => m.id;
+const codigoDe = (m: MaquinaFlota) => m.codigo;
+const descripcionDe = (m: MaquinaFlota) =>
+  [m.estadoOperativo === 'FUERA_DE_SERVICIO' ? 'Fuera de servicio (respaldo)' : 'Operativa', m.marcaModelo, m.operadorAsignado]
+    .filter(Boolean)
+    .join(' · ');
 
-const MOCK_ZONAS = [
-  { id_area: 1, id_zona: 1, nombre: 'Fase 4 - Banco 320' },
-  { id_area: 1, id_zona: 2, nombre: 'Fase 4 - Rampa Sur' },
-  { id_area: 2, id_zona: 3, nombre: 'Botadero Norte' },
-  { id_area: 3, id_zona: 4, nombre: 'Chancador Primario' },
-];
+const equipoValido = (eq: EquipoFormState) => {
+  const horometro = Number(eq.horometro);
+  return (
+    eq.codigo.trim() !== '' &&
+    eq.patente.trim() !== '' &&
+    eq.marca.trim() !== '' &&
+    eq.modelo.trim() !== '' &&
+    eq.tipoMaquina.trim() !== '' &&
+    eq.horometro.trim() !== '' &&
+    Number.isFinite(horometro) &&
+    horometro >= 0 &&
+    (eq.anio === '' || eq.anio.length === 4)
+  );
+};
 
-const MOCK_MOTIVOS = ['Aumento de Capacidad / Flota', 'Reemplazo por Falla', 'Mantención Programada'];
-const MOCK_MAQUINAS_RETIRAR = ['CAEX-204 - Caterpillar 793F', 'CAEX-205 - Komatsu 930E', 'EX-02 - CAT 349D2 L'];
-
-
-
-export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
+export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReemplazado }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  const visible = maquina !== null;
   const modelos = useModelosMaquina(visible);
   const opcionesMaquina = useOpcionesMaquina(visible);
+  const operadores = useOperadoresAsignables(visible);
   const successColor = colorScheme === 'dark' ? '#81c995' : theme.success;
 
-  const [numEquipos, setNumEquipos] = useState<1 | 2>(1);
-  const [activeTabIdx, setActiveTabIdx] = useState<0 | 1>(0);
+  const [origen, setOrigen] = useState<Origen>('De la flota');
+  const [entrante, setEntrante] = useState<MaquinaFlota | null>(null);
+  const [nueva, setNueva] = useState<EquipoFormState>(EQUIPO_FORM_INICIAL);
+  const [operadorId, setOperadorId] = useState('');
+  const [motivo, setMotivo] = useState('');
+  const [observaciones, setObservaciones] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
 
-  const [equipo1, setEquipo1] = useState<EquipoFormState>(EQUIPO_FORM_INICIAL);
-  const [equipo2, setEquipo2] = useState<EquipoFormState>(EQUIPO_FORM_INICIAL);
-
-  const [destinoZonaId, setDestinoZonaId] = useState<number | null>(null);
-  const [motivo, setMotivo] = useState<string>('');
-  const [observaciones, setObservaciones] = useState<string>('');
-  const [activeDropdown, setActiveDropdown] = useState<'maquina' | 'zona' | 'motivo' | null>(null);
-  const [maquinaRetirar, setMaquinaRetirar] = useState(MOCK_MAQUINAS_RETIRAR[0]);
-
-  // Validaciones
-  const isEquipoValid = (eq: EquipoFormState) => {
-    return eq.codigo.trim() !== '' &&
-      eq.patente.trim() !== '' &&
-      eq.marca.trim() !== '' &&
-      eq.modelo.trim() !== '' &&
-      eq.tipoMaquina.trim() !== '' &&
-      eq.horometro.trim() !== '' &&
-      eq.operadorId !== '';
-  };
-
-  const isFormValid = () => {
-    const isE1Valid = isEquipoValid(equipo1);
-    const isE2Valid = numEquipos === 2 ? isEquipoValid(equipo2) : true;
-    const isDestinoValid = destinoZonaId !== null && motivo !== '';
-    return isE1Valid && isE2Valid && isDestinoValid;
-  };
-
-  const handleSubmit = () => {
-    const payload = {
-      equipos: numEquipos === 1 ? [equipo1] : [equipo1, equipo2],
-      destino: {
-        zonaId: destinoZonaId,
-        motivo: motivo,
-        observaciones: observaciones,
-      },
-      autorizadoPor: 'Cristian Núñez (15.123.456-7)', // Mock from session
-      timestamp: new Date().toISOString(),
+  // Candidatas a entrar: toda la flota (no solo lo filtrado en la pantalla), salvo la saliente
+  const [flota, setFlota] = useState<MaquinaFlota[]>([]);
+  const [cargandoFlota, setCargandoFlota] = useState(false);
+  const [errorFlota, setErrorFlota] = useState<string | null>(null);
+  const [intentoFlota, setIntentoFlota] = useState(0);
+  useEffect(() => {
+    if (!visible) return;
+    let cancelado = false;
+    const timer = setTimeout(async () => {
+      setCargandoFlota(true);
+      setErrorFlota(null);
+      try {
+        const lista = (await listarFlota('')).map(mapMaquinaFlota);
+        // Primero las de respaldo (fuera de servicio), que son las que normalmente entran
+        lista.sort((a, b) => Number(a.estadoOperativo === 'OPERATIVO') - Number(b.estadoOperativo === 'OPERATIVO'));
+        if (!cancelado) setFlota(lista);
+      } catch (err) {
+        if (!cancelado) setErrorFlota(err instanceof Error ? err.message : 'No se pudo cargar la flota.');
+      } finally {
+        if (!cancelado) setCargandoFlota(false);
+      }
+    }, 0);
+    return () => {
+      cancelado = true;
+      clearTimeout(timer);
     };
+  }, [visible, intentoFlota]);
 
-    console.log('Payload de Incorporación:', JSON.stringify(payload, null, 2));
-    // TODO: conectar con el endpoint real de incorporación de equipos cuando el backend lo exponga
-
-    // Reset and close
-    setEquipo1(EQUIPO_FORM_INICIAL);
-    setEquipo2(EQUIPO_FORM_INICIAL);
-    setNumEquipos(1);
-    setActiveTabIdx(0);
-    setDestinoZonaId(null);
+  // Cada apertura parte en blanco; el operador de la saliente pasa por defecto a la entrante
+  const [abiertoPara, setAbiertoPara] = useState<MaquinaFlota | null>(null);
+  if (maquina !== abiertoPara) {
+    setAbiertoPara(maquina);
+    setOrigen('De la flota');
+    setEntrante(null);
+    setNueva(EQUIPO_FORM_INICIAL);
+    setOperadorId(maquina?.idOperadorAsignado === null || !maquina ? '' : String(maquina.idOperadorAsignado));
     setMotivo('');
     setObservaciones('');
-    onClose();
+    setErrorEnvio(null);
+  }
+
+  if (!maquina) return null;
+
+  const candidatas = flota.filter((m) => m.id !== maquina.id);
+  const entranteLista = origen === 'De la flota' ? entrante !== null : equipoValido(nueva);
+  const isFormValid = entranteLista && motivo !== '' && !guardando;
+
+  const cerrar = () => {
+    if (!guardando) onClose();
+  };
+
+  const handleSubmit = async () => {
+    setGuardando(true);
+    setErrorEnvio(null);
+    try {
+      await reemplazarMaquina(maquina.id, {
+        ...(origen === 'De la flota'
+          ? { idMaquinaEntrante: entrante!.id }
+          : {
+              maquinaNueva: {
+                nombre: nueva.codigo.trim(),
+                marca: nueva.marca.trim(),
+                modelo: nueva.modelo.trim(),
+                tipoMaquina: nueva.tipoMaquina.trim(),
+                anio: nueva.anio ? Number(nueva.anio) : null,
+                patente: nueva.patente.trim() || null,
+                numeroChasis: nueva.chasis.trim() || null,
+                horometroInicial: Number(nueva.horometro),
+                esContratista: nueva.contratista,
+              },
+            }),
+        idOperador: operadorId ? Number(operadorId) : null,
+        motivo,
+        observacion: observaciones.trim() || null,
+      });
+      onReemplazado();
+      onClose();
+    } catch (err) {
+      setErrorEnvio(err instanceof Error ? err.message : 'No se pudo registrar el reemplazo.');
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const headerTop = (
@@ -98,20 +163,17 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
 
   const renderFooter = () => (
     <>
-      <TouchableOpacity
-        style={[styles.btnSecundario, { backgroundColor: theme.cardAlt }]}
-        onPress={onClose}
-      >
+      <TouchableOpacity style={[styles.btnSecundario, { backgroundColor: theme.cardAlt }]} onPress={cerrar} disabled={guardando}>
         <Text style={[styles.btnSecundarioText, { color: theme.text }]}>Cancelar</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.btnPrimario, { backgroundColor: theme.primary, opacity: isFormValid() ? 1 : 0.5 }]}
+        style={[styles.btnPrimario, { backgroundColor: theme.warning, opacity: isFormValid ? 1 : 0.5 }]}
         onPress={handleSubmit}
-        disabled={!isFormValid()}
+        disabled={!isFormValid}
       >
-        <CheckCircle size={18} color="#FFF" />
-        <Text style={styles.btnPrimarioText}>Incorporar {numEquipos} a Planta</Text>
+        {guardando ? <ActivityIndicator color="#FFF" /> : <CheckCircle size={18} color="#FFF" />}
+        <Text style={styles.btnPrimarioText}>{guardando ? 'Reemplazando...' : 'Confirmar Reemplazo'}</Text>
       </TouchableOpacity>
     </>
   );
@@ -119,230 +181,137 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ visible, onClose }) => {
   return (
     <AppBottomSheetModal
       visible={visible}
-      onClose={onClose}
+      onClose={cerrar}
       title="Reemplazo de Equipo"
-      subtitle={`Registra la salida y sustitución de ${numEquipos} equipo${numEquipos > 1 ? 's' : ''}`}
+      subtitle={`${maquina.codigo} sale de servicio y otro equipo toma su lugar`}
       icon={<RefreshCw size={22} color={theme.warning} />}
       iconBadgeColor={theme.warning + '15'}
       headerTop={headerTop}
       footer={renderFooter()}
       modalStyle={{ width: '95%', maxWidth: 700, maxHeight: '92%' }}
     >
-
-      <View style={[styles.section, styles.capsuleSection, {
-        backgroundColor: theme.danger + '08',
-        borderColor: theme.danger + '60',
-        borderWidth: 1.5,
-        zIndex: 10
-      }]}>
+      {/* 1. Saliente: la máquina de la tarjeta */}
+      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.danger + '08', borderColor: theme.danger + '60', borderWidth: 1.5 }]}>
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
             <AlertCircle size={18} color={theme.danger} />
-            <Text style={[styles.sectionTitle, { color: theme.danger, marginBottom: 0, fontWeight: 'bold' }]}>2. EQUIPO SALIENTE (FUERA DE SERVICIO)</Text>
+            <Text style={[styles.sectionTitle, { color: theme.danger, marginBottom: 0 }]}>1. EQUIPO SALIENTE (QUEDA FUERA DE SERVICIO)</Text>
           </View>
         </View>
-        <View style={[styles.cardsRow, { gap: 16 }]}>
-          <View style={[styles.fieldCol, { flex: 2, zIndex: 10 }]}>
-            <Text style={[styles.label, { color: theme.textSecondary, fontSize: 10, letterSpacing: 0.5 }]}>MÁQUINA A RETIRAR:</Text>
-            <TouchableOpacity
-              style={[styles.dropdownSelector, { backgroundColor: theme.cardAlt, borderColor: activeDropdown === 'maquina' ? theme.primary : theme.border }]}
-              onPress={() => setActiveDropdown(activeDropdown === 'maquina' ? null : 'maquina')}
-            >
-              <View style={styles.dropdownSelectorInner}>
-                <Text style={[styles.dropdownText, { color: theme.text }]} numberOfLines={1}>{maquinaRetirar}</Text>
-              </View>
-              <ChevronDown size={18} color={theme.textSecondary} />
-            </TouchableOpacity>
-            {activeDropdown === 'maquina' && (
-              <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
-                {MOCK_MAQUINAS_RETIRAR.map((m, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={[styles.dropdownOption, idx < MOCK_MAQUINAS_RETIRAR.length - 1 && styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
-                    onPress={() => { setMaquinaRetirar(m); setActiveDropdown(null); }}
-                  >
-                    <Text style={[styles.dropdownText, { color: maquinaRetirar === m ? theme.primary : theme.text }]}>{m}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+        <Text style={[styles.salienteCodigo, { color: theme.text }]}>{maquina.codigo}</Text>
+        <Text style={[styles.salienteDetalle, { color: theme.textSecondary }]}>{maquina.marcaModelo}</Text>
+        <View style={styles.salienteFila}>
+          <View style={styles.salienteDato}>
+            <Gauge size={14} color={theme.textSecondary} />
+            <Text style={[styles.salienteDetalle, { color: theme.textSecondary }]}>
+              {maquina.horometroActual.toLocaleString('es-CL', { minimumFractionDigits: 1 })} hrs
+            </Text>
           </View>
-          <View style={[styles.fieldCol, { flex: 1.5, zIndex: 9 }]}>
-            <Text style={[styles.label, { color: theme.textSecondary, fontSize: 10, letterSpacing: 0.5 }]}>HORÓMETRO SALIDA:</Text>
-            <View style={[styles.input, { backgroundColor: theme.cardAlt, borderColor: theme.border, flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-              <Gauge size={16} color={theme.textSecondary} />
-              <TextInput
-                style={{ flex: 1, color: theme.text, fontSize: 14, fontWeight: '500', padding: 0 }}
-                value="14280,5"
-                placeholderTextColor={theme.textTertiary}
-              />
-            </View>
+          <View style={styles.salienteDato}>
+            <User size={14} color={theme.textSecondary} />
+            <Text style={[styles.salienteDetalle, { color: theme.textSecondary }]}>{maquina.operadorAsignado ?? 'Sin operador asignado'}</Text>
           </View>
         </View>
       </View>
 
-      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border, zIndex: 9 }]}>
-        <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>¿CUÁNTOS EQUIPOS ENTRAN A OPERAR EN ESTA ACCIÓN?</Text>
-        <View style={styles.cardsRow}>
-          <TouchableOpacity
-            style={[styles.qtyCard, { backgroundColor: theme.card, borderColor: 'transparent' }, numEquipos === 1 && { borderColor: theme.primary, backgroundColor: theme.primary + '10' }]}
-            onPress={() => {
-              setNumEquipos(1);
-              setActiveTabIdx(0);
-            }}
-          >
-            <View style={styles.qtyTitleRow}>
-              <Text style={[styles.qtyTitle, { color: numEquipos === 1 ? theme.primary : theme.text }]}>1 Equipo Entrante</Text>
-            </View>
-            <Text style={[styles.qtySubtitle, { color: theme.textSecondary }]}>Ingreso individual a planta</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.qtyCard, { backgroundColor: theme.card, borderColor: 'transparent' }, numEquipos === 2 && { borderColor: theme.warning, backgroundColor: theme.warning + '10' }]}
-            onPress={() => setNumEquipos(2)}
-          >
-            <View style={styles.qtyTitleRow}>
-              <Text style={[styles.qtyTitle, { color: numEquipos === 2 ? theme.warning : theme.text }]}>2 Equipos (Dupla)</Text>
-            </View>
-            <Text style={[styles.qtySubtitle, { color: theme.textSecondary }]}>Incorporar 2 equipos a planta</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border, zIndex: 8 }]}>
+      {/* 2. Entrante: de la flota o nueva */}
+      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
             <Truck size={16} color={successColor} />
-            <Text style={[styles.sectionTitle, { color: successColor, marginBottom: 0 }]}>3. DATOS DE MAQUINARIA PARA PLANTA</Text>
-          </View>
-
-          {/* Custom Tabs */}
-          <View style={[styles.tabsContainer, { backgroundColor: theme.cardAlt, borderWidth: 1, borderColor: theme.border }]}>
-            <TouchableOpacity
-              style={[styles.tab, activeTabIdx === 0 && { backgroundColor: theme.card, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 2, elevation: 2 }]}
-              onPress={() => setActiveTabIdx(0)}
-            >
-              <Text style={[styles.tabText, { color: activeTabIdx === 0 ? theme.primary : theme.textSecondary }]}>
-                {equipo1.codigo ? `Eq. #1 (${equipo1.codigo})` : 'Equipo #1'}
-              </Text>
-            </TouchableOpacity>
-            {numEquipos === 2 && (
-              <TouchableOpacity
-                style={[styles.tab, activeTabIdx === 1 && { backgroundColor: theme.card, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 2, elevation: 2 }]}
-                onPress={() => setActiveTabIdx(1)}
-              >
-                <Text style={[styles.tabText, { color: activeTabIdx === 1 ? theme.primary : theme.textSecondary }]}>
-                  {equipo2.codigo ? `Eq. #2 (${equipo2.codigo})` : 'Equipo #2'}
-                </Text>
-              </TouchableOpacity>
-            )}
+            <Text style={[styles.sectionTitle, { color: successColor, marginBottom: 0 }]}>2. EQUIPO ENTRANTE</Text>
           </View>
         </View>
+        <SegmentedControl opciones={ORIGENES} activo={origen} onChange={setOrigen} />
 
-        <View style={styles.tabContent}>
-          {activeTabIdx === 0 ? (
-            <EquipoDataForm
-              equipoIdx={0}
-              state={equipo1}
-              onChange={setEquipo1}
-              plantillas={modelos.plantillas}
-              cargandoPlantillas={modelos.cargando}
-              errorPlantillas={modelos.error}
-              opciones={opcionesMaquina}
+        {origen === 'De la flota' ? (
+          <View style={styles.fieldFull}>
+            <SearchableSelect
+              label="MÁQUINA QUE ENTRA *"
+              placeholder="Buscar por código..."
+              options={candidatas}
+              value={entrante}
+              onChange={setEntrante}
+              getOptionKey={idDe}
+              getOptionLabel={codigoDe}
+              getOptionDescription={descripcionDe}
+              isLoading={cargandoFlota}
+              error={errorFlota}
+              onRetry={() => setIntentoFlota((n) => n + 1)}
+              emptyMessage="No hay otras máquinas en la flota"
+              hint={
+                entrante?.estadoOperativo === 'FUERA_DE_SERVICIO'
+                  ? 'Está fuera de servicio: quedará operativa al confirmar.'
+                  : 'Las de respaldo (fuera de servicio) aparecen primero.'
+              }
             />
-          ) : (
-            <EquipoDataForm
-              equipoIdx={1}
-              state={equipo2}
-              onChange={setEquipo2}
-              plantillas={modelos.plantillas}
-              cargandoPlantillas={modelos.cargando}
-              errorPlantillas={modelos.error}
-              opciones={opcionesMaquina}
-            />
-          )}
+          </View>
+        ) : (
+          <EquipoDataForm
+            equipoIdx={0}
+            state={nueva}
+            onChange={setNueva}
+            plantillas={modelos.plantillas}
+            cargandoPlantillas={modelos.cargando}
+            errorPlantillas={modelos.error}
+            opciones={opcionesMaquina}
+          />
+        )}
+
+        <View style={styles.fieldFull}>
+          <OperadorSelect
+            operadores={operadores}
+            valor={operadorId}
+            onChange={setOperadorId}
+            idMaquina={origen === 'De la flota' ? entrante?.id : undefined}
+            label="OPERADOR DEL EQUIPO ENTRANTE"
+          />
         </View>
       </View>
 
-      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border, zIndex: 7 }]}>
+      {/* 3. Justificación */}
+      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
-            <Wrench size={16} color={theme.warning} />
-            <Text style={[styles.sectionTitle, { color: theme.textSecondary, marginBottom: 0 }]}>4. DESTINO EN PLANTA Y OBSERVACIONES</Text>
+            <ClipboardList size={16} color={theme.warning} />
+            <Text style={[styles.sectionTitle, { color: theme.textSecondary, marginBottom: 0 }]}>3. JUSTIFICACIÓN DEL JEFE DE TURNO</Text>
           </View>
         </View>
 
-        <View style={[styles.fieldFull, { zIndex: 10 }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>UBICACIÓN / FASE DESTINO EN MINA:</Text>
-          <TouchableOpacity
-            style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: activeDropdown === 'zona' ? theme.primary : theme.border }]}
-            onPress={() => setActiveDropdown(activeDropdown === 'zona' ? null : 'zona')}
-          >
-            <View style={styles.dropdownSelectorInner}>
-              <MapPin size={16} color={theme.textSecondary} />
-              <Text style={[styles.dropdownText, { color: theme.text }]}>
-                {destinoZonaId ? MOCK_ZONAS.find(z => z.id_zona === destinoZonaId)?.nombre : 'Fase 4 - Banco 320 (Rampa Sur)'}
-              </Text>
-            </View>
-            <ChevronDown size={20} color={theme.textSecondary} />
-          </TouchableOpacity>
-          {activeDropdown === 'zona' && (
-            <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
-              {MOCK_ZONAS.map((z, idx) => (
-                <TouchableOpacity
-                  key={z.id_zona}
-                  style={[styles.dropdownOption, idx < MOCK_ZONAS.length - 1 && styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
-                  onPress={() => { setDestinoZonaId(z.id_zona); setActiveDropdown(null); }}
-                >
-                  <MapPin size={16} color={destinoZonaId === z.id_zona ? theme.primary : theme.textSecondary} />
-                  <Text style={[styles.dropdownText, { color: destinoZonaId === z.id_zona ? theme.primary : theme.text }]}>{z.nombre}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+        <View style={styles.fieldFull}>
+          <SearchableSelect
+            label="MOTIVO *"
+            placeholder="Buscar o seleccionar motivo..."
+            options={MOTIVOS_REEMPLAZO}
+            value={motivo || null}
+            onChange={(opcion) => setMotivo(opcion ?? '')}
+            getOptionKey={comoTexto}
+            getOptionLabel={comoTexto}
+          />
         </View>
 
-        <View style={[styles.fieldFull, { zIndex: 9 }]}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>MOTIVO / JUSTIFICACIÓN DEL JEFE DE TURNO:</Text>
-          <TouchableOpacity
-            style={[styles.dropdownSelector, { backgroundColor: theme.background, borderColor: activeDropdown === 'motivo' ? theme.primary : theme.border }]}
-            onPress={() => setActiveDropdown(activeDropdown === 'motivo' ? null : 'motivo')}
-          >
-            <View style={styles.dropdownSelectorInner}>
-              <Text style={[styles.dropdownText, { color: theme.text }]}>
-                {motivo || 'Aumento de Capacidad / Flota de Producción Planta'}
-              </Text>
-            </View>
-            <ChevronDown size={20} color={theme.textSecondary} />
-          </TouchableOpacity>
-          {activeDropdown === 'motivo' && (
-            <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
-              {MOCK_MOTIVOS.map((m, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={[styles.dropdownOption, idx < MOCK_MOTIVOS.length - 1 && styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
-                  onPress={() => { setMotivo(m); setActiveDropdown(null); }}
-                >
-                  <Text style={[styles.dropdownText, { color: motivo === m ? theme.primary : theme.text }]}>{m}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View style={[styles.fieldFull, { zIndex: 8 }]}>
+        <View style={styles.fieldFull}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>OBSERVACIONES</Text>
           <TextInput
             style={[styles.textarea, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]}
             value={observaciones}
             onChangeText={setObservaciones}
-            placeholder="Incorporación autorizada de maquinaria adicional para reforzar frente de carguío y cumplir meta diaria de tonelaje."
+            placeholder="Ej. Falla en la transmisión; el equipo va a taller."
             placeholderTextColor={theme.textTertiary}
             multiline
             numberOfLines={3}
+            maxLength={500}
             textAlignVertical="top"
           />
         </View>
-
       </View>
+
+      {!!errorEnvio && (
+        <View style={[styles.errorBox, { backgroundColor: theme.danger + '15', borderColor: theme.danger }]}>
+          <AlertTriangle size={16} color={theme.danger} />
+          <Text style={[styles.errorText, { color: theme.danger }]}>{errorEnvio}</Text>
+        </View>
+      )}
     </AppBottomSheetModal>
   );
 };

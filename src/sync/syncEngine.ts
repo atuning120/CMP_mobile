@@ -38,8 +38,8 @@ import { actualizarEstadoSincronizacion, emitirCambioDatos } from './eventos';
 
 const CATALOGO_VIGENCIA_MS = 30 * 60 * 1000;
 // Subir este número cuando cambie el formato de un catálogo: los teléfonos lo vuelven a descargar
-// (2: estados operacionales con descripción y esProductivo)
-const VERSION_CATALOGOS = 2;
+// (2: estados operacionales con descripción y esProductivo; 3: máquinas con su operador asignado)
+const VERSION_CATALOGOS = 3;
 // Una foto que no logra subirse se marca con error tras estos intentos (y deja de reintentarse sola)
 const MAX_INTENTOS_EVIDENCIA = 8;
 export const AVISO_CIERRE_AUTO = (idOperador: number) => `aviso_cierre_auto:${idOperador}`;
@@ -233,19 +233,22 @@ const CATALOGOS: { tipo: TipoCatalogo; cargar: () => Promise<{ id: number }[]>; 
 
 /**
  * Descarga los catálogos (máquinas, áreas, zonas, estados) para poder trabajar offline.
+ * tipos: solo esos catálogos (p. ej. las máquinas al abrir el inicio de turno)
  */
-export const sincronizarCatalogos = async (forzar = false) => {
+export const sincronizarCatalogos = async (forzar = false, tipos?: TipoCatalogo[]) => {
   const versionGuardada = await leerAjuste<number>('catalogo_version');
   if (versionGuardada !== VERSION_CATALOGOS) forzar = true;
   let cambios = false;
   for (const catalogo of CATALOGOS) {
+    if (tipos && !tipos.includes(catalogo.tipo)) continue;
     const actualizado = await catalogoActualizadoEn(catalogo.tipo);
     if (!forzar && actualizado && Date.now() - actualizado.getTime() < CATALOGO_VIGENCIA_MS) continue;
     const items = await catalogo.cargar();
     await guardarCatalogo(catalogo.tipo, items, catalogo.padre as ((item: { id: number }) => number) | undefined);
     cambios = true;
   }
-  if (versionGuardada !== VERSION_CATALOGOS) await guardarAjuste('catalogo_version', VERSION_CATALOGOS);
+  // Una descarga parcial no deja al día los demás catálogos: la versión se marca solo con la completa
+  if (!tipos && versionGuardada !== VERSION_CATALOGOS) await guardarAjuste('catalogo_version', VERSION_CATALOGOS);
   if (cambios) emitirCambioDatos();
 };
 

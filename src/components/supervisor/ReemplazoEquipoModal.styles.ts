@@ -41,49 +41,6 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.5,
     flexShrink: 1,
   },
-  cardsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  qtyCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    position: 'relative',
-  },
-  qtyTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  qtyTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  qtySubtitle: {
-    fontSize: 11,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    borderRadius: 8,
-    padding: 4,
-  },
-  tab: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-  },
-  tabText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  tabContent: {
-  },
-  fieldCol: {
-    flex: 1,
-  },
   fieldFull: {
     width: '100%',
     marginBottom: 16,
@@ -93,81 +50,12 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 8,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    minHeight: 44,
-  },
   textarea: {
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
     minHeight: 80,
-  },
-  dropdownSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    minHeight: 44,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  dropdownSelectorInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  dropdownText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  dropdownOptionsContainer: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    borderWidth: 1,
-    borderRadius: 8,
-    marginTop: 4,
-    overflow: 'hidden',
-    zIndex: 9999,
-    elevation: 9999,
-  },
-  dropdownOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dropdownOptionBorder: {
-    borderBottomWidth: 1,
-  },
-  authBlock: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  authText: {
-    fontSize: 12,
   },
   btnSecundario: {
     paddingHorizontal: 16,
@@ -194,5 +82,37 @@ export const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  salienteCodigo: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  salienteDetalle: {
+    fontSize: 13,
+  },
+  salienteFila: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginTop: 8,
+  },
+  salienteDato: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

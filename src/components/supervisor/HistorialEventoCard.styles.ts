@@ -46,6 +46,11 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
+  motivoConIcono: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   motivoTexto: {
     fontSize: 12,
     fontWeight: '700',

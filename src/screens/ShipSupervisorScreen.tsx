@@ -7,8 +7,8 @@ import { darkTheme, lightTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
-import { Truck, History, ShieldAlert, AlertTriangle, CheckCircle } from 'lucide-react-native';
-import { AppBottomSheetModal } from '../components/common/AppBottomSheetModal';
+import { Truck, History, ShieldAlert, AlertTriangle, LayoutList, UserRound, AlarmClockOff } from 'lucide-react-native';
+import { CambiarEstadoModal } from '../components/supervisor/CambiarEstadoModal';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
 import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
@@ -24,12 +24,37 @@ import { NuevaMaquinaFab } from '../components/supervisor/NuevaMaquinaFab';
 import { HistorialEventoCard } from '../components/supervisor/HistorialEventoCard';
 import { useHistorial } from '../hooks/useHistorial';
 import type { FiltroHistorial } from '../services/historialService';
+import { SegmentedControl } from '../components/supervisor/SegmentedControl';
+import { RangoFechasFiltro } from '../components/supervisor/RangoFechasFiltro';
+import { ListaPorDia } from '../components/supervisor/ListaPorDia';
+import { AlertaCard } from '../components/supervisor/AlertaCard';
+import { useRangoFechas } from '../hooks/useRangoFechas';
+import { useAlertas } from '../hooks/useAlertas';
+import type { FiltroAlertas } from '../services/alertasService';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
-const FILTROS_HISTORIAL = ['Todo', 'Turnos', 'Flota'] as const;
-type FiltroHistorialUI = (typeof FILTROS_HISTORIAL)[number];
+type FiltroHistorialUI = 'Todo' | 'Turnos' | 'Flota';
+const FILTROS_HISTORIAL = [
+  { valor: 'Todo', icono: LayoutList },
+  { valor: 'Turnos', icono: UserRound },
+  { valor: 'Flota', icono: Truck },
+] as const satisfies readonly { valor: FiltroHistorialUI; icono: unknown }[];
 const FILTRO_HISTORIAL_API: Record<FiltroHistorialUI, FiltroHistorial> = { Todo: 'TODO', Turnos: 'TURNOS', Flota: 'FLOTA' };
+
+type FiltroAlertasUI = 'Todas' | '+10 horas' | 'Cierre auto';
+const FILTROS_ALERTAS = [
+  { valor: 'Todas', icono: ShieldAlert },
+  { valor: '+10 horas', icono: AlertTriangle },
+  { valor: 'Cierre auto', icono: AlarmClockOff },
+] as const satisfies readonly { valor: FiltroAlertasUI; icono: unknown }[];
+const FILTRO_ALERTAS_API: Record<FiltroAlertasUI, FiltroAlertas> = {
+  Todas: 'TODO',
+  '+10 horas': 'EXTENDIDOS',
+  'Cierre auto': 'CIERRES_AUTOMATICOS',
+};
+// Distancia al final (px) desde la que se pide la siguiente página del historial o de las alertas
+const DISTANCIA_CARGA_MAS = 600;
 
 export const ShipSupervisorScreen = () => {
   const colorScheme = useColorScheme();
@@ -41,7 +66,14 @@ export const ShipSupervisorScreen = () => {
   const [fabExpandido, setFabExpandido] = useState(true);
   const ultimoScrollY = useRef(0);
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const y = e.nativeEvent.contentOffset.y;
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    const y = contentOffset.y;
+    // Scroll infinito del historial y de las alertas: pide la página siguiente antes de llegar al final.
+    // Si la última carga falló no se reintenta sola (se repetiría en cada evento de scroll)
+    const lista = activeTab === 'HISTORIAL' ? historial : activeTab === 'ALERTAS' ? alertas : null;
+    if (lista && !lista.errorMas && y + layoutMeasurement.height >= contentSize.height - DISTANCIA_CARGA_MAS) {
+      lista.cargarMas();
+    }
     const delta = y - ultimoScrollY.current;
     ultimoScrollY.current = y;
     if (y < 40) setFabExpandido(true);
@@ -53,17 +85,21 @@ export const ShipSupervisorScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterOption>('Todos');
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isModificacionModalVisible, setIsModificacionModalVisible] = useState(false);
+  const [maquinaAReemplazar, setMaquinaAReemplazar] = useState<MaquinaFlota | null>(null);
   const [isEditarModalVisible, setIsEditarModalVisible] = useState(false);
   const [maquinaAEditar, setMaquinaAEditar] = useState<MaquinaFlota | null>(null);
-  const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false);
   const [maquinaAToggle, setMaquinaAToggle] = useState<MaquinaFlota | null>(null);
 
   // La búsqueda la resuelve el Backend; el filtro por estado se aplica sobre el resultado
   const { maquinas, contadorFlota, isLoading, error, refetch, actualizarMaquina } = useFlotaResumen(searchQuery);
 
   const [filtroHistorial, setFiltroHistorial] = useState<FiltroHistorialUI>('Todo');
-  const historial = useHistorial(FILTRO_HISTORIAL_API[filtroHistorial]);
+  const rangoHistorial = useRangoFechas();
+  const historial = useHistorial(FILTRO_HISTORIAL_API[filtroHistorial], rangoHistorial.rango);
+
+  const [filtroAlertas, setFiltroAlertas] = useState<FiltroAlertasUI>('Todas');
+  const rangoAlertas = useRangoFechas();
+  const alertas = useAlertas(FILTRO_ALERTAS_API[filtroAlertas], rangoAlertas.rango);
 
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
 
@@ -74,7 +110,7 @@ export const ShipSupervisorScreen = () => {
   };
 
   const handleSustituir = (maquina: MaquinaFlota) => {
-    setIsModificacionModalVisible(true);
+    setMaquinaAReemplazar(maquina);
   };
 
   const handleEditar = (maquina: MaquinaFlota) => {
@@ -84,7 +120,6 @@ export const ShipSupervisorScreen = () => {
 
   const handleToggleEstado = (maquina: MaquinaFlota) => {
     setMaquinaAToggle(maquina);
-    setIsConfirmModalVisible(true);
   };
 
   const filteredMaquinas = useMemo(
@@ -131,15 +166,19 @@ export const ShipSupervisorScreen = () => {
           </Text>
         </View>
         <Text style={[styles.tabCounter, { color: activeTab === 'HISTORIAL' ? theme.textSecondary : theme.textTertiary }]}>
-          {historial.isLoading && historial.eventos.length === 0
+          {historial.isLoading && historial.items.length === 0
             ? 'Cargando...'
-            : `${historial.eventos.length}${historial.hayMas ? '+' : ''} eventos`}
+            : `${historial.items.length}${historial.hayMas ? '+' : ''} eventos`}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.tab, activeTab === 'ALERTAS' && { backgroundColor: theme.card }]}
-        onPress={() => setActiveTab('ALERTAS')}
+        onPress={() => {
+          // Al entrar se recarga: un turno pudo pasar las 10 h mientras tanto
+          if (activeTab !== 'ALERTAS') alertas.refetch();
+          setActiveTab('ALERTAS');
+        }}
         activeOpacity={0.7}
       >
         <View style={styles.tabIconRow}>
@@ -149,7 +188,7 @@ export const ShipSupervisorScreen = () => {
           </Text>
         </View>
         <Text style={[styles.tabCounter, { color: activeTab === 'ALERTAS' ? theme.textSecondary : theme.textTertiary }]}>
-          4 eventos
+          {alertas.activas === null ? 'Cargando...' : alertas.activas === 1 ? '1 activa' : `${alertas.activas} activas`}
         </Text>
       </TouchableOpacity>
     </View>
@@ -157,51 +196,24 @@ export const ShipSupervisorScreen = () => {
 
   const renderHistorial = () => (
     <GlassCapsule blurTarget={fondoRef}>
-      <FleetFilterChips filters={FILTROS_HISTORIAL} activeFilter={filtroHistorial} onFilterChange={setFiltroHistorial} />
+      {/* Qué se ve (segmentos) va separado de cuándo (chips de rango) */}
+      <SegmentedControl opciones={FILTROS_HISTORIAL} activo={filtroHistorial} onChange={setFiltroHistorial} />
+      <RangoFechasFiltro estado={rangoHistorial} />
+      <ListaPorDia lista={historial} nombre="eventos" renderItem={(evento) => <HistorialEventoCard evento={evento} />} />
+    </GlassCapsule>
+  );
 
-      {historial.isLoading ? (
-        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
-      ) : historial.error && historial.eventos.length === 0 ? (
-        <View style={{ alignItems: 'center', marginTop: 40, gap: 12 }}>
-          <Text style={{ textAlign: 'center', color: theme.danger }}>{historial.error}</Text>
-          <TouchableOpacity onPress={historial.refetch} style={{ backgroundColor: theme.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}>
-            <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Reintentar</Text>
-          </TouchableOpacity>
-        </View>
-      ) : historial.eventos.length === 0 ? (
-        <Text style={{ textAlign: 'center', marginTop: 40, color: theme.textSecondary }}>Aún no hay eventos registrados.</Text>
-      ) : (
-        <>
-          {historial.eventos.map(evento => (
-            <HistorialEventoCard key={evento.id} evento={evento} />
-          ))}
-          {historial.hayMas && (
-            <TouchableOpacity
-              onPress={historial.cargarMas}
-              disabled={historial.isLoadingMas}
-              style={[styles.cargarMas, { borderColor: theme.glassSurfaceBorder, backgroundColor: theme.glassSurface }]}
-            >
-              {historial.isLoadingMas ? (
-                <ActivityIndicator color={theme.primary} />
-              ) : (
-                <Text style={[styles.cargarMasTexto, { color: theme.primary }]}>Cargar eventos anteriores</Text>
-              )}
-            </TouchableOpacity>
-          )}
-        </>
-      )}
+  const renderAlertas = () => (
+    <GlassCapsule blurTarget={fondoRef}>
+      <SegmentedControl opciones={FILTROS_ALERTAS} activo={filtroAlertas} onChange={setFiltroAlertas} />
+      <RangoFechasFiltro estado={rangoAlertas} />
+      <ListaPorDia lista={alertas} nombre="alertas" renderItem={(alerta) => <AlertaCard alerta={alerta} />} />
     </GlassCapsule>
   );
 
   const renderContent = () => {
     if (activeTab === 'HISTORIAL') return renderHistorial();
-    if (activeTab !== 'FLOTA') {
-      return (
-        <View style={styles.placeholderContainer}>
-          <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>Próximamente...</Text>
-        </View>
-      );
-    }
+    if (activeTab === 'ALERTAS') return renderAlertas();
 
     return (
       <GlassCapsule blurTarget={fondoRef}>
@@ -288,8 +300,13 @@ export const ShipSupervisorScreen = () => {
       />
 
       <ReemplazoEquipoModal
-        visible={isModificacionModalVisible}
-        onClose={() => setIsModificacionModalVisible(false)}
+        maquina={maquinaAReemplazar}
+        onClose={() => setMaquinaAReemplazar(null)}
+        onReemplazado={() => {
+          // Cambian dos máquinas (y quizá un operador): se recarga la flota completa
+          refetch();
+          historial.refetch();
+        }}
       />
 
       <EditarEquipoModal
@@ -299,62 +316,24 @@ export const ShipSupervisorScreen = () => {
           setMaquinaAEditar(null);
         }}
         maquina={maquinaAEditar}
-        onSave={(maquinaActualizada) => actualizarMaquina(maquinaActualizada)}
+        onSave={(maquinaActualizada) => {
+          actualizarMaquina(maquinaActualizada);
+          // Si se reasignó un operador, otra máquina pudo quedar sin él: se recarga la flota completa
+          refetch();
+          // La edición queda en la bitácora: aparece en el historial
+          historial.refetch();
+        }}
       />
 
-      <AppBottomSheetModal
-        visible={isConfirmModalVisible}
-        onClose={() => { setIsConfirmModalVisible(false); setMaquinaAToggle(null); }}
-        title={maquinaAToggle?.estadoOperativo === 'OPERATIVO' ? "Confirmar Deshabilitación" : "Confirmar Habilitación"}
-        icon={<AlertTriangle size={22} color={theme.warning} />}
-        iconBadgeColor={theme.warning + '15'}
-        footer={
-          <>
-            <TouchableOpacity
-              style={{ flex: 1, backgroundColor: theme.cardAlt, padding: 12, borderRadius: 8, alignItems: 'center' }}
-              onPress={() => { setIsConfirmModalVisible(false); setMaquinaAToggle(null); }}
-            >
-              <Text style={{ color: theme.text, fontWeight: 'bold' }}>Cancelar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{
-                flex: 1, 
-                backgroundColor: maquinaAToggle?.estadoOperativo === 'OPERATIVO' ? theme.danger : theme.success, 
-                padding: 12, 
-                borderRadius: 8, 
-                alignItems: 'center', 
-                flexDirection: 'row', 
-                justifyContent: 'center', 
-                gap: 8
-              }}
-              onPress={() => {
-                if (maquinaAToggle) {
-                  const isOperativo = maquinaAToggle.estadoOperativo === 'OPERATIVO';
-                  actualizarMaquina({
-                    ...maquinaAToggle,
-                    estadoOperativo: isOperativo ? 'FUERA_DE_SERVICIO' : 'OPERATIVO',
-                    fallaActiva: isOperativo ? 'Deshabilitado manualmente por Jefe de Turno' : null,
-                  });
-                  // TODO: conectar con el endpoint real de cambio de estado operacional cuando el backend lo exponga
-                }
-                setIsConfirmModalVisible(false);
-                setMaquinaAToggle(null);
-              }}
-            >
-              <CheckCircle size={18} color="#FFF" />
-              <Text style={{ color: '#FFF', fontWeight: 'bold' }}>
-                {maquinaAToggle?.estadoOperativo === 'OPERATIVO' ? 'Deshabilitar' : 'Habilitar'}
-              </Text>
-            </TouchableOpacity>
-          </>
-        }
-      >
-        <Text style={{ color: theme.textSecondary, fontSize: 16, lineHeight: 24, textAlign: 'center', marginVertical: 16 }}>
-          {maquinaAToggle?.estadoOperativo === 'OPERATIVO' 
-            ? `¿Estás seguro de que deseas deshabilitar el equipo ${maquinaAToggle.codigo}? Pasará a estado "Fuera de Servicio".`
-            : `¿Confirmas que el equipo ${maquinaAToggle?.codigo} está reparado y listo para operar?`}
-        </Text>
-      </AppBottomSheetModal>
+      <CambiarEstadoModal
+        maquina={maquinaAToggle}
+        onClose={() => setMaquinaAToggle(null)}
+        onCambiado={(maquinaActualizada) => {
+          actualizarMaquina(maquinaActualizada);
+          // El cambio queda en la bitácora: aparece en el historial
+          historial.refetch();
+        }}
+      />
       <ConfirmLogoutModal
         visible={isLogoutModalVisible}
         onCancel={() => setIsLogoutModalVisible(false)}

@@ -6,6 +6,7 @@ import { darkTheme, lightTheme } from '../../constants/theme';
 import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
 import { useModelosMaquina } from '../../hooks/useModelosMaquina';
 import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
+import { useOperadoresAsignables } from '../../hooks/useOperadoresAsignables';
 import { styles } from './IncorporacionEquipoModal.styles';
 import { crearMaquina } from '../../services/flotaService';
 import { SearchableSelect } from '../common/SearchableSelect';
@@ -28,6 +29,7 @@ const aCrearMaquina = (eq: EquipoFormState) => ({
   numeroChasis: eq.chasis.trim() || null,
   horometroInicial: Number(eq.horometro),
   esContratista: eq.contratista,
+  idOperador: eq.operadorId ? Number(eq.operadorId) : null,
 });
 
 // Accesor estable para SearchableSelect (evita recalcular la búsqueda en cada render)
@@ -38,6 +40,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const modelos = useModelosMaquina(visible);
   const opcionesMaquina = useOpcionesMaquina(visible);
+  const operadores = useOperadoresAsignables(visible);
   const successColor = colorScheme === 'dark' ? '#81c995' : theme.success;
 
   const [numEquipos, setNumEquipos] = useState<1 | 2>(1);
@@ -90,6 +93,11 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
     const equipos = numEquipos === 1 ? [equipo1] : [equipo1, equipo2];
     if (numEquipos === 2 && equipo1.codigo.trim().toUpperCase() === equipo2.codigo.trim().toUpperCase()) {
       setErrorEnvio('Los dos equipos tienen el mismo código interno.');
+      return;
+    }
+    // Un operador está a cargo de una sola máquina: el segundo equipo se lo quitaría al primero
+    if (numEquipos === 2 && equipo1.operadorId !== '' && equipo1.operadorId === equipo2.operadorId) {
+      setErrorEnvio('Los dos equipos tienen el mismo operador asignado.');
       return;
     }
 
@@ -228,6 +236,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
               cargandoPlantillas={modelos.cargando}
               errorPlantillas={modelos.error}
               opciones={opcionesMaquina}
+              operadores={operadores}
             />
           ) : (
             <EquipoDataForm
@@ -238,6 +247,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
               cargandoPlantillas={modelos.cargando}
               errorPlantillas={modelos.error}
               opciones={opcionesMaquina}
+              operadores={operadores}
             />
           )}
         </View>

@@ -13,7 +13,13 @@ export interface MaquinaFlotaApi {
   tipoMaquina: string | null;
   estado: string | null; // 'ACTIVA' | 'BAJA'
   patente: string | null;
-  operadorActual: string | null;
+  anio: number | null;
+  numeroChasis: string | null;
+  esContratista: boolean;
+  operadorAsignado: { idOperador: number; nombre: string } | null; // a cargo de la máquina
+  operadorActual: string | null; // con turno en curso
+  // Por qué está en BAJA (deshabilitada o reemplazada)
+  fueraDeServicio: { motivo: string; observacion: string | null; fecha: string; reemplazadaPor: string | null } | null;
   ubicacionActual: string | null;
   horometroActual: number | null;
 }
@@ -34,12 +40,61 @@ export interface CrearMaquinaApi {
   numeroChasis: string | null;
   horometroInicial: number;
   esContratista: boolean;
+  idOperador: number | null;
   motivo: string;
   observacion: string | null;
 }
 
 export const crearMaquina = (datos: CrearMaquinaApi) =>
   apiRequest<MaquinaFlotaApi>('/maquinas', { method: 'POST', body: JSON.stringify(datos) });
+
+// Edición de la ficha: solo se envían los campos editables; el motivo queda en la bitácora
+export interface EditarMaquinaApi {
+  nombre: string;
+  marca: string;
+  modelo: string;
+  tipoMaquina: string;
+  anio: number | null;
+  patente: string | null;
+  numeroChasis: string | null;
+  esContratista: boolean;
+  idOperador: number | null; // null deja la máquina sin operador
+  estado: 'ACTIVA' | 'BAJA';
+  motivo: string;
+  observacion: string | null;
+}
+
+export const editarMaquina = (idMaquina: number, datos: EditarMaquinaApi) =>
+  apiRequest<MaquinaFlotaApi>(`/maquinas/${idMaquina}`, { method: 'PATCH', body: JSON.stringify(datos) });
+
+// Operador que se puede asignar a una máquina, con la que tiene hoy (al asignarlo a otra, se mueve)
+// Habilitar / deshabilitar: el mismo PATCH, enviando solo el estado (lo demás no se toca)
+export const cambiarEstadoMaquina = (idMaquina: number, estado: 'ACTIVA' | 'BAJA', motivo: string, observacion: string | null) =>
+  apiRequest<MaquinaFlotaApi>(`/maquinas/${idMaquina}`, { method: 'PATCH', body: JSON.stringify({ estado, motivo, observacion }) });
+
+// Reemplazo: la entrante es una de la flota o una nueva; sin idOperador, el de la saliente pasa a la entrante
+export interface ReemplazarMaquinaApi {
+  idMaquinaEntrante?: number;
+  maquinaNueva?: Omit<CrearMaquinaApi, 'motivo' | 'observacion' | 'idOperador'>;
+  idOperador: number | null;
+  motivo: string;
+  observacion: string | null;
+}
+
+export const reemplazarMaquina = (idSaliente: number, datos: ReemplazarMaquinaApi) =>
+  apiRequest<{ saliente: MaquinaFlotaApi; entrante: MaquinaFlotaApi }>(`/maquinas/${idSaliente}/reemplazo`, {
+    method: 'POST',
+    body: JSON.stringify(datos),
+  });
+
+export interface OperadorAsignableApi {
+  idOperador: number;
+  nombre: string;
+  rut: string;
+  maquinaAsignada: { idMaquina: number; nombre: string } | null;
+}
+
+export const listarOperadoresAsignables = () => apiRequest<OperadorAsignableApi[]>('/maquinas/operadores');
 
 export interface ModeloMaquinaApi {
   idModelo: number;

@@ -21,8 +21,19 @@ export interface PaginaHistorial {
   hayMas: boolean;
 }
 
-export const listarHistorial = (tipo: FiltroHistorial, antes?: string) => {
-  const params = new URLSearchParams({ tipo });
-  if (antes) params.set('antes', antes);
+// Rango de fechas en ISO; hasta es exclusiva y null significa "hasta ahora"
+export interface RangoHistorial {
+  desde: string;
+  hasta: string | null;
+}
+
+// Cursor: el último evento recibido (fecha + id, para no perder eventos con la misma fecha)
+export const listarHistorial = (tipo: FiltroHistorial, rango: RangoHistorial, ultimo?: Pick<EventoHistorial, 'fecha' | 'id'>) => {
+  const params = new URLSearchParams({ tipo, desde: rango.desde });
+  if (rango.hasta) params.set('hasta', rango.hasta);
+  if (ultimo) {
+    params.set('antes', ultimo.fecha);
+    params.set('antesId', ultimo.id);
+  }
   return apiRequest<PaginaHistorial>(`/historial?${params.toString()}`);
 };
