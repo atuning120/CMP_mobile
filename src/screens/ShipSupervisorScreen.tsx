@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { View, Text, Image, NativeScrollEvent, NativeSyntheticEvent, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
+import { View, Text, Image, NativeScrollEvent, NativeSyntheticEvent, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -30,6 +30,7 @@ import { ListaPorDia } from '../components/supervisor/ListaPorDia';
 import { AlertaCard } from '../components/supervisor/AlertaCard';
 import { useRangoFechas } from '../hooks/useRangoFechas';
 import { useAlertas } from '../hooks/useAlertas';
+import { useRecargaManual } from '../hooks/useRecargaManual';
 import type { FiltroAlertas } from '../services/alertasService';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
@@ -100,6 +101,20 @@ export const ShipSupervisorScreen = () => {
   const [filtroAlertas, setFiltroAlertas] = useState<FiltroAlertasUI>('Todas');
   const rangoAlertas = useRangoFechas();
   const alertas = useAlertas(FILTRO_ALERTAS_API[filtroAlertas], rangoAlertas.rango);
+
+  // Deslizar hacia abajo recarga la pestaña visible (en Flota también el contador de alertas)
+  const { refetch: refetchHistorial } = historial;
+  const { refetch: refetchAlertas } = alertas;
+  const recargarPestana = useCallback(() => {
+    if (activeTab === 'HISTORIAL') refetchHistorial();
+    else if (activeTab === 'ALERTAS') refetchAlertas();
+    else {
+      refetch();
+      refetchAlertas();
+    }
+  }, [activeTab, refetchHistorial, refetchAlertas, refetch]);
+  const cargandoPestana = activeTab === 'HISTORIAL' ? historial.isLoading : activeTab === 'ALERTAS' ? alertas.isLoading : isLoading;
+  const recarga = useRecargaManual(recargarPestana, cargandoPestana);
 
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
 
@@ -199,7 +214,7 @@ export const ShipSupervisorScreen = () => {
       {/* Qué se ve (segmentos) va separado de cuándo (chips de rango) */}
       <SegmentedControl opciones={FILTROS_HISTORIAL} activo={filtroHistorial} onChange={setFiltroHistorial} />
       <RangoFechasFiltro estado={rangoHistorial} />
-      <ListaPorDia lista={historial} nombre="eventos" renderItem={(evento) => <HistorialEventoCard evento={evento} />} />
+      <ListaPorDia lista={historial} nombre="eventos" recargando={recarga.refreshing} renderItem={(evento) => <HistorialEventoCard evento={evento} />} />
     </GlassCapsule>
   );
 
@@ -207,7 +222,7 @@ export const ShipSupervisorScreen = () => {
     <GlassCapsule blurTarget={fondoRef}>
       <SegmentedControl opciones={FILTROS_ALERTAS} activo={filtroAlertas} onChange={setFiltroAlertas} />
       <RangoFechasFiltro estado={rangoAlertas} />
-      <ListaPorDia lista={alertas} nombre="alertas" renderItem={(alerta) => <AlertaCard alerta={alerta} />} />
+      <ListaPorDia lista={alertas} nombre="alertas" recargando={recarga.refreshing} renderItem={(alerta) => <AlertaCard alerta={alerta} />} />
     </GlassCapsule>
   );
 
@@ -220,7 +235,8 @@ export const ShipSupervisorScreen = () => {
         <FleetSearchBar value={searchQuery} onChangeText={setSearchQuery} />
         <FleetFilterChips activeFilter={activeFilter} onFilterChange={setActiveFilter} />
 
-        {isLoading ? (
+        {/* Al deslizar para recargar se mantiene la lista: el indicador ya se ve arriba */}
+        {isLoading && !(recarga.refreshing && maquinas.length > 0) ? (
           <ActivityIndicator size="large" color={theme.warning} style={{ marginTop: 40 }} />
         ) : error ? (
           <View style={{ alignItems: 'center', marginTop: 40, gap: 12 }}>
@@ -274,6 +290,15 @@ export const ShipSupervisorScreen = () => {
           showsVerticalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
+          refreshControl={
+            <RefreshControl
+              refreshing={recarga.refreshing}
+              onRefresh={recarga.onRefresh}
+              tintColor={theme.primary}
+              colors={[theme.primary]}
+              progressBackgroundColor={theme.card}
+            />
+          }
         >
           <TurnoSummaryDropdown turno={null} onLogout={() => setIsLogoutModalVisible(true)} />
 
