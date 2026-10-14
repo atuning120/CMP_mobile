@@ -150,6 +150,8 @@ const styles = StyleSheet.create({
     left: 0,
     zIndex: 100,
     elevation: 100,
+    // La hoja va centrada en el espacio libre: este relleno la baja ~24 px respecto del centro exacto
+    paddingTop: 48,
   },
   modalContent: {
     width: '90%',
