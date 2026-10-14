@@ -1,5 +1,5 @@
 import { CheckCircle2 } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ImageBackground,
   ScrollView,
@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNetInfo } from '@react-native-community/netinfo';
 
 import { AuthError, loginOffline, loginOnline, OFFLINE_MAX_DIAS } from '../services/authService';
+import { despertarBackend } from '../services/backendUrl';
 
 import { LoginFooter } from '../components/LoginFooter';
 import { LoginForm } from '../components/LoginForm';
@@ -59,6 +60,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const netInfo = useNetInfo();
+
+  // Al abrir el login (o al recuperar la red) se despierta el servidor para que el ingreso no espere su arranque
+  useEffect(() => {
+    if (networkState !== 'offline') despertarBackend();
+  }, [networkState]);
 
   const handleStandardLogin = async () => {
     if (!email.trim() || !password.trim()) {
