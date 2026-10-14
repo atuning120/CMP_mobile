@@ -10,6 +10,10 @@ import {
 } from '../types/turno';
 import * as operaciones from '../services/operacionesTurno';
 import { suscribirCambioDatos } from '../sync/eventos';
+import { sincronizacionEnCurso } from '../sync/syncEngine';
+
+// Tope de espera a la sincronización al abrir la pantalla: con mala señal no se bloquea al operador
+const ESPERA_SINCRONIZACION_MS = 6000;
 
 /**
  * Turno en curso del operador, leído de la base local: funciona igual con o sin conexión.
@@ -23,19 +27,25 @@ export const useTurnoActual = (): UseTurnoActualResult => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const cargar = useCallback(async () => {
+  // Lee la base local y devuelve el turno en curso (null si no hay o si falló la lectura)
+  const leer = useCallback(async (): Promise<TurnoActual | null> => {
     try {
       const [actual, estados] = await Promise.all([operaciones.obtenerTurnoActual(), operaciones.catalogoEstados()]);
       setTurno(actual.turno);
       setTurnoCerradoAutomaticamente(actual.turnoCerradoAutomaticamente);
       setEstadosCatalogo(estados);
       setError(null);
+      return actual.turno;
     } catch (e) {
       setError(e instanceof Error ? e : new Error('Error al cargar el turno'));
-    } finally {
-      setIsLoading(false);
+      return null;
     }
   }, []);
+
+  const cargar = useCallback(async () => {
+    await leer();
+    setIsLoading(false);
+  }, [leer]);
 
   const iniciarTurno = useCallback(async (datos: IniciarTurnoDatos) => {
     await operaciones.iniciarTurno(datos);
@@ -58,7 +68,20 @@ export const useTurnoActual = (): UseTurnoActualResult => {
   );
 
   useEffect(() => {
-    const timer = setTimeout(() => void cargar(), 0);
+    let activo = true;
+    const timer = setTimeout(async () => {
+      const turnoLocal = await leer();
+      // Recién instalada la app (o tras iniciar sesión en otro teléfono) la base local no tiene el turno
+      // que sigue abierto en el servidor. Mientras la sincronización lo trae se muestra "cargando" y no
+      // "sin turno", para no ofrecer iniciar un segundo turno; con mala señal se espera como máximo
+      // ESPERA_SINCRONIZACION_MS y se sigue con lo guardado (la sincronización avisará si llega después)
+      const enCurso = turnoLocal ? null : sincronizacionEnCurso();
+      if (enCurso) {
+        await Promise.race([enCurso, new Promise((resolver) => setTimeout(resolver, ESPERA_SINCRONIZACION_MS))]);
+        if (activo) await leer();
+      }
+      if (activo) setIsLoading(false);
+    }, 0);
     // Se relee cuando cambian los datos locales (acción del operador o sincronización en segundo plano)
     const desuscribir = suscribirCambioDatos(() => void cargar());
     // Al volver a primer plano y cada minuto se re-evalúa el límite de 12 h
@@ -67,12 +90,13 @@ export const useTurnoActual = (): UseTurnoActualResult => {
     });
     const intervalo = setInterval(() => void cargar(), 60 * 1000);
     return () => {
+      activo = false;
       clearTimeout(timer);
       desuscribir();
       suscripcionApp.remove();
       clearInterval(intervalo);
     };
-  }, [cargar]);
+  }, [cargar, leer]);
 
   return {
     turno,

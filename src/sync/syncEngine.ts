@@ -313,6 +313,9 @@ export const solicitarSincronizacion = () => {
   void sincronizar();
 };
 
+// Sincronización en curso (o null). Permite a una pantalla esperar a que el servidor confirme los datos
+export const sincronizacionEnCurso = (): Promise<void> | null => ejecucionEnCurso;
+
 export const refrescarContadores = async () => {
   const sesion = await leerSesion();
   if (sesion?.idOperador) await actualizarContadores(sesion.idOperador);
