@@ -36,7 +36,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           { backgroundColor: 'rgba(244, 63, 94, 0.15)', borderColor: 'rgba(244, 63, 94, 0.4)' }
         ]}>
           <AlertCircle size={16} color={theme.danger} />
-          <Text style={[styles.errorText, { color: theme.danger }]}>{errorMsg}</Text>
+          <Text style={[styles.errorText, { color: theme.dangerText }]}>{errorMsg}</Text>
         </View>
       )}
 

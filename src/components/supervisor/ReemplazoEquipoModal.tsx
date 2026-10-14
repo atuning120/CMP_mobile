@@ -15,6 +15,7 @@ import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
 import { listarFlota, reemplazarMaquina } from '../../services/flotaService';
 import { styles } from './ReemplazoEquipoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
+import { mostrarAviso } from '../../services/retroalimentacion';
 
 interface Props {
   // Máquina que sale (la de la tarjeta); null = modal cerrado
@@ -149,6 +150,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
       });
       onReemplazado();
       onClose();
+      mostrarAviso('Reemplazo registrado');
     } catch (err) {
       setErrorEnvio(err instanceof Error ? err.message : 'No se pudo registrar el reemplazo.');
     }
@@ -156,7 +158,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
 
   const headerTop = (
     <View style={styles.headerTopBadge}>
-      <Text style={[styles.headerTopText, { color: theme.primary }]}>JEFE DE TURNO</Text>
+      <Text style={[styles.headerTopText, { color: theme.primaryText }]}>JEFE DE TURNO</Text>
     </View>
   );
 
@@ -194,7 +196,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
             <AlertCircle size={18} color={theme.danger} />
-            <Text style={[styles.sectionTitle, { color: theme.danger, marginBottom: 0 }]}>1. EQUIPO SALIENTE (QUEDA FUERA DE SERVICIO)</Text>
+            <Text style={[styles.sectionTitle, { color: theme.dangerText, marginBottom: 0 }]}>1. EQUIPO SALIENTE (QUEDA FUERA DE SERVICIO)</Text>
           </View>
         </View>
         <Text style={[styles.salienteCodigo, { color: theme.text }]}>{maquina.codigo}</Text>
@@ -308,7 +310,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
       {!!errorEnvio && (
         <View style={[styles.errorBox, { backgroundColor: theme.danger + '15', borderColor: theme.danger }]}>
           <AlertTriangle size={16} color={theme.danger} />
-          <Text style={[styles.errorText, { color: theme.danger }]}>{errorEnvio}</Text>
+          <Text style={[styles.errorText, { color: theme.dangerText }]}>{errorEnvio}</Text>
         </View>
       )}
     </AppBottomSheetModal>

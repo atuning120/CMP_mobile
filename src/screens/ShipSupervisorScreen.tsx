@@ -240,7 +240,7 @@ export const ShipSupervisorScreen = () => {
           <ActivityIndicator size="large" color={theme.warning} style={{ marginTop: 40 }} />
         ) : error ? (
           <View style={{ alignItems: 'center', marginTop: 40, gap: 12 }}>
-            <Text style={{ textAlign: 'center', color: theme.danger }}>{error.message}</Text>
+            <Text style={{ textAlign: 'center', color: theme.dangerText }}>{error.message}</Text>
             <TouchableOpacity onPress={refetch} style={{ backgroundColor: theme.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}>
               <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>Reintentar</Text>
             </TouchableOpacity>

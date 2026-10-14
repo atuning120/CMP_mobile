@@ -10,6 +10,16 @@ export interface ThemeColors {
   danger: string;
   warning: string;
   white: string;
+  // Variantes para TEXTO (contraste ≥ 4,5:1 sobre fondo, card y cardAlt, legibles a pleno sol). Los
+  // colores base siguen para fondos de botón, bordes e íconos; como texto quedaban bajo ese mínimo
+  primaryText: string;
+  successText: string;
+  dangerText: string;
+  warningText: string;
+  // Superficie invertida (oscura en tema claro y viceversa) para avisos flotantes que deben destacar
+  inverseSurface: string;
+  inverseText: string;
+  inverseTextSecondary: string;
 
   cardAlt: string;
   transparentPrimary: string;
@@ -28,13 +38,20 @@ export const lightTheme: ThemeColors = {
   card: '#FFFFFF',
   text: '#202124',
   textSecondary: '#5f6368',
-  textTertiary: '#80868b',
+  textTertiary: '#666b70',
   border: '#dadce0',
   primary: '#1A73E8',
   success: '#1e8e3e',
   danger: '#d93025',
   warning: '#f9ab00',
   white: '#FFFFFF',
+  primaryText: '#1967d2',
+  successText: '#137333',
+  dangerText: '#c5221f',
+  warningText: '#a35a00',
+  inverseSurface: '#2d2e31',
+  inverseText: '#FFFFFF',
+  inverseTextSecondary: '#bdc1c6',
 
   cardAlt: '#f1f3f4',
   transparentPrimary: 'rgba(26, 115, 232, 0.1)',
@@ -58,6 +75,13 @@ export const darkTheme: ThemeColors = {
   danger: '#d93025',
   warning: '#f9ab00',
   white: '#FFFFFF',
+  primaryText: '#8ab4f8',
+  successText: '#81c995',
+  dangerText: '#f28b82',
+  warningText: '#fdd663',
+  inverseSurface: '#e8eaed',
+  inverseText: '#202124',
+  inverseTextSecondary: '#5f6368',
 
   cardAlt: '#303134',
   transparentPrimary: 'rgba(26, 115, 232, 0.2)',

@@ -49,7 +49,7 @@ export const SyncIndicator: React.FC<{ theme: ThemeColors }> = ({ theme }) => {
     return (
       <TouchableOpacity style={styles.fila} onPress={mostrarErrores}>
         <CloudOff size={12} color={theme.danger} />
-        <Text style={[styles.texto, { color: theme.danger }]}>{errores} con error · ver</Text>
+        <Text style={[styles.texto, { color: theme.dangerText }]}>{errores} con error · ver</Text>
       </TouchableOpacity>
     );
   }
@@ -57,7 +57,7 @@ export const SyncIndicator: React.FC<{ theme: ThemeColors }> = ({ theme }) => {
     return (
       <TouchableOpacity style={styles.fila} disabled>
         <RefreshCw size={12} color={theme.primary} />
-        <Text style={[styles.texto, { color: theme.primary }]}>Sincronizando {pendientes}…</Text>
+        <Text style={[styles.texto, { color: theme.primaryText }]}>Sincronizando {pendientes}…</Text>
       </TouchableOpacity>
     );
   }
@@ -65,14 +65,14 @@ export const SyncIndicator: React.FC<{ theme: ThemeColors }> = ({ theme }) => {
     return (
       <TouchableOpacity style={styles.fila} onPress={solicitarSincronizacion}>
         <CloudUpload size={12} color={theme.warning} />
-        <Text style={[styles.texto, { color: theme.warning }]}>{pendientes} por sincronizar</Text>
+        <Text style={[styles.texto, { color: theme.warningText }]}>{pendientes} por sincronizar</Text>
       </TouchableOpacity>
     );
   }
   return (
     <TouchableOpacity style={styles.fila} disabled>
       <CloudCheck size={12} color={theme.success} />
-      <Text style={[styles.texto, { color: theme.success }]}>Todo sincronizado</Text>
+      <Text style={[styles.texto, { color: theme.successText }]}>Todo sincronizado</Text>
     </TouchableOpacity>
   );
 };

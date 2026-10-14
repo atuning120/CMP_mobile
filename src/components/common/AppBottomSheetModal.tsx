@@ -94,7 +94,13 @@ export const AppBottomSheetModal: React.FC<AppBottomSheetModalProps> = ({
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               {headerRight}
-              <TouchableOpacity onPress={onClose} style={[styles.closeBtn, { backgroundColor: theme.cardAlt }]}>
+              <TouchableOpacity
+                onPress={onClose}
+                style={[styles.closeBtn, { backgroundColor: theme.cardAlt }]}
+                // 36 dp visibles + 6 por lado = 48 dp de área táctil
+                hitSlop={6}
+                accessibilityLabel="Cerrar"
+              >
                 <X size={20} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>

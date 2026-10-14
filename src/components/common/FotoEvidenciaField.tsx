@@ -35,11 +35,11 @@ export const FotoEvidenciaField: React.FC<Props> = ({ foto, onChange, titulo, su
         <View style={styles.acciones}>
           <TouchableOpacity style={styles.accion} onPress={tomarFoto} disabled={disabled}>
             <RefreshCw size={16} color={theme.primary} />
-            <Text style={[styles.accionTexto, { color: theme.primary }]}>Tomar otra</Text>
+            <Text style={[styles.accionTexto, { color: theme.primaryText }]}>Tomar otra</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.accion} onPress={() => onChange(null)} disabled={disabled}>
             <Trash2 size={16} color={theme.danger} />
-            <Text style={[styles.accionTexto, { color: theme.danger }]}>Quitar foto</Text>
+            <Text style={[styles.accionTexto, { color: theme.dangerText }]}>Quitar foto</Text>
           </TouchableOpacity>
         </View>
       </View>

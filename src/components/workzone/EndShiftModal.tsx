@@ -8,6 +8,7 @@ import { FotoEvidenciaField } from '../common/FotoEvidenciaField';
 import { calcularDesgloseHoras, formatearHoras } from '../../utils/desgloseHoras';
 import { FOTOS_HABILITADAS } from '../../constants/features';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
+import { vibrar } from '../../services/retroalimentacion';
 
 interface Props {
   visible: boolean;
@@ -85,6 +86,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
       setFoto(null);
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'No se pudo cerrar el turno.');
+      vibrar('error');
     }
   });
 
@@ -128,7 +130,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
       <View style={[styles.datosGrid, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
         <View style={styles.datoCol}>
           <Text style={[styles.datoLabel, { color: theme.textSecondary }]}>TURNO:</Text>
-          <Text style={[styles.datoValue, { color: theme.warning }]}>{turno.id !== null ? `#${turno.id}` : 'Por sincronizar'}</Text>
+          <Text style={[styles.datoValue, { color: theme.warningText }]}>{turno.id !== null ? `#${turno.id}` : 'Por sincronizar'}</Text>
         </View>
         <View style={styles.datoCol}>
           <Text style={[styles.datoLabel, { color: theme.textSecondary }]}>MÁQUINA:</Text>
@@ -140,7 +142,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
         </View>
         <View style={styles.datoCol}>
           <Text style={[styles.datoLabel, { color: theme.textSecondary }]}>ÁREA:</Text>
-          <Text style={[styles.datoValue, { color: theme.primary }]} numberOfLines={1}>{turno.area?.nombre ?? 'Sin asignar'}</Text>
+          <Text style={[styles.datoValue, { color: theme.primaryText }]} numberOfLines={1}>{turno.area?.nombre ?? 'Sin asignar'}</Text>
         </View>
       </View>
 
@@ -155,7 +157,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
             style={[
               styles.input,
               {
-                color: theme.warning,
+                color: theme.warningText,
                 backgroundColor: theme.background,
                 borderColor: (!isHorometroValid && horometro !== '') ? theme.danger : theme.border,
               }
@@ -169,7 +171,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
           <Text style={{ color: theme.textSecondary, fontSize: 18, fontWeight: '700' }}>hrs</Text>
         </View>
         {horometroError !== '' && (
-          <Text style={[styles.errorText, { color: theme.danger }]}>{horometroError}</Text>
+          <Text style={[styles.errorText, { color: theme.dangerText }]}>{horometroError}</Text>
         )}
       </View>
 
@@ -178,7 +180,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
         <View style={styles.desgloseHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <TrendingUp size={16} color={theme.primary} />
-            <Text style={[styles.desgloseTitle, { color: theme.primary }]}>
+            <Text style={[styles.desgloseTitle, { color: theme.primaryText }]}>
               Desglose Automatizado de Horas
             </Text>
           </View>
@@ -250,7 +252,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
       />
 
       {submitError !== '' && (
-        <Text style={[styles.errorText, { color: theme.danger, textAlign: 'center' }]}>{submitError}</Text>
+        <Text style={[styles.errorText, { color: theme.dangerText, textAlign: 'center' }]}>{submitError}</Text>
       )}
     </AppBottomSheetModal>
   );

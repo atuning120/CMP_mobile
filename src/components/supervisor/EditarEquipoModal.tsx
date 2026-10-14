@@ -12,6 +12,7 @@ import { SearchableSelect } from '../common/SearchableSelect';
 import { MOTIVOS_DESHABILITAR, MOTIVOS_EDICION, MOTIVOS_HABILITAR } from '../../constants/motivosJefeTurno';
 import { styles } from './EditarEquipoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
+import { mostrarAviso } from '../../services/retroalimentacion';
 
 interface Props {
   visible: boolean;
@@ -124,6 +125,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
       });
       onSave?.(mapMaquinaFlota(actualizada));
       onClose();
+      mostrarAviso('Cambios guardados');
     } catch (err) {
       setErrorEnvio(err instanceof Error ? err.message : 'No se pudieron guardar los cambios.');
     }
@@ -264,7 +266,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
       {!!errorEnvio && (
         <View style={[styles.errorBox, { backgroundColor: theme.danger + '15', borderColor: theme.danger }]}>
           <AlertTriangle size={16} color={theme.danger} />
-          <Text style={[styles.errorText, { color: theme.danger }]}>{errorEnvio}</Text>
+          <Text style={[styles.errorText, { color: theme.dangerText }]}>{errorEnvio}</Text>
         </View>
       )}
     </AppBottomSheetModal>

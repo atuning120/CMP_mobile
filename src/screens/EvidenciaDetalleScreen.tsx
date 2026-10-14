@@ -40,7 +40,7 @@ export default function EvidenciaDetalleScreen() {
   if (!evidencia) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: theme.danger, marginBottom: 16 }}>Evidencia no encontrada</Text>
+        <Text style={{ color: theme.dangerText, marginBottom: 16 }}>Evidencia no encontrada</Text>
         <TouchableOpacity style={{ padding: 10, backgroundColor: theme.cardAlt, borderRadius: 8 }} onPress={() => router.back()}>
           <Text style={{ color: theme.text }}>Volver</Text>
         </TouchableOpacity>

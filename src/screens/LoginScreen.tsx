@@ -23,6 +23,7 @@ import { styles } from './LoginScreen.styles';
 
 import { darkTheme, lightTheme } from '../constants/theme';
 import { NetworkState, Operador, PerfilPrueba } from '../types/mining';
+import { vibrar } from '../services/retroalimentacion';
 
 // Mensajes que se muestran al usuario según el error del login. Nunca se muestra el texto crudo
 // del servidor ni de la red.
@@ -122,6 +123,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       if (error instanceof AuthError && error.status > 0) {
         // Errores ya traducidos desde la respuesta del backend
         setErrorMsg(getLoginErrorMessage(error.status, error.code));
+        vibrar('error');
         return;
       }
 

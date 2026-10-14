@@ -58,7 +58,7 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
       {!isOperativo && maquina.fallaActiva && (
         <View style={[styles.alertBlock, { backgroundColor: theme.danger + '15' }]}>
           <AlertTriangle size={16} color={theme.danger} style={{ marginTop: 2 }} />
-          <Text style={[styles.alertText, { color: theme.danger }]}>{maquina.fallaActiva}</Text>
+          <Text style={[styles.alertText, { color: theme.dangerText }]}>{maquina.fallaActiva}</Text>
         </View>
       )}
 

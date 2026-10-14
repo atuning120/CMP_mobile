@@ -103,7 +103,7 @@ export const RangoFechasModal: React.FC<Props> = ({ visible, desde, hasta, onClo
       {campo('Hasta', fin, setFin)}
 
       {error ? (
-        <Text style={[styles.mensaje, { color: theme.danger }]}>{error}</Text>
+        <Text style={[styles.mensaje, { color: theme.dangerText }]}>{error}</Text>
       ) : (
         <Text style={[styles.mensaje, { color: theme.textSecondary }]}>{dias === 1 ? '1 día' : `${dias} días`}</Text>
       )}

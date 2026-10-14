@@ -22,6 +22,7 @@ import { sincronizar, sincronizarCatalogos } from '../sync/syncEngine';
 import { FOTOS_HABILITADAS } from '../constants/features';
 import { FinalizarTurnoDatos, IniciarTurnoDatos } from '../types/turno';
 import { esperarTransicion, useAccionUnica } from '../hooks/useAccionUnica';
+import { mostrarAviso, vibrar } from '../services/retroalimentacion';
 
 const formatearFechaHora = (iso: string) =>
   new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -71,6 +72,7 @@ export default function WorkzoneScreen() {
   const handleIniciarTurno = async (datos: IniciarTurnoDatos) => {
     await iniciarTurno(datos);
     setIsStartShiftModalVisible(false);
+    mostrarAviso(`Turno iniciado en ${datos.maquina.codigoCorto}`);
   };
 
   const handleFinalizarTurno = async (datos: FinalizarTurnoDatos) => {
@@ -84,6 +86,8 @@ export default function WorkzoneScreen() {
     };
     const estado = await finalizarTurno(datos);
     setIsEndShiftModalVisible(false);
+    // El resumen del cierre ya se muestra en pantalla: basta la vibración de confirmación
+    vibrar('exito');
     const automatico = estado === 'CERRADO_AUTO';
     // En el cierre automático el turno termina en el límite de 12 h, no en el momento actual
     const fechaFin = automatico
@@ -105,7 +109,7 @@ export default function WorkzoneScreen() {
     if (error) {
       return (
         <View style={styles.centerContainer}>
-          <Text style={{ color: theme.danger, marginBottom: 12 }}>{error.message}</Text>
+          <Text style={{ color: theme.dangerText, marginBottom: 12 }}>{error.message}</Text>
           <TouchableOpacity
             onPress={refetch}
             style={[styles.retryButton, { backgroundColor: theme.primary }]}

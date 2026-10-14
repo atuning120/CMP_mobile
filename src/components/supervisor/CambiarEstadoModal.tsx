@@ -9,6 +9,7 @@ import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
 import { cambiarEstadoMaquina } from '../../services/flotaService';
 import { styles } from './CambiarEstadoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
+import { mostrarAviso } from '../../services/retroalimentacion';
 
 interface Props {
   // Máquina a habilitar o deshabilitar (según su estado actual); null = modal cerrado
@@ -55,6 +56,7 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
       const actualizada = await cambiarEstadoMaquina(maquina.id, deshabilitar ? 'BAJA' : 'ACTIVA', motivo, observacion.trim() || null);
       onCambiado(mapMaquinaFlota(actualizada));
       onClose();
+      mostrarAviso(deshabilitar ? 'Equipo deshabilitado' : 'Equipo habilitado');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cambiar el estado del equipo.');
     }
@@ -119,7 +121,7 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
       {!!error && (
         <View style={[styles.errorCaja, { backgroundColor: theme.danger + '15', borderColor: theme.danger }]}>
           <AlertTriangle size={16} color={theme.danger} />
-          <Text style={[styles.errorTexto, { color: theme.danger }]}>{error}</Text>
+          <Text style={[styles.errorTexto, { color: theme.dangerText }]}>{error}</Text>
         </View>
       )}
     </AppBottomSheetModal>

@@ -82,7 +82,7 @@ export const NovedadModal: React.FC<Props> = ({ foto, onClose, onGuardar }) => {
         editable={!guardando}
       />
       <Text style={[styles.contador, { color: theme.textTertiary }]}>{descripcion.length}/500</Text>
-      {error !== '' && <Text style={[styles.error, { color: theme.danger }]}>{error}</Text>}
+      {error !== '' && <Text style={[styles.error, { color: theme.dangerText }]}>{error}</Text>}
     </AppBottomSheetModal>
   );
 };

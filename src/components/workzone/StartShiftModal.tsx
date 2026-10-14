@@ -13,6 +13,7 @@ import { leerSesion } from '../../services/authStorage';
 import { sincronizarCatalogos } from '../../sync/syncEngine';
 import { Area, FotoCapturada, IniciarTurnoDatos, ZonaTrabajo } from '../../types/turno';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
+import { vibrar } from '../../services/retroalimentacion';
 
 interface Props {
   visible: boolean;
@@ -125,6 +126,7 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
       setInstrucciones('');
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'No se pudo iniciar el turno.');
+      vibrar('error');
     }
   });
 
@@ -166,7 +168,7 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
       {isLoadingMaquinas && <ActivityIndicator color={theme.primary} style={{ marginBottom: 20 }} />}
       {maquinasError && (
         <TouchableOpacity onPress={refetchMaquinas} style={{ marginBottom: 20 }}>
-          <Text style={[styles.errorText, { color: theme.danger }]}>{maquinasError.message} Toca para reintentar.</Text>
+          <Text style={[styles.errorText, { color: theme.dangerText }]}>{maquinasError.message} Toca para reintentar.</Text>
         </TouchableOpacity>
       )}
       <View style={styles.gridContainer}>
@@ -193,13 +195,13 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
             >
               <View style={styles.maquinaCardTop}>
                 <Text style={[styles.maquinaId, { color: theme.text }]}>{maq.codigoCorto}</Text>
-                <Text style={[styles.maquinaTipo, { color: theme.warning }]}>{maq.tipoMaquina}</Text>
+                <Text style={[styles.maquinaTipo, { color: theme.warningText }]}>{maq.tipoMaquina}</Text>
               </View>
               <Text style={[styles.maquinaModelo, { color: theme.textSecondary }]} numberOfLines={1}>{maq.modelo}</Text>
               {esAsignada && (
                 <View style={styles.asignadaFila}>
                   <UserCheck size={12} color={theme.success} />
-                  <Text style={[styles.asignadaTexto, { color: theme.success }]}>Tu máquina asignada</Text>
+                  <Text style={[styles.asignadaTexto, { color: theme.successText }]}>Tu máquina asignada</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -263,7 +265,7 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
             style={[
               styles.input,
               {
-                color: theme.warning,
+                color: theme.warningText,
                 backgroundColor: theme.background,
                 borderColor: theme.border,
               }
@@ -312,7 +314,7 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
       </View>
 
       {submitError !== '' && (
-        <Text style={[styles.errorText, { color: theme.danger, textAlign: 'center' }]}>{submitError}</Text>
+        <Text style={[styles.errorText, { color: theme.dangerText, textAlign: 'center' }]}>{submitError}</Text>
       )}
     </AppBottomSheetModal>
   );

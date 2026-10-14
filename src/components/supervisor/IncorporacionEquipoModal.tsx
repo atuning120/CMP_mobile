@@ -12,6 +12,7 @@ import { crearMaquina } from '../../services/flotaService';
 import { SearchableSelect } from '../common/SearchableSelect';
 import { MOTIVOS_INCORPORACION } from '../../constants/motivosJefeTurno';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
+import { mostrarAviso } from '../../services/retroalimentacion';
 
 interface Props {
   visible: boolean;
@@ -114,6 +115,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
       }
       reiniciar();
       onClose();
+      mostrarAviso(equipos.length === 1 ? 'Equipo incorporado a planta' : '2 equipos incorporados a planta');
     } catch (err) {
       const mensaje = err instanceof Error ? err.message : 'No se pudo incorporar el equipo.';
       if (creados === 1) {
@@ -131,7 +133,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
 
   const headerTop = (
     <View style={styles.headerTopBadge}>
-      <Text style={[styles.headerTopText, { color: theme.primary }]}>JEFE DE TURNO</Text>
+      <Text style={[styles.headerTopText, { color: theme.primaryText }]}>JEFE DE TURNO</Text>
     </View>
   );
 
@@ -291,7 +293,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
       {!!errorEnvio && (
         <View style={[styles.errorBox, { backgroundColor: theme.danger + '15', borderColor: theme.danger }]}>
           <AlertTriangle size={16} color={theme.danger} />
-          <Text style={[styles.errorText, { color: theme.danger }]}>{errorEnvio}</Text>
+          <Text style={[styles.errorText, { color: theme.dangerText }]}>{errorEnvio}</Text>
         </View>
       )}
     </AppBottomSheetModal>

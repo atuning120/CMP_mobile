@@ -11,6 +11,7 @@ import {
 import * as operaciones from '../services/operacionesTurno';
 import { suscribirCambioDatos } from '../sync/eventos';
 import { sincronizacionEnCurso } from '../sync/syncEngine';
+import { mostrarAviso } from '../services/retroalimentacion';
 
 // Tope de espera a la sincronización al abrir la pantalla: con mala señal no se bloquea al operador
 const ESPERA_SINCRONIZACION_MS = 6000;
@@ -68,7 +69,11 @@ export const useTurnoActual = (): UseTurnoActualResult => {
       cambiandoEstado.current = true;
       operaciones
         .cambiarEstadoOperacional(turno.idCliente, nuevoEstado)
-        .catch((e) => setError(e instanceof Error ? e : new Error(String(e))))
+        .then(() => mostrarAviso(`Estado: ${nuevoEstado.nombre}`))
+        .catch((e) => {
+          setError(e instanceof Error ? e : new Error(String(e)));
+          mostrarAviso('No se pudo cambiar el estado', { detalle: e instanceof Error ? e.message : undefined, tipo: 'error' });
+        })
         .finally(() => {
           cambiandoEstado.current = false;
         });

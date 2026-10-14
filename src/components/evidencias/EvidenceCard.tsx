@@ -24,6 +24,7 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidencia, onPressDe
     });
   };
 
+  // Color de fondo de la etiqueta (texto blanco encima): colores base, no las variantes de texto
   const getSyncStatusConfig = (status: EvidenciaHistorial['estadoSincronizacion']) => {
     switch (status) {
       case 'SINCRONIZADO':
@@ -87,7 +88,7 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidencia, onPressDe
             onPress={() => onPressDetalle(evidencia.id)}
           >
             <Eye size={16} color={theme.primary} style={{ marginRight: 6 }} />
-            <Text style={[styles.btnDetalleText, { color: theme.primary }]}>Ver detalle</Text>
+            <Text style={[styles.btnDetalleText, { color: theme.primaryText }]}>Ver detalle</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 

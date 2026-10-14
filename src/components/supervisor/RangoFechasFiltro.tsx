@@ -23,7 +23,7 @@ export const RangoFechasFiltro: React.FC<Props> = ({ estado }) => {
       {estado.opcion === 'Personalizado' && (
         <TouchableOpacity style={styles.resumen} onPress={estado.abrirModal} activeOpacity={0.7}>
           <CalendarRange size={14} color={theme.primary} />
-          <Text style={[styles.resumenTexto, { color: theme.primary }]}>
+          <Text style={[styles.resumenTexto, { color: theme.primaryText }]}>
             {etiquetaRango(estado.elegido.desde, estado.elegido.hasta)} · Cambiar
           </Text>
         </TouchableOpacity>
