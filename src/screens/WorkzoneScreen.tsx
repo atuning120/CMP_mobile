@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView, TouchableOpacity, ImageBackground, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Play, Square, Camera, AlertTriangle } from 'lucide-react-native';
@@ -17,6 +17,8 @@ import { ResumenCierreTurno, ShiftClosedModal } from '../components/workzone/Shi
 import { cerrarSesion } from '../services/authService';
 import { ConfirmLogoutModal } from '../components/common/ConfirmLogoutModal';
 import { useSyncStatus } from '../hooks/useSyncStatus';
+import { useRecargaManual } from '../hooks/useRecargaManual';
+import { sincronizar, sincronizarCatalogos } from '../sync/syncEngine';
 import { FOTOS_HABILITADAS } from '../constants/features';
 import { FinalizarTurnoDatos, IniciarTurnoDatos } from '../types/turno';
 
@@ -46,6 +48,15 @@ export default function WorkzoneScreen() {
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
   const [resumenCierre, setResumenCierre] = useState<ResumenCierreTurno | null>(null);
   const { pendientes } = useSyncStatus();
+
+  // Deslizar hacia abajo: envía lo pendiente, trae el estado del turno desde el servidor y los catálogos
+  // al día (p. ej. una máquina asignada hace un rato). Sin conexión solo relee lo guardado en el teléfono
+  const recargarTodo = useCallback(async () => {
+    await sincronizar();
+    await sincronizarCatalogos(true).catch(() => undefined);
+    refetch();
+  }, [refetch]);
+  const recarga = useRecargaManual(recargarTodo);
 
   // Cerrar sesión NO cierra el turno: sigue EN_CURSO en el teléfono y en el Backend
   const handleLogout = async () => {
@@ -105,7 +116,19 @@ export default function WorkzoneScreen() {
     const cantidadEvidencias = turno?.cantidadEvidencias ?? 0;
 
     return (
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={recarga.refreshing}
+            onRefresh={recarga.onRefresh}
+            tintColor={theme.primary}
+            colors={[theme.primary]}
+            progressBackgroundColor={theme.card}
+          />
+        }
+      >
         <TurnoSummaryDropdown turno={turno} onLogout={() => setIsLogoutModalVisible(true)} />
 
         {!hayTurnoEnCurso && turnoCerradoAutomaticamente && (

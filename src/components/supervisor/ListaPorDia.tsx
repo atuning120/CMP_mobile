@@ -10,16 +10,18 @@ interface Props<T extends ElementoPaginado, P> {
   renderItem: (item: T) => React.ReactNode;
   // "eventos", "alertas": se usa en los mensajes de lista vacía y de fin
   nombre: string;
+  // Recarga con el gesto de deslizar: se mantiene la lista (el indicador ya se ve arriba)
+  recargando?: boolean;
 }
 
 // Lista del jefe de turno agrupada por día ("Hoy", "Ayer", "Lunes 06/10"), con los estados de carga
 // y el pie del scroll infinito (la pantalla llama a cargarMas al acercarse al final)
-export function ListaPorDia<T extends ElementoPaginado, P>({ lista, renderItem, nombre }: Props<T, P>) {
+export function ListaPorDia<T extends ElementoPaginado, P>({ lista, renderItem, nombre, recargando = false }: Props<T, P>) {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const dias = useMemo(() => agruparPorDia(lista.items), [lista.items]);
 
-  if (lista.isLoading) return <ActivityIndicator size="large" color={theme.primary} style={styles.cargando} />;
+  if (lista.isLoading && !(recargando && lista.items.length > 0)) return <ActivityIndicator size="large" color={theme.primary} style={styles.cargando} />;
 
   if (lista.error && lista.items.length === 0) {
     return (
