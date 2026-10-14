@@ -42,7 +42,43 @@ interface SesionMovilApi {
   refreshTokenExpiraEn: string;
   rol: 'OPERADOR' | 'JEFE_TURNO';
   idOperador?: number;
+  // Solo en el login (no en el refresh). Un jefe de turno no tiene RUT y su nombre completo viene en `nombre`
+  perfil?: { nombre: string; apellido: string | null; rut: string | null; email: string };
 }
+
+/**
+ * Perfil que la app muestra y guarda para el modo offline, con los datos reales que entrega el Backend.
+ * Un Backend anterior no envía `perfil`: se usa el respaldo (perfil de prueba) o, como mínimo, el
+ * identificador con el que se ingresó, nunca datos inventados.
+ */
+const operadorDeSesion = (data: SesionMovilApi, identificador: string, respaldo?: Operador): Operador => {
+  if (!data.perfil) {
+    return (
+      respaldo ?? {
+        id_operador: data.idOperador ?? 0,
+        nombre: identificador,
+        apellido: '',
+        rut: identificador.includes('@') ? '' : identificador,
+        telefono: '',
+        estado: 'ACTIVO',
+        email: identificador.includes('@') ? identificador : '',
+        empresa: '',
+        rol: data.rol === 'JEFE_TURNO' ? 'Jefe de Turno' : 'Operador',
+      }
+    );
+  }
+  return {
+    id_operador: data.idOperador ?? 0,
+    nombre: data.perfil.nombre,
+    apellido: data.perfil.apellido ?? '',
+    rut: data.perfil.rut ?? '',
+    telefono: '',
+    estado: 'ACTIVO',
+    email: data.perfil.email,
+    empresa: '',
+    rol: data.rol === 'JEFE_TURNO' ? 'Jefe de Turno' : 'Operador',
+  };
+};
 
 export type ResultadoSincronizacion = 'ok' | 'sin-conexion' | 'rechazada' | 'sin-sesion';
 
@@ -71,8 +107,13 @@ const tokensDe = (data: SesionMovilApi): TokensSesion => ({
 
 /**
  * Login contra el Backend. Lanza AuthError (status 0 si no hay conexión).
+ * respaldo: perfil a usar si el Backend no envía el perfil del usuario
  */
-export const loginOnline = async (identificador: string, password: string, operador: Operador): Promise<{ rol: string }> => {
+export const loginOnline = async (
+  identificador: string,
+  password: string,
+  respaldo?: Operador,
+): Promise<{ rol: string; operador: Operador }> => {
   const id = normalizarIdentificador(identificador);
   const response = await postAuth('/auth/login', cuerpoLogin(id, password));
   if (!response.ok) {
@@ -90,9 +131,10 @@ export const loginOnline = async (identificador: string, password: string, opera
     ultimaValidacionOnline: new Date().toISOString(),
     tokens: tokensDe(data),
   });
+  const operador = operadorDeSesion(data, id, respaldo);
   await guardarOperadorCache(operador);
   credencialesPendientes = null;
-  return { rol: data.rol };
+  return { rol: data.rol, operador };
 };
 
 export type ResultadoLoginOffline =

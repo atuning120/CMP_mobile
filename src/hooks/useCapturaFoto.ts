@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
@@ -23,24 +23,38 @@ const comprimir = async (foto: ImagePicker.ImagePickerAsset): Promise<FotoCaptur
   return { uri: resultado.uri, mimeType: 'image/jpeg' };
 };
 
+// Pide el permiso, abre la cámara y comprime la foto
+const capturar = async (): Promise<FotoCapturada | null> => {
+  const permiso = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permiso.granted) {
+    Alert.alert('Permiso de cámara', 'Activa el permiso de cámara en los ajustes del teléfono para adjuntar evidencias.');
+    return null;
+  }
+  const resultado = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, exif: false });
+  if (resultado.canceled || resultado.assets.length === 0) return null;
+  try {
+    return await comprimir(resultado.assets[0]);
+  } catch (error) {
+    // Si la compresión falla, se usa la foto original antes que perder la evidencia
+    console.warn('No se pudo comprimir la foto', error);
+    const original = resultado.assets[0];
+    return { uri: original.uri, mimeType: original.mimeType ?? 'image/jpeg' };
+  }
+};
+
 /**
  * Abre la cámara y devuelve la foto tomada, ya comprimida (o null si el operador cancela).
  */
-export const useCapturaFoto = () =>
-  useCallback(async (): Promise<FotoCapturada | null> => {
-    const permiso = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permiso.granted) {
-      Alert.alert('Permiso de cámara', 'Activa el permiso de cámara en los ajustes del teléfono para adjuntar evidencias.');
-      return null;
-    }
-    const resultado = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, exif: false });
-    if (resultado.canceled || resultado.assets.length === 0) return null;
+export const useCapturaFoto = () => {
+  // Un toque doble mientras la cámara se abre la lanzaría dos veces: el segundo toque se ignora
+  const abierta = useRef(false);
+  return useCallback(async (): Promise<FotoCapturada | null> => {
+    if (abierta.current) return null;
+    abierta.current = true;
     try {
-      return await comprimir(resultado.assets[0]);
-    } catch (error) {
-      // Si la compresión falla, se usa la foto original antes que perder la evidencia
-      console.warn('No se pudo comprimir la foto', error);
-      const original = resultado.assets[0];
-      return { uri: original.uri, mimeType: original.mimeType ?? 'image/jpeg' };
+      return await capturar();
+    } finally {
+      abierta.current = false;
     }
   }, []);
+};

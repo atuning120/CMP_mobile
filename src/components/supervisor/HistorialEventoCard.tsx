@@ -80,7 +80,7 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
         {cierreAutomatico && (
           <View style={[styles.motivo, styles.motivoConIcono, { backgroundColor: theme.warning + '14', borderColor: theme.warning + '40' }]}>
             <AlarmClockOff size={12} color={theme.warning} />
-            <Text style={[styles.motivoTexto, { color: theme.warning }]}>Cierre automático (más de 12 h)</Text>
+            <Text style={[styles.motivoTexto, { color: theme.warningText }]}>Cierre automático (más de 12 h)</Text>
           </View>
         )}
         {!!evento.observacion && <Text style={[styles.observacion, { color: theme.textSecondary }]}>{evento.observacion}</Text>}

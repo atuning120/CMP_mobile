@@ -13,6 +13,7 @@ import { useNetInfo } from '@react-native-community/netinfo';
 
 import { AuthError, loginOffline, loginOnline, OFFLINE_MAX_DIAS } from '../services/authService';
 import { despertarBackend } from '../services/backendUrl';
+import { useAccionUnica } from '../hooks/useAccionUnica';
 
 import { LoginFooter } from '../components/LoginFooter';
 import { LoginForm } from '../components/LoginForm';
@@ -22,6 +23,7 @@ import { styles } from './LoginScreen.styles';
 
 import { darkTheme, lightTheme } from '../constants/theme';
 import { NetworkState, Operador, PerfilPrueba } from '../types/mining';
+import { vibrar } from '../services/retroalimentacion';
 
 // Mensajes que se muestran al usuario según el error del login. Nunca se muestra el texto crudo
 // del servidor ni de la red.
@@ -31,6 +33,9 @@ const LOGIN_ERROR_MESSAGES: Record<string, string> = {
   OPERADOR_INACTIVO: 'Tu cuenta de operador está inactiva. Contacta a tu jefe de turno.',
   SIN_ACCESO_APP: 'Tu usuario no tiene acceso a la aplicación móvil.',
 };
+
+// Perfil de prueba sin su contraseña, para guardarlo en el teléfono como respaldo
+const sinPassword = ({ password: _password, ...perfil }: PerfilPrueba): Operador => perfil;
 
 const getLoginErrorMessage = (status: number, code?: string): string => {
   if (code && LOGIN_ERROR_MESSAGES[code]) return LOGIN_ERROR_MESSAGES[code];
@@ -66,7 +71,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     if (networkState !== 'offline') despertarBackend();
   }, [networkState]);
 
-  const handleStandardLogin = async () => {
+  // Un solo intento de ingreso a la vez: los toques repetidos mientras responde el servidor se ignoran
+  const [ingresando, ejecutarUnaVez] = useAccionUnica();
+
+  const iniciarSesion = async () => {
     if (!email.trim() || !password.trim()) {
       setErrorMsg('Por favor ingresa tu correo corporativo y contraseña.');
       return;
@@ -77,7 +85,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     const intentarOffline = async (motivoSinRed: boolean) => {
       const resultado = await loginOffline(email, password);
       if (resultado.ok) {
-        console.log('Login offline exitoso');
         onLoginSuccess(resultado.operador, resultado.rol);
         return;
       }
@@ -94,46 +101,38 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     // Flujo Offline Explicito
     if (networkState === 'offline') {
-      console.log('Modo offline detectado, intentando login local...');
       await intentarOffline(true);
       return;
     }
 
-    // El operador mostrado sale de los perfiles de prueba hasta que el Backend exponga el perfil
-    const matched = operadoresDisponibles.find(
+    // El perfil real viene del Backend. Si un Backend anterior no lo envía, se usa el perfil de prueba
+    // que coincida (sin su contraseña, que no debe quedar guardada en el teléfono)
+    const perfilPrueba = operadoresDisponibles.find(
       (op) => op.email.toLowerCase() === email.trim().toLowerCase()
     );
-    const finalOp: Operador = matched ?? {
-      id_operador: 105,
-      nombre: email.split('@')[0],
-      apellido: 'Operador',
-      rut: '16.789.012-3',
-      telefono: '+56 9 8899 7766',
-      estado: 'En Faena',
-      email,
-      empresa: 'Servicio Movimiento de Material MLC',
-      rol: 'Operador de Maquinaria',
-    };
+    const respaldo = perfilPrueba ? sinPassword(perfilPrueba) : undefined;
 
     try {
       // El backend responde con el rol (OPERADOR o JEFE_TURNO) para decidir la pantalla
-      const { rol } = await loginOnline(email, password, finalOp);
-      console.log('Login successful, rol:', rol);
-      onLoginSuccess(finalOp, rol);
+      const { rol, operador } = await loginOnline(email, password, respaldo);
+      onLoginSuccess(operador, rol);
     } catch (error) {
       if (error instanceof AuthError && error.status > 0) {
         // Errores ya traducidos desde la respuesta del backend
         setErrorMsg(getLoginErrorMessage(error.status, error.code));
+        vibrar('error');
         return;
       }
 
       // Fallo de red (no del servidor): intentamos con la sesión guardada
-      console.log('Fallo de red detectado, intentando login local...');
       await intentarOffline(false);
     }
   };
 
+  const handleStandardLogin = () => ejecutarUnaVez(iniciarSesion);
+
   const handleQuickSelect = (op: PerfilPrueba) => {
+    if (ingresando) return;
     setSelectedQuickOp(op);
     setEmail(op.email);
     setPassword(op.password);
@@ -192,6 +191,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               setPassword={setPassword}
               errorMsg={errorMsg}
               onSubmit={handleStandardLogin}
+              cargando={ingresando}
             />
 
             {/* Offline Support Notice */}

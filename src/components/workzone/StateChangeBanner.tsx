@@ -38,7 +38,7 @@ export const StateChangeBanner: React.FC<Props> = ({ onPress, estadosCatalogo })
         <View style={styles.titleRow}>
           <Text style={[styles.title, { color: theme.text }]}>REGISTRAR CAMBIO DE ESTADO EN CABINA</Text>
           <View style={[styles.badge, { backgroundColor: theme.primary + '30' }]}>
-            <Text style={[styles.badgeText, { color: theme.primary }]}>TÁCTIL</Text>
+            <Text style={[styles.badgeText, { color: theme.primaryText }]}>TÁCTIL</Text>
           </View>
         </View>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]} numberOfLines={2}>

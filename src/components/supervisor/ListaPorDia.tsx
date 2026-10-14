@@ -26,7 +26,7 @@ export function ListaPorDia<T extends ElementoPaginado, P>({ lista, renderItem, 
   if (lista.error && lista.items.length === 0) {
     return (
       <View style={styles.errorCaja}>
-        <Text style={[styles.centrado, { color: theme.danger }]}>{lista.error}</Text>
+        <Text style={[styles.centrado, { color: theme.dangerText }]}>{lista.error}</Text>
         <TouchableOpacity onPress={lista.refetch} style={[styles.reintentar, { backgroundColor: theme.primary }]}>
           <Text style={styles.reintentarTexto}>Reintentar</Text>
         </TouchableOpacity>
@@ -55,7 +55,7 @@ export function ListaPorDia<T extends ElementoPaginado, P>({ lista, renderItem, 
           onPress={lista.cargarMas}
           style={[styles.cargarMas, { borderColor: theme.glassSurfaceBorder, backgroundColor: theme.glassSurface }]}
         >
-          <Text style={[styles.cargarMasTexto, { color: theme.danger }]}>No se pudieron cargar más {nombre}. Reintentar</Text>
+          <Text style={[styles.cargarMasTexto, { color: theme.dangerText }]}>No se pudieron cargar más {nombre}. Reintentar</Text>
         </TouchableOpacity>
       ) : !lista.hayMas ? (
         <Text style={[styles.finLista, styles.finListaTexto, { color: theme.textTertiary }]}>No hay más {nombre} en este rango</Text>

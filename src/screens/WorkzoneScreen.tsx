@@ -21,6 +21,9 @@ import { useRecargaManual } from '../hooks/useRecargaManual';
 import { sincronizar, sincronizarCatalogos } from '../sync/syncEngine';
 import { FOTOS_HABILITADAS } from '../constants/features';
 import { FinalizarTurnoDatos, IniciarTurnoDatos } from '../types/turno';
+import { esperarTransicion, useAccionUnica } from '../hooks/useAccionUnica';
+import { mostrarAviso, vibrar } from '../services/retroalimentacion';
+import { PantallaEncendida } from '../components/workzone/PantallaEncendida';
 
 const formatearFechaHora = (iso: string) =>
   new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -47,6 +50,8 @@ export default function WorkzoneScreen() {
   const [isChangeStateModalVisible, setIsChangeStateModalVisible] = useState(false);
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
   const [resumenCierre, setResumenCierre] = useState<ResumenCierreTurno | null>(null);
+  // Un doble toque en "Evidencias" apilaba dos veces la misma pantalla
+  const [, navegarUnaVez] = useAccionUnica();
   const { pendientes } = useSyncStatus();
 
   // Deslizar hacia abajo: envía lo pendiente, trae el estado del turno desde el servidor y los catálogos
@@ -68,6 +73,7 @@ export default function WorkzoneScreen() {
   const handleIniciarTurno = async (datos: IniciarTurnoDatos) => {
     await iniciarTurno(datos);
     setIsStartShiftModalVisible(false);
+    mostrarAviso(`Turno iniciado en ${datos.maquina.codigoCorto}`);
   };
 
   const handleFinalizarTurno = async (datos: FinalizarTurnoDatos) => {
@@ -81,6 +87,8 @@ export default function WorkzoneScreen() {
     };
     const estado = await finalizarTurno(datos);
     setIsEndShiftModalVisible(false);
+    // El resumen del cierre ya se muestra en pantalla: basta la vibración de confirmación
+    vibrar('exito');
     const automatico = estado === 'CERRADO_AUTO';
     // En el cierre automático el turno termina en el límite de 12 h, no en el momento actual
     const fechaFin = automatico
@@ -102,7 +110,7 @@ export default function WorkzoneScreen() {
     if (error) {
       return (
         <View style={styles.centerContainer}>
-          <Text style={{ color: theme.danger, marginBottom: 12 }}>{error.message}</Text>
+          <Text style={{ color: theme.dangerText, marginBottom: 12 }}>{error.message}</Text>
           <TouchableOpacity
             onPress={refetch}
             style={[styles.retryButton, { backgroundColor: theme.primary }]}
@@ -161,15 +169,18 @@ export default function WorkzoneScreen() {
             disabled={!hayTurnoEnCurso}
             style={{ marginHorizontal: 8 }}
           />
-          {/* Visible pero sin acción mientras las fotos estén desactivadas (pendiente Cloudinary) */}
+          {/* Sin acción si FOTOS_HABILITADAS se desactiva (constants/features.ts) */}
           <ActionCard
             icon={Camera}
             iconColor={theme.warning}
             title="Evidencias"
             subtitle={hayTurnoEnCurso ? 'Subir fotos de inspección, cancha o falla mecánica.' : 'Disponible al iniciar un turno.'}
-            badgeText={FOTOS_HABILITADAS ? `${cantidadEvidencias} FOTO${cantidadEvidencias === 1 ? '' : 'S'}` : 'PRÓXIMAMENTE'}
+            badgeText={`${cantidadEvidencias} FOTO${cantidadEvidencias === 1 ? '' : 'S'}`}
             onPress={() => {
-              if (FOTOS_HABILITADAS) router.push('/evidencias');
+              if (FOTOS_HABILITADAS) navegarUnaVez(() => {
+                router.push('/evidencias');
+                return esperarTransicion();
+              });
             }}
             disabled={!hayTurnoEnCurso}
           />
@@ -196,6 +207,8 @@ export default function WorkzoneScreen() {
         {renderContent()}
       </ImageBackground>
       <LoginFooter />
+      {/* Con turno en curso la pantalla no se apaga sola (teléfono en el soporte de la cabina) */}
+      {hayTurnoEnCurso && <PantallaEncendida />}
 
       <StartShiftModal 
         visible={isStartShiftModalVisible} 

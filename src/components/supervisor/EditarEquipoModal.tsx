@@ -11,6 +11,8 @@ import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDa
 import { SearchableSelect } from '../common/SearchableSelect';
 import { MOTIVOS_DESHABILITAR, MOTIVOS_EDICION, MOTIVOS_HABILITAR } from '../../constants/motivosJefeTurno';
 import { styles } from './EditarEquipoModal.styles';
+import { useAccionUnica } from '../../hooks/useAccionUnica';
+import { mostrarAviso } from '../../services/retroalimentacion';
 
 interface Props {
   visible: boolean;
@@ -63,7 +65,8 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
   const [motivo, setMotivo] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [estadoAbierto, setEstadoAbierto] = useState(false);
-  const [guardando, setGuardando] = useState(false);
+  // Bloquea toques repetidos en el botón de confirmar mientras se guarda
+  const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
 
   // Al abrir (o cambiar de máquina) el formulario parte desde los datos guardados
@@ -103,8 +106,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
     onClose();
   };
 
-  const handleSave = async () => {
-    setGuardando(true);
+  const handleSave = () => ejecutarUnaVez(async () => {
     setErrorEnvio(null);
     try {
       const actualizada = await editarMaquina(maquina.id, {
@@ -123,12 +125,11 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
       });
       onSave?.(mapMaquinaFlota(actualizada));
       onClose();
+      mostrarAviso('Cambios guardados');
     } catch (err) {
       setErrorEnvio(err instanceof Error ? err.message : 'No se pudieron guardar los cambios.');
-    } finally {
-      setGuardando(false);
     }
-  };
+  });
 
   const renderFooter = () => (
     <>
@@ -265,7 +266,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
       {!!errorEnvio && (
         <View style={[styles.errorBox, { backgroundColor: theme.danger + '15', borderColor: theme.danger }]}>
           <AlertTriangle size={16} color={theme.danger} />
-          <Text style={[styles.errorText, { color: theme.danger }]}>{errorEnvio}</Text>
+          <Text style={[styles.errorText, { color: theme.dangerText }]}>{errorEnvio}</Text>
         </View>
       )}
     </AppBottomSheetModal>

@@ -60,7 +60,7 @@ export const ChangeStateModal: React.FC<ChangeStateModalProps> = ({
   };
 
   const headerTop = (
-    <Text style={[styles.headerTag, { color: theme.primary }]}>
+    <Text style={[styles.headerTag, { color: theme.primaryText }]}>
       CONTROL TÁCTIL DE CABINA · FAENA MINERA
     </Text>
   );
@@ -87,7 +87,7 @@ export const ChangeStateModal: React.FC<ChangeStateModalProps> = ({
         {estadoActual && (
           <View style={styles.actualTiempo}>
             <Clock size={14} color={theme.warning} />
-            <Text style={[styles.actualTiempoTexto, { color: theme.warning }]}>{elapsedTime}</Text>
+            <Text style={[styles.actualTiempoTexto, { color: theme.warningText }]}>{elapsedTime}</Text>
           </View>
         )}
       </View>
@@ -136,7 +136,8 @@ export const ChangeStateModal: React.FC<ChangeStateModalProps> = ({
                       <TouchableOpacity
                         style={[styles.botonInfo, { borderColor: theme.border, backgroundColor: theme.card }]}
                         onPress={() => setEstadoInfo(estado)}
-                        hitSlop={8}
+                        // 26 dp visibles + 11 por lado = 48 dp de área táctil (fácil de tocar con guantes)
+                        hitSlop={11}
                         accessibilityLabel={`Información de ${nombreCorto(estado)}`}
                       >
                         <Info size={14} color={theme.textSecondary} />

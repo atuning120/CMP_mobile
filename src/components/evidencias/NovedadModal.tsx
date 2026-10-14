@@ -5,6 +5,7 @@ import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { FotoCapturada } from '../../types/turno';
 import { styles } from './NovedadModal.styles';
+import { useAccionUnica } from '../../hooks/useAccionUnica';
 
 interface Props {
   foto: FotoCapturada | null;
@@ -20,7 +21,8 @@ export const NovedadModal: React.FC<Props> = ({ foto, onClose, onGuardar }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const [descripcion, setDescripcion] = useState('');
-  const [guardando, setGuardando] = useState(false);
+  // Bloquea toques repetidos en el botón de confirmar mientras se guarda
+  const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [error, setError] = useState('');
 
   const cerrar = () => {
@@ -30,27 +32,30 @@ export const NovedadModal: React.FC<Props> = ({ foto, onClose, onGuardar }) => {
     onClose();
   };
 
-  const guardar = async () => {
-    setGuardando(true);
+  const guardar = () => ejecutarUnaVez(async () => {
     setError('');
     try {
       await onGuardar(descripcion);
       setDescripcion('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo guardar la evidencia.');
-    } finally {
-      setGuardando(false);
     }
-  };
+  });
 
   const footer = (
     <>
       <TouchableOpacity style={[styles.botonSecundario, { borderColor: theme.border, backgroundColor: theme.background }]} onPress={cerrar}>
-        <Text style={[styles.botonSecundarioTexto, { color: theme.text }]}>Descartar</Text>
+        <Text style={[styles.botonSecundarioTexto, { color: theme.text }]} numberOfLines={1}>
+          Descartar
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity style={[styles.botonPrimario, { backgroundColor: theme.primary, opacity: guardando ? 0.6 : 1 }]} onPress={guardar} disabled={guardando}>
         {guardando ? <ActivityIndicator color="#FFFFFF" /> : <Save size={18} color="#FFFFFF" />}
-        <Text style={styles.botonPrimarioTexto}>GUARDAR EVIDENCIA</Text>
+        {/* Etiqueta corta como en los otros modales ("INICIAR TURNO", "CERRAR TURNO"): "GUARDAR EVIDENCIA"
+            no cabía en medio pie de modal y se salía del botón */}
+        <Text style={styles.botonPrimarioTexto} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          GUARDAR
+        </Text>
       </TouchableOpacity>
     </>
   );
@@ -77,7 +82,7 @@ export const NovedadModal: React.FC<Props> = ({ foto, onClose, onGuardar }) => {
         editable={!guardando}
       />
       <Text style={[styles.contador, { color: theme.textTertiary }]}>{descripcion.length}/500</Text>
-      {error !== '' && <Text style={[styles.error, { color: theme.danger }]}>{error}</Text>}
+      {error !== '' && <Text style={[styles.error, { color: theme.dangerText }]}>{error}</Text>}
     </AppBottomSheetModal>
   );
 };

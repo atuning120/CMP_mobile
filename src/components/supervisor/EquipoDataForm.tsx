@@ -161,7 +161,7 @@ export const EquipoDataForm: React.FC<Props> = ({
           {cargandoPlantillas ? (
             <ActivityIndicator color={theme.primary} style={styles.plantillasEstado} />
           ) : errorPlantillas ? (
-            <Text style={[styles.plantillasMensaje, { color: theme.danger }]}>{errorPlantillas}</Text>
+            <Text style={[styles.plantillasMensaje, { color: theme.dangerText }]}>{errorPlantillas}</Text>
           ) : plantillas.length === 0 ? (
             <Text style={[styles.plantillasMensaje, { color: theme.textSecondary }]}>Aún no hay modelos registrados.</Text>
           ) : (

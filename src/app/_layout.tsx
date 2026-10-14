@@ -1,8 +1,9 @@
 import { DarkTheme, DefaultTheme, ThemeProvider, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 import { useEffect } from 'react';
 import { iniciarMotorSync } from '../sync/motorSync';
+import { AvisoFlotante } from '../components/common/AvisoFlotante';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -18,9 +19,13 @@ export default function TabLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-      </Stack>
+      <View style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+        </Stack>
+        {/* Avisos de confirmación ("Turno iniciado"…), encima de cualquier pantalla */}
+        <AvisoFlotante />
+      </View>
     </ThemeProvider>
   );
 }

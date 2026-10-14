@@ -51,11 +51,11 @@ export const MachineStatusCard: React.FC<Props> = ({ turno, variant = 'default' 
             {turno.maquina.nombreCompleto}
           </Text>
           <Text style={[styles.secondaryText, isCompact && styles.secondaryTextCompact, { color: theme.textSecondary }]}>
-            Área: {turno.area?.nombre ?? 'Sin asignar'} · Horóm. Inicial: <Text style={{ color: theme.warning, fontWeight: 'bold' }}>{turno.horometroInicial}h</Text>
+            Área: {turno.area?.nombre ?? 'Sin asignar'} · Horóm. Inicial: <Text style={{ color: theme.warningText, fontWeight: 'bold' }}>{turno.horometroInicial}h</Text>
           </Text>
         </View>
         <View style={[styles.statusPill, isCompact && styles.statusPillCompact, { backgroundColor: theme.success + '20', borderColor: theme.success }]}>
-          <Text style={[styles.statusPillText, isCompact && styles.statusPillTextCompact, { color: theme.success }]}>En Operación</Text>
+          <Text style={[styles.statusPillText, isCompact && styles.statusPillTextCompact, { color: theme.successText }]}>En Operación</Text>
         </View>
       </View>
       <View style={[styles.divider, isCompact && styles.dividerCompact, { backgroundColor: theme.border }]} />
@@ -64,12 +64,12 @@ export const MachineStatusCard: React.FC<Props> = ({ turno, variant = 'default' 
           <Text style={[styles.label, { color: theme.textTertiary }]}>ESTADO OPERACIONAL ACTUAL</Text>
           <View style={styles.stateValueContainer}>
             <View style={[styles.dot, isCompact && styles.dotCompact, { backgroundColor: theme.success }]} />
-            <Text style={[styles.stateName, isCompact && styles.stateNameCompact, { color: theme.warning }]}>{turno.estadoOperacionalActual?.estado.nombre ?? 'Sin registrar'}</Text>
+            <Text style={[styles.stateName, isCompact && styles.stateNameCompact, { color: theme.warningText }]}>{turno.estadoOperacionalActual?.estado.nombre ?? 'Sin registrar'}</Text>
           </View>
         </View>
         <View style={styles.durationBlock}>
           <Text style={[styles.label, { color: theme.textTertiary }]}>DURACIÓN</Text>
-          <Text style={[styles.durationValue, isCompact && styles.durationValueCompact, { color: theme.warning }]}>{duracion}</Text>
+          <Text style={[styles.durationValue, isCompact && styles.durationValueCompact, { color: theme.warningText }]}>{duracion}</Text>
         </View>
       </View>
     </View>

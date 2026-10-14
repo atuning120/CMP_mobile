@@ -6,13 +6,7 @@ import { darkTheme, lightTheme } from '../../constants/theme';
 import { TurnoActual } from '../../types/turno';
 import { ProfileChip } from '../ProfileChip';
 import { MachineStatusCard } from './MachineStatusCard';
-
-// Fake operator data for demo, in a real app this comes from auth state
-const MOCK_OPERADOR = {
-  nombre: 'Cristian',
-  apellido: 'Núñez',
-  rut: '15.123.456-7'
-};
+import { useOperadorActual } from '../../hooks/useOperadorActual';
 
 interface Props {
   turno: TurnoActual | null;
@@ -23,15 +17,17 @@ export const TurnoSummaryDropdown: React.FC<Props> = ({ turno, onLogout }) => {
   const [isOpen, setIsOpen] = useState(true);
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  // Usuario real que inició sesión (operador o jefe de turno), guardado en el teléfono
+  const perfil = useOperadorActual();
 
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <View style={styles.chipContainer}>
           <ProfileChip
-            nombre={MOCK_OPERADOR.nombre}
-            apellido={MOCK_OPERADOR.apellido}
-            rut={MOCK_OPERADOR.rut}
+            nombre={perfil?.nombre ?? ''}
+            apellido={perfil?.apellido ?? ''}
+            rut={perfil?.detalle ?? ''}
             onPress={() => setIsOpen(!isOpen)}
           />
         </View>

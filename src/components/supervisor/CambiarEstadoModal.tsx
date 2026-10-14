@@ -8,6 +8,8 @@ import { MOTIVOS_DESHABILITAR, MOTIVOS_HABILITAR } from '../../constants/motivos
 import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
 import { cambiarEstadoMaquina } from '../../services/flotaService';
 import { styles } from './CambiarEstadoModal.styles';
+import { useAccionUnica } from '../../hooks/useAccionUnica';
+import { mostrarAviso } from '../../services/retroalimentacion';
 
 interface Props {
   // Máquina a habilitar o deshabilitar (según su estado actual); null = modal cerrado
@@ -27,7 +29,8 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const [motivo, setMotivo] = useState('');
   const [observacion, setObservacion] = useState('');
-  const [guardando, setGuardando] = useState(false);
+  // Bloquea toques repetidos en el botón de confirmar mientras se guarda
+  const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [error, setError] = useState<string | null>(null);
 
   // Cada apertura parte en blanco
@@ -46,20 +49,18 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
     if (!guardando) onClose();
   };
 
-  const confirmar = async () => {
+  const confirmar = () => ejecutarUnaVez(async () => {
     if (!maquina || !motivo) return;
-    setGuardando(true);
     setError(null);
     try {
       const actualizada = await cambiarEstadoMaquina(maquina.id, deshabilitar ? 'BAJA' : 'ACTIVA', motivo, observacion.trim() || null);
       onCambiado(mapMaquinaFlota(actualizada));
       onClose();
+      mostrarAviso(deshabilitar ? 'Equipo deshabilitado' : 'Equipo habilitado');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cambiar el estado del equipo.');
-    } finally {
-      setGuardando(false);
     }
-  };
+  });
 
   return (
     <AppBottomSheetModal
@@ -120,7 +121,7 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
       {!!error && (
         <View style={[styles.errorCaja, { backgroundColor: theme.danger + '15', borderColor: theme.danger }]}>
           <AlertTriangle size={16} color={theme.danger} />
-          <Text style={[styles.errorTexto, { color: theme.danger }]}>{error}</Text>
+          <Text style={[styles.errorTexto, { color: theme.dangerText }]}>{error}</Text>
         </View>
       )}
     </AppBottomSheetModal>

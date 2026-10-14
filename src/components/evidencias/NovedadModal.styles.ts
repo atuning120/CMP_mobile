@@ -34,6 +34,7 @@ export const styles = StyleSheet.create({
   botonSecundario: {
     flex: 1,
     paddingVertical: 14,
+    paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
     justifyContent: 'center',
@@ -47,11 +48,14 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   botonPrimarioTexto: {
+    // Si aun así no cabe (pantalla angosta o letra grande del sistema) se achica en vez de salirse
+    flexShrink: 1,
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 14,

@@ -91,7 +91,7 @@ export const SelectorConCreacion: React.FC<Props> = ({
           }}
           hitSlop={8}
         >
-          <Text style={[styles.link, { color: theme.primary }]}>Elegir de la lista</Text>
+          <Text style={[styles.link, { color: theme.primaryText }]}>Elegir de la lista</Text>
         </TouchableOpacity>
       </View>
       <TextInput

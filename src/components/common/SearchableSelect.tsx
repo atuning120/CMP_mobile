@@ -140,10 +140,10 @@ export function SearchableSelect<T>({
     if (error) {
       return (
         <View style={styles.stateContainer}>
-          <Text style={[styles.stateText, { color: theme.danger }]}>{error}</Text>
+          <Text style={[styles.stateText, { color: theme.dangerText }]}>{error}</Text>
           {onRetry && (
             <TouchableOpacity onPress={onRetry}>
-              <Text style={[styles.retryText, { color: theme.primary }]}>Reintentar</Text>
+              <Text style={[styles.retryText, { color: theme.primaryText }]}>Reintentar</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -273,7 +273,7 @@ export function SearchableSelect<T>({
                 <View style={[styles.accionFinalIcono, { backgroundColor: theme.primary + '18' }]}>
                   <Plus size={16} color={theme.primary} />
                 </View>
-                <Text style={[styles.accionFinalTexto, { color: theme.primary }]}>{accionFinal.label}</Text>
+                <Text style={[styles.accionFinalTexto, { color: theme.primaryText }]}>{accionFinal.label}</Text>
               </TouchableOpacity>
             )}
           </View>

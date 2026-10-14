@@ -47,21 +47,21 @@ export const LoginHeader: React.FC<LoginHeaderProps> = ({ showConnectionStatus =
       <View style={styles.headerRight}>
         <View style={styles.flotaContainer}>
           <HardHat size={14} color={theme.warning} />
-          <Text style={[styles.flotaText, { color: theme.warning }]}>Sistema en Cabina MLC</Text>
+          <Text style={[styles.flotaText, { color: theme.warningText }]}>Sistema en Cabina MLC</Text>
         </View>
         {showConnectionStatus && (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4, gap: 4 }}>
             {netInfo.isConnected ? (
               <>
                 <Wifi size={12} color={theme.success} />
-                <Text style={{ color: theme.success, fontSize: 10, fontWeight: '500' }}>
+                <Text style={{ color: theme.successText, fontSize: 10, fontWeight: '500' }}>
                   Conectado {netInfo.type === 'wifi' ? '(WiFi)' : netInfo.type === 'cellular' ? '(Móvil)' : ''}
                 </Text>
               </>
             ) : (
               <>
                 <WifiOff size={12} color={theme.danger} />
-                <Text style={{ color: theme.danger, fontSize: 10, fontWeight: '500' }}>Sin conexión</Text>
+                <Text style={{ color: theme.dangerText, fontSize: 10, fontWeight: '500' }}>Sin conexión</Text>
               </>
             )}
           </View>

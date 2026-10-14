@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { ActivityIndicator, BackHandler, Pressable, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { CloudUpload, Info, LogOut } from 'lucide-react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { styles } from './ConfirmLogoutModal.styles';
+import { useAccionUnica } from '../../hooks/useAccionUnica';
 
 interface Props {
   visible: boolean;
@@ -17,16 +18,10 @@ interface Props {
 export const ConfirmLogoutModal: React.FC<Props> = ({ visible, onCancel, onConfirm, avisoTurno, pendientesSincronizar = 0 }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
-  const [cerrando, setCerrando] = useState(false);
+  // Bloquea toques repetidos en "Cerrar sesión" mientras se cierra
+  const [cerrando, ejecutarUnaVez] = useAccionUnica();
 
-  const confirmar = async () => {
-    setCerrando(true);
-    try {
-      await onConfirm();
-    } finally {
-      setCerrando(false);
-    }
-  };
+  const confirmar = () => ejecutarUnaVez(onConfirm);
 
   const cancelar = () => {
     if (!cerrando) onCancel();

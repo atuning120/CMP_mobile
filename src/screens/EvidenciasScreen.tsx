@@ -12,6 +12,8 @@ import { eliminarEvidenciaPendiente, registrarNovedad } from '../services/operac
 import { FotoCapturada } from '../types/turno';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
+import { esperarTransicion, useAccionUnica } from '../hooks/useAccionUnica';
+import { mostrarAviso } from '../services/retroalimentacion';
 
 export default function EvidenciasScreen() {
   const router = useRouter();
@@ -37,6 +39,7 @@ export default function EvidenciasScreen() {
     if (!fotoNueva) return;
     await registrarNovedad(descripcion, fotoNueva);
     setFotoNueva(null);
+    mostrarAviso('Evidencia guardada', { detalle: 'Se sube automáticamente cuando hay conexión.' });
   };
 
   const handleDelete = (id: string) => {
@@ -60,9 +63,13 @@ export default function EvidenciasScreen() {
     );
   };
 
-  const handleDetail = (id: string) => {
-    router.push(`/evidencias/detalle/${id}`);
-  };
+  // Un doble toque sobre una evidencia apilaba dos veces su detalle
+  const [, navegarUnaVez] = useAccionUnica();
+  const handleDetail = (id: string) =>
+    navegarUnaVez(() => {
+      router.push(`/evidencias/detalle/${id}`);
+      return esperarTransicion();
+    });
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
@@ -75,7 +82,7 @@ export default function EvidenciasScreen() {
         <View style={styles.titleContainer}>
           <Text style={[styles.title, { color: theme.text }]}>Evidencias Fotográficas</Text>
           <View style={[styles.badge, { backgroundColor: theme.primary + '20' }]}>
-            <Text style={[styles.badgeText, { color: theme.primary }]}>
+            <Text style={[styles.badgeText, { color: theme.primaryText }]}>
               {evidencias.length}
             </Text>
           </View>
@@ -123,7 +130,7 @@ export default function EvidenciasScreen() {
             onPress={refetch}
           >
             <RefreshCw size={16} color={theme.primary} style={{ marginRight: 8 }} />
-            <Text style={[styles.retryText, { color: theme.primary }]}>Reintentar</Text>
+            <Text style={[styles.retryText, { color: theme.primaryText }]}>Reintentar</Text>
           </TouchableOpacity>
         </View>
       );
