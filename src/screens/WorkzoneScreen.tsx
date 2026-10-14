@@ -164,13 +164,13 @@ export default function WorkzoneScreen() {
             disabled={!hayTurnoEnCurso}
             style={{ marginHorizontal: 8 }}
           />
-          {/* Visible pero sin acción mientras las fotos estén desactivadas (pendiente Cloudinary) */}
+          {/* Sin acción si FOTOS_HABILITADAS se desactiva (constants/features.ts) */}
           <ActionCard
             icon={Camera}
             iconColor={theme.warning}
             title="Evidencias"
             subtitle={hayTurnoEnCurso ? 'Subir fotos de inspección, cancha o falla mecánica.' : 'Disponible al iniciar un turno.'}
-            badgeText={FOTOS_HABILITADAS ? `${cantidadEvidencias} FOTO${cantidadEvidencias === 1 ? '' : 'S'}` : 'PRÓXIMAMENTE'}
+            badgeText={`${cantidadEvidencias} FOTO${cantidadEvidencias === 1 ? '' : 'S'}`}
             onPress={() => {
               if (FOTOS_HABILITADAS) navegarUnaVez(() => {
                 router.push('/evidencias');

@@ -33,6 +33,9 @@ const LOGIN_ERROR_MESSAGES: Record<string, string> = {
   SIN_ACCESO_APP: 'Tu usuario no tiene acceso a la aplicación móvil.',
 };
 
+// Perfil de prueba sin su contraseña, para guardarlo en el teléfono como respaldo
+const sinPassword = ({ password: _password, ...perfil }: PerfilPrueba): Operador => perfil;
+
 const getLoginErrorMessage = (status: number, code?: string): string => {
   if (code && LOGIN_ERROR_MESSAGES[code]) return LOGIN_ERROR_MESSAGES[code];
   if (status === 400) return LOGIN_ERROR_MESSAGES.DATOS_INCOMPLETOS;
@@ -103,27 +106,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       return;
     }
 
-    // El operador mostrado sale de los perfiles de prueba hasta que el Backend exponga el perfil
-    const matched = operadoresDisponibles.find(
+    // El perfil real viene del Backend. Si un Backend anterior no lo envía, se usa el perfil de prueba
+    // que coincida (sin su contraseña, que no debe quedar guardada en el teléfono)
+    const perfilPrueba = operadoresDisponibles.find(
       (op) => op.email.toLowerCase() === email.trim().toLowerCase()
     );
-    const finalOp: Operador = matched ?? {
-      id_operador: 105,
-      nombre: email.split('@')[0],
-      apellido: 'Operador',
-      rut: '16.789.012-3',
-      telefono: '+56 9 8899 7766',
-      estado: 'En Faena',
-      email,
-      empresa: 'Servicio Movimiento de Material MLC',
-      rol: 'Operador de Maquinaria',
-    };
+    const respaldo = perfilPrueba ? sinPassword(perfilPrueba) : undefined;
 
     try {
       // El backend responde con el rol (OPERADOR o JEFE_TURNO) para decidir la pantalla
-      const { rol } = await loginOnline(email, password, finalOp);
+      const { rol, operador } = await loginOnline(email, password, respaldo);
       console.log('Login successful, rol:', rol);
-      onLoginSuccess(finalOp, rol);
+      onLoginSuccess(operador, rol);
     } catch (error) {
       if (error instanceof AuthError && error.status > 0) {
         // Errores ya traducidos desde la respuesta del backend
