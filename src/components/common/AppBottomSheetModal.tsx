@@ -141,7 +141,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Cubre toda la pantalla y queda sobre las vistas con elevation (en Android definen el orden de dibujo)
+  // Cubre toda la pantalla; zIndex la deja sobre el resto porque es el último hijo de la raíz. Sin
+  // elevation: en Android una vista translúcida con elevation deja ver su propia sombra a través del
+  // fondo, y eso se veía como una franja más clara bajo la hoja
   capa: {
     position: 'absolute',
     top: 0,
@@ -149,7 +151,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     zIndex: 100,
-    elevation: 100,
     // La hoja va centrada en el espacio libre: este relleno la baja ~24 px respecto del centro exacto
     paddingTop: 48,
   },

@@ -7,8 +7,8 @@ export const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
+    // Sin elevation: en Android la sombra de una vista translúcida con elevation se ve a través de ella
     zIndex: 100,
-    elevation: 100,
   },
   tarjetaAnimada: {
     width: '100%',
