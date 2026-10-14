@@ -12,6 +12,7 @@ import { eliminarEvidenciaPendiente, registrarNovedad } from '../services/operac
 import { FotoCapturada } from '../types/turno';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
+import { esperarTransicion, useAccionUnica } from '../hooks/useAccionUnica';
 
 export default function EvidenciasScreen() {
   const router = useRouter();
@@ -60,9 +61,13 @@ export default function EvidenciasScreen() {
     );
   };
 
-  const handleDetail = (id: string) => {
-    router.push(`/evidencias/detalle/${id}`);
-  };
+  // Un doble toque sobre una evidencia apilaba dos veces su detalle
+  const [, navegarUnaVez] = useAccionUnica();
+  const handleDetail = (id: string) =>
+    navegarUnaVez(() => {
+      router.push(`/evidencias/detalle/${id}`);
+      return esperarTransicion();
+    });
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>

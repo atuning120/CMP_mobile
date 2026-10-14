@@ -14,6 +14,7 @@ import { useOperadoresAsignables } from '../../hooks/useOperadoresAsignables';
 import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
 import { listarFlota, reemplazarMaquina } from '../../services/flotaService';
 import { styles } from './ReemplazoEquipoModal.styles';
+import { useAccionUnica } from '../../hooks/useAccionUnica';
 
 interface Props {
   // Máquina que sale (la de la tarjeta); null = modal cerrado
@@ -68,7 +69,8 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
   const [operadorId, setOperadorId] = useState('');
   const [motivo, setMotivo] = useState('');
   const [observaciones, setObservaciones] = useState('');
-  const [guardando, setGuardando] = useState(false);
+  // Bloquea toques repetidos en el botón de confirmar mientras se guarda
+  const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
 
   // Candidatas a entrar: toda la flota (no solo lo filtrado en la pantalla), salvo la saliente
@@ -122,8 +124,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
     if (!guardando) onClose();
   };
 
-  const handleSubmit = async () => {
-    setGuardando(true);
+  const handleSubmit = () => ejecutarUnaVez(async () => {
     setErrorEnvio(null);
     try {
       await reemplazarMaquina(maquina.id, {
@@ -150,10 +151,8 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
       onClose();
     } catch (err) {
       setErrorEnvio(err instanceof Error ? err.message : 'No se pudo registrar el reemplazo.');
-    } finally {
-      setGuardando(false);
     }
-  };
+  });
 
   const headerTop = (
     <View style={styles.headerTopBadge}>

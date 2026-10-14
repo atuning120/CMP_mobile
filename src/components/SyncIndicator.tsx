@@ -7,6 +7,7 @@ import { leerSesion } from '../services/authStorage';
 import { listarOperacionesConError, reintentarOperacionesConError } from '../sync/colaSync';
 import { solicitarSincronizacion } from '../sync/syncEngine';
 import { styles } from './SyncIndicator.styles';
+import { useAccionUnica } from '../hooks/useAccionUnica';
 
 const ETIQUETAS: Record<string, string> = {
   INICIAR_TURNO: 'Inicio de turno',
@@ -22,7 +23,9 @@ const ETIQUETAS: Record<string, string> = {
 export const SyncIndicator: React.FC<{ theme: ThemeColors }> = ({ theme }) => {
   const { sincronizando, pendientes, errores } = useSyncStatus();
 
-  const mostrarErrores = async () => {
+  // Dos toques rápidos mostraban el aviso dos veces (cada uno lee la base antes de abrirlo)
+  const [, ejecutarUnaVez] = useAccionUnica();
+  const mostrarErrores = () => ejecutarUnaVez(async () => {
     const sesion = await leerSesion();
     if (!sesion?.idOperador) return;
     const operaciones = await listarOperacionesConError(sesion.idOperador);
@@ -40,7 +43,7 @@ export const SyncIndicator: React.FC<{ theme: ThemeColors }> = ({ theme }) => {
         },
       },
     ]);
-  };
+  });
 
   if (errores > 0) {
     return (

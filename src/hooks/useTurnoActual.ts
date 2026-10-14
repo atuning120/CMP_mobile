@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState } from 'react-native';
 import {
   UseTurnoActualResult,
@@ -59,10 +59,19 @@ export const useTurnoActual = (): UseTurnoActualResult => {
     [turno],
   );
 
+  // Mientras se guarda un cambio de estado se ignoran los demás toques: con dos toques rápidos sobre
+  // la misma tarjeta (antes de que la pantalla muestre el nuevo estado) se registraba dos veces
+  const cambiandoEstado = useRef(false);
   const updateEstadoActual = useCallback(
     (nuevoEstado: EstadoOperacional) => {
-      if (!turno) return;
-      operaciones.cambiarEstadoOperacional(turno.idCliente, nuevoEstado).catch((e) => setError(e instanceof Error ? e : new Error(String(e))));
+      if (!turno || cambiandoEstado.current) return;
+      cambiandoEstado.current = true;
+      operaciones
+        .cambiarEstadoOperacional(turno.idCliente, nuevoEstado)
+        .catch((e) => setError(e instanceof Error ? e : new Error(String(e))))
+        .finally(() => {
+          cambiandoEstado.current = false;
+        });
     },
     [turno],
   );

@@ -13,6 +13,7 @@ import { useNetInfo } from '@react-native-community/netinfo';
 
 import { AuthError, loginOffline, loginOnline, OFFLINE_MAX_DIAS } from '../services/authService';
 import { despertarBackend } from '../services/backendUrl';
+import { useAccionUnica } from '../hooks/useAccionUnica';
 
 import { LoginFooter } from '../components/LoginFooter';
 import { LoginForm } from '../components/LoginForm';
@@ -66,7 +67,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     if (networkState !== 'offline') despertarBackend();
   }, [networkState]);
 
-  const handleStandardLogin = async () => {
+  // Un solo intento de ingreso a la vez: los toques repetidos mientras responde el servidor se ignoran
+  const [ingresando, ejecutarUnaVez] = useAccionUnica();
+
+  const iniciarSesion = async () => {
     if (!email.trim() || !password.trim()) {
       setErrorMsg('Por favor ingresa tu correo corporativo y contraseña.');
       return;
@@ -133,7 +137,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
+  const handleStandardLogin = () => ejecutarUnaVez(iniciarSesion);
+
   const handleQuickSelect = (op: PerfilPrueba) => {
+    if (ingresando) return;
     setSelectedQuickOp(op);
     setEmail(op.email);
     setPassword(op.password);
@@ -192,6 +199,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               setPassword={setPassword}
               errorMsg={errorMsg}
               onSubmit={handleStandardLogin}
+              cargando={ingresando}
             />
 
             {/* Offline Support Notice */}

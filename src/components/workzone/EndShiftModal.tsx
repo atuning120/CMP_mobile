@@ -7,6 +7,7 @@ import { FinalizarTurnoDatos, FotoCapturada, TurnoActual } from '../../types/tur
 import { FotoEvidenciaField } from '../common/FotoEvidenciaField';
 import { calcularDesgloseHoras, formatearHoras } from '../../utils/desgloseHoras';
 import { FOTOS_HABILITADAS } from '../../constants/features';
+import { useAccionUnica } from '../../hooks/useAccionUnica';
 
 interface Props {
   visible: boolean;
@@ -22,7 +23,8 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
   const [horometro, setHorometro] = useState('');
   const [novedades, setNovedades] = useState('');
   const [foto, setFoto] = useState<FotoCapturada | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Bloquea toques repetidos en "CERRAR TURNO" mientras se guarda
+  const [isSubmitting, ejecutarUnaVez] = useAccionUnica();
   const [submitError, setSubmitError] = useState('');
 
   // El desglose se recalcula cada 30 s mientras el modal está abierto (el estado vigente sigue sumando)
@@ -73,9 +75,8 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
     onClose();
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => ejecutarUnaVez(async () => {
     if (!canSubmit) return;
-    setIsSubmitting(true);
     setSubmitError('');
     try {
       await onConfirm({ horometroFinal: numericHorometro, novedades, foto });
@@ -84,14 +85,16 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
       setFoto(null);
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'No se pudo cerrar el turno.');
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  });
 
   const footer = (
     <>
-      <TouchableOpacity style={[styles.footerBtn, { borderColor: theme.border, backgroundColor: theme.background }]} onPress={handleClose}>
+      <TouchableOpacity
+        style={[styles.footerBtn, { borderColor: theme.border, backgroundColor: theme.background, opacity: isSubmitting ? 0.5 : 1 }]}
+        onPress={handleClose}
+        disabled={isSubmitting}
+      >
         <Text style={[styles.footerBtnText, { color: theme.text }]}>Cancelar</Text>
       </TouchableOpacity>
       <TouchableOpacity

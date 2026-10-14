@@ -21,6 +21,7 @@ import { useRecargaManual } from '../hooks/useRecargaManual';
 import { sincronizar, sincronizarCatalogos } from '../sync/syncEngine';
 import { FOTOS_HABILITADAS } from '../constants/features';
 import { FinalizarTurnoDatos, IniciarTurnoDatos } from '../types/turno';
+import { esperarTransicion, useAccionUnica } from '../hooks/useAccionUnica';
 
 const formatearFechaHora = (iso: string) =>
   new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -47,6 +48,8 @@ export default function WorkzoneScreen() {
   const [isChangeStateModalVisible, setIsChangeStateModalVisible] = useState(false);
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
   const [resumenCierre, setResumenCierre] = useState<ResumenCierreTurno | null>(null);
+  // Un doble toque en "Evidencias" apilaba dos veces la misma pantalla
+  const [, navegarUnaVez] = useAccionUnica();
   const { pendientes } = useSyncStatus();
 
   // Deslizar hacia abajo: envía lo pendiente, trae el estado del turno desde el servidor y los catálogos
@@ -169,7 +172,10 @@ export default function WorkzoneScreen() {
             subtitle={hayTurnoEnCurso ? 'Subir fotos de inspección, cancha o falla mecánica.' : 'Disponible al iniciar un turno.'}
             badgeText={FOTOS_HABILITADAS ? `${cantidadEvidencias} FOTO${cantidadEvidencias === 1 ? '' : 'S'}` : 'PRÓXIMAMENTE'}
             onPress={() => {
-              if (FOTOS_HABILITADAS) router.push('/evidencias');
+              if (FOTOS_HABILITADAS) navegarUnaVez(() => {
+                router.push('/evidencias');
+                return esperarTransicion();
+              });
             }}
             disabled={!hayTurnoEnCurso}
           />

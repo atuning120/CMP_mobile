@@ -5,6 +5,7 @@ import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { FotoCapturada } from '../../types/turno';
 import { styles } from './NovedadModal.styles';
+import { useAccionUnica } from '../../hooks/useAccionUnica';
 
 interface Props {
   foto: FotoCapturada | null;
@@ -20,7 +21,8 @@ export const NovedadModal: React.FC<Props> = ({ foto, onClose, onGuardar }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const [descripcion, setDescripcion] = useState('');
-  const [guardando, setGuardando] = useState(false);
+  // Bloquea toques repetidos en el botón de confirmar mientras se guarda
+  const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [error, setError] = useState('');
 
   const cerrar = () => {
@@ -30,18 +32,15 @@ export const NovedadModal: React.FC<Props> = ({ foto, onClose, onGuardar }) => {
     onClose();
   };
 
-  const guardar = async () => {
-    setGuardando(true);
+  const guardar = () => ejecutarUnaVez(async () => {
     setError('');
     try {
       await onGuardar(descripcion);
       setDescripcion('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo guardar la evidencia.');
-    } finally {
-      setGuardando(false);
     }
-  };
+  });
 
   const footer = (
     <>

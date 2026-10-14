@@ -11,6 +11,7 @@ import { styles } from './IncorporacionEquipoModal.styles';
 import { crearMaquina } from '../../services/flotaService';
 import { SearchableSelect } from '../common/SearchableSelect';
 import { MOTIVOS_INCORPORACION } from '../../constants/motivosJefeTurno';
+import { useAccionUnica } from '../../hooks/useAccionUnica';
 
 interface Props {
   visible: boolean;
@@ -51,7 +52,8 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
 
   const [motivo, setMotivo] = useState<string>('');
   const [observaciones, setObservaciones] = useState<string>('');
-  const [guardando, setGuardando] = useState(false);
+  // Bloquea toques repetidos en el botón de confirmar mientras se guarda
+  const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
 
   // Validaciones
@@ -89,7 +91,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
     onClose();
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => ejecutarUnaVez(async () => {
     const equipos = numEquipos === 1 ? [equipo1] : [equipo1, equipo2];
     if (numEquipos === 2 && equipo1.codigo.trim().toUpperCase() === equipo2.codigo.trim().toUpperCase()) {
       setErrorEnvio('Los dos equipos tienen el mismo código interno.');
@@ -101,7 +103,6 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
       return;
     }
 
-    setGuardando(true);
     setErrorEnvio(null);
     let creados = 0;
     try {
@@ -125,10 +126,8 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
       } else {
         setErrorEnvio(mensaje);
       }
-    } finally {
-      setGuardando(false);
     }
-  };
+  });
 
   const headerTop = (
     <View style={styles.headerTopBadge}>

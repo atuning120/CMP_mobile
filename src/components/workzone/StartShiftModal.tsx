@@ -12,6 +12,7 @@ import { useZonasPorArea } from '../../hooks/useZonasPorArea';
 import { leerSesion } from '../../services/authStorage';
 import { sincronizarCatalogos } from '../../sync/syncEngine';
 import { Area, FotoCapturada, IniciarTurnoDatos, ZonaTrabajo } from '../../types/turno';
+import { useAccionUnica } from '../../hooks/useAccionUnica';
 
 interface Props {
   visible: boolean;
@@ -31,7 +32,8 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
   const { maquinas, isLoading: isLoadingMaquinas, error: maquinasError, refetch: refetchMaquinas } = useMaquinasActivas(visible);
   const [selectedMaquina, setSelectedMaquina] = useState<number | null>(null);
   const [horometro, setHorometro] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Bloquea toques repetidos en "INICIAR TURNO" mientras se guarda
+  const [isSubmitting, ejecutarUnaVez] = useAccionUnica();
   const [submitError, setSubmitError] = useState('');
   const [instrucciones, setInstrucciones] = useState('');
   const [foto, setFoto] = useState<FotoCapturada | null>(null);
@@ -102,10 +104,9 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
     onClose();
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => ejecutarUnaVez(async () => {
     const maquina = maquinas.find((m) => m.id === selectedMaquina);
     if (!canSubmit || !maquina || areaSeleccionada === null) return;
-    setIsSubmitting(true);
     setSubmitError('');
     try {
       await onConfirm({
@@ -124,14 +125,16 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
       setInstrucciones('');
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'No se pudo iniciar el turno.');
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  });
 
   const footer = (
     <>
-      <TouchableOpacity style={[styles.footerBtn, { borderColor: theme.border, backgroundColor: theme.background }]} onPress={handleClose}>
+      <TouchableOpacity
+        style={[styles.footerBtn, { borderColor: theme.border, backgroundColor: theme.background, opacity: isSubmitting ? 0.5 : 1 }]}
+        onPress={handleClose}
+        disabled={isSubmitting}
+      >
         <Text style={[styles.footerBtnText, { color: theme.text }]}>Cancelar</Text>
       </TouchableOpacity>
       <TouchableOpacity
