@@ -50,10 +50,15 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
     leerSesion().then((sesion) => {
       if (!cancelado) setIdOperador(sesion?.idOperador ?? null);
     });
-    // Sin red falla y se queda con el catálogo guardado
-    sincronizarCatalogos(true, ['maquina']).catch(() => undefined);
+    // Sin red falla y se queda con el catálogo guardado. Se espera a que termine la animación de
+    // apertura: al llegar, el catálogo nuevo vuelve a renderizar el modal, y en un teléfono de gama baja
+    // eso durante la animación la entrecorta
+    const sincronizacion = setTimeout(() => {
+      sincronizarCatalogos(true, ['maquina']).catch(() => undefined);
+    }, 400);
     return () => {
       cancelado = true;
+      clearTimeout(sincronizacion);
     };
   }, [visible]);
   const maquinaAsignada = idOperador === null ? undefined : maquinas.find((m) => m.idOperadorAsignado === idOperador);
@@ -144,6 +149,8 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
 
   return (
     <AppBottomSheetModal
+      // Hijo directo de la raíz de WorkzoneScreen: se dibuja como capa, sin abrir una ventana nativa
+      superpuesto
       visible={visible}
       onClose={handleClose}
       title="Inicio de Turno"

@@ -111,6 +111,8 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
 
   return (
     <AppBottomSheetModal
+      // Hijo directo de la raíz de WorkzoneScreen: se dibuja como capa, sin abrir una ventana nativa
+      superpuesto
       visible={visible}
       onClose={handleClose}
       title="Cierre de Turno y Conciliación"

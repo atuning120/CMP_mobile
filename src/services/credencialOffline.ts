@@ -1,7 +1,12 @@
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 import * as Crypto from 'expo-crypto';
 
 // Verificador de la contraseña para el login offline. Nunca se guarda la contraseña:
 // solo un hash con salt aleatorio y estiramiento (SHA-256 iterado; expo-crypto no expone PBKDF2).
+// El SHA-256 se calcula en JavaScript (@noble/hashes) y no con expo-crypto: mil llamadas await al
+// módulo nativo, una tras otra, alargaban el login en el teléfono. El resultado es idéntico (hex en
+// minúsculas del UTF-8), así que los verificadores ya guardados siguen siendo válidos.
 export interface CredencialOffline {
   algoritmo: 'sha256-iterado';
   salt: string; // hex
@@ -11,12 +16,12 @@ export interface CredencialOffline {
 
 const ITERACIONES = 1000;
 
-const bytesAHex = (bytes: Uint8Array) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+const sha256Hex = (texto: string) => bytesToHex(sha256(utf8ToBytes(texto)));
 
-const derivar = async (identificador: string, password: string, salt: string, iteraciones: number) => {
-  let hash = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, `${salt}:${identificador}:${password}`);
+const derivar = (identificador: string, password: string, salt: string, iteraciones: number) => {
+  let hash = sha256Hex(`${salt}:${identificador}:${password}`);
   for (let i = 0; i < iteraciones; i++) {
-    hash = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, `${hash}${salt}`);
+    hash = sha256Hex(`${hash}${salt}`);
   }
   return hash;
 };
@@ -30,12 +35,12 @@ const igualesEnTiempoConstante = (a: string, b: string) => {
 };
 
 export const crearCredencialOffline = async (identificador: string, password: string): Promise<CredencialOffline> => {
-  const salt = bytesAHex(await Crypto.getRandomBytesAsync(16));
+  const salt = bytesToHex(await Crypto.getRandomBytesAsync(16));
   return {
     algoritmo: 'sha256-iterado',
     salt,
     iteraciones: ITERACIONES,
-    hash: await derivar(identificador, password, salt, ITERACIONES),
+    hash: derivar(identificador, password, salt, ITERACIONES),
   };
 };
 
@@ -44,4 +49,4 @@ export const verificarCredencialOffline = async (
   identificador: string,
   password: string,
 ): Promise<boolean> =>
-  igualesEnTiempoConstante(await derivar(identificador, password, credencial.salt, credencial.iteraciones), credencial.hash);
+  igualesEnTiempoConstante(derivar(identificador, password, credencial.salt, credencial.iteraciones), credencial.hash);

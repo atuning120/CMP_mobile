@@ -16,7 +16,9 @@ export const useCatalogo = <T>(tipo: TipoCatalogo, enabled: boolean, idPadre?: n
   const leer = useCallback(async () => {
     const carga = ++ultimaCarga.current;
     if (!enabled || idPadre === null) {
-      setItems([]);
+      // Con el modal cerrado llegan avisos de cada sincronización: un [] nuevo re-renderizaría el modal
+      // oculto cada vez; se conserva el mismo arreglo si ya estaba vacío
+      setItems((actuales) => (actuales.length === 0 ? actuales : []));
       return [];
     }
     const datos = await leerCatalogo<T>(tipo, idPadre);

@@ -35,3 +35,13 @@ export const fetchBackend = async (path: string, init: RequestInit = {}, timeout
     clearTimeout(timer);
   }
 };
+
+/**
+ * Despierta al Backend sin esperar la respuesta. En Azure el contenedor se apaga cuando nadie lo usa
+ * (mínimo 0 réplicas, sin costo) y el primer request tarda ~9 s en arrancarlo: se llama al abrir el
+ * login para que el arranque ocurra mientras el operador escribe su contraseña.
+ */
+export const despertarBackend = () => {
+  // El arranque en frío puede superar el timeout normal; un fallo aquí no afecta al login
+  fetchBackend('/health', {}, 30000).catch(() => {});
+};
