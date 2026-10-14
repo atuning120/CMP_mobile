@@ -46,11 +46,17 @@ export const NovedadModal: React.FC<Props> = ({ foto, onClose, onGuardar }) => {
   const footer = (
     <>
       <TouchableOpacity style={[styles.botonSecundario, { borderColor: theme.border, backgroundColor: theme.background }]} onPress={cerrar}>
-        <Text style={[styles.botonSecundarioTexto, { color: theme.text }]}>Descartar</Text>
+        <Text style={[styles.botonSecundarioTexto, { color: theme.text }]} numberOfLines={1}>
+          Descartar
+        </Text>
       </TouchableOpacity>
       <TouchableOpacity style={[styles.botonPrimario, { backgroundColor: theme.primary, opacity: guardando ? 0.6 : 1 }]} onPress={guardar} disabled={guardando}>
         {guardando ? <ActivityIndicator color="#FFFFFF" /> : <Save size={18} color="#FFFFFF" />}
-        <Text style={styles.botonPrimarioTexto}>GUARDAR EVIDENCIA</Text>
+        {/* Etiqueta corta como en los otros modales ("INICIAR TURNO", "CERRAR TURNO"): "GUARDAR EVIDENCIA"
+            no cabía en medio pie de modal y se salía del botón */}
+        <Text style={styles.botonPrimarioTexto} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          GUARDAR
+        </Text>
       </TouchableOpacity>
     </>
   );
