@@ -13,8 +13,7 @@ export default function HomeScreen() {
   const netInfo = useNetInfo();
   const networkState = netInfo.isConnected === false ? 'offline' : 'online';
 
-  const handleLoginSuccess = (operador: Operador, rol: string) => {
-    console.log('Login successful:', operador, rol);
+  const handleLoginSuccess = (_operador: Operador, rol: string) => {
     // La sincronización que arranca con la app corrió sin sesión y no hizo nada: se pide otra ahora para
     // traer del servidor el turno que el operador pueda tener abierto (p. ej. app recién instalada)
     solicitarSincronizacion();

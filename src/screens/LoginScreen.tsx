@@ -85,7 +85,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     const intentarOffline = async (motivoSinRed: boolean) => {
       const resultado = await loginOffline(email, password);
       if (resultado.ok) {
-        console.log('Login offline exitoso');
         onLoginSuccess(resultado.operador, resultado.rol);
         return;
       }
@@ -102,7 +101,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     // Flujo Offline Explicito
     if (networkState === 'offline') {
-      console.log('Modo offline detectado, intentando login local...');
       await intentarOffline(true);
       return;
     }
@@ -117,7 +115,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     try {
       // El backend responde con el rol (OPERADOR o JEFE_TURNO) para decidir la pantalla
       const { rol, operador } = await loginOnline(email, password, respaldo);
-      console.log('Login successful, rol:', rol);
       onLoginSuccess(operador, rol);
     } catch (error) {
       if (error instanceof AuthError && error.status > 0) {
@@ -128,7 +125,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       }
 
       // Fallo de red (no del servidor): intentamos con la sesión guardada
-      console.log('Fallo de red detectado, intentando login local...');
       await intentarOffline(false);
     }
   };

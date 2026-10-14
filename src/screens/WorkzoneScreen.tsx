@@ -23,6 +23,7 @@ import { FOTOS_HABILITADAS } from '../constants/features';
 import { FinalizarTurnoDatos, IniciarTurnoDatos } from '../types/turno';
 import { esperarTransicion, useAccionUnica } from '../hooks/useAccionUnica';
 import { mostrarAviso, vibrar } from '../services/retroalimentacion';
+import { PantallaEncendida } from '../components/workzone/PantallaEncendida';
 
 const formatearFechaHora = (iso: string) =>
   new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -206,6 +207,8 @@ export default function WorkzoneScreen() {
         {renderContent()}
       </ImageBackground>
       <LoginFooter />
+      {/* Con turno en curso la pantalla no se apaga sola (teléfono en el soporte de la cabina) */}
+      {hayTurnoEnCurso && <PantallaEncendida />}
 
       <StartShiftModal 
         visible={isStartShiftModalVisible} 
