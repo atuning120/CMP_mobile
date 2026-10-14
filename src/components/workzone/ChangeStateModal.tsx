@@ -67,6 +67,8 @@ export const ChangeStateModal: React.FC<ChangeStateModalProps> = ({
 
   return (
     <AppBottomSheetModal
+      // Hijo directo de la raíz de WorkzoneScreen: se dibuja como capa, sin abrir una ventana nativa
+      superpuesto
       visible={visible}
       onClose={onClose}
       title="Cambiar Estado Operacional"
