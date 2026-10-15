@@ -43,6 +43,11 @@ export const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
+  badges: {
+    alignItems: 'flex-end',
+    gap: 4,
+    flexShrink: 1,
+  },
   estadoBadge: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -36,6 +36,17 @@ import type { FiltroAlertas } from '../services/alertasService';
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
 type FiltroHistorialUI = 'Todo' | 'Turnos' | 'Flota';
+// "Sin operador" se cruza con cualquier estado: una máquina en reserva también puede estar sin operador
+const FILTRO_FLOTA: Record<FilterOption, (m: MaquinaFlota) => boolean> = {
+  Todos: () => true,
+  Operativos: (m) => m.estado === 'ACTIVA',
+  'Bajo observación': (m) => m.estado === 'BAJO_OBSERVACION',
+  'En mantenimiento': (m) => m.estado === 'EN_MANTENIMIENTO',
+  'En reserva': (m) => m.estado === 'EN_RESERVA',
+  'Sin operador': (m) => m.sinOperador,
+  'Fuera de Servicio': (m) => m.estado === 'BAJA',
+};
+
 const FILTROS_HISTORIAL = [
   { valor: 'Todo', icono: LayoutList },
   { valor: 'Turnos', icono: UserRound },
@@ -139,11 +150,7 @@ export const ShipSupervisorScreen = () => {
 
   const filteredMaquinas = useMemo(
     () =>
-      maquinas.filter(m =>
-        activeFilter === 'Todos' ? true :
-          activeFilter === 'Operativos' ? m.estadoOperativo === 'OPERATIVO' :
-            activeFilter === 'Fuera de Servicio' ? m.estadoOperativo === 'FUERA_DE_SERVICIO' : true,
-      ),
+      maquinas.filter(m => FILTRO_FLOTA[activeFilter](m)),
     [maquinas, activeFilter],
   );
 
@@ -254,7 +261,7 @@ export const ShipSupervisorScreen = () => {
               maquina={maquina}
               onSustituir={handleSustituir}
               onEditar={handleEditar}
-              onToggleEstado={handleToggleEstado}
+              onCambiarEstado={handleToggleEstado}
             />
           ))
         )}
@@ -350,6 +357,12 @@ export const ShipSupervisorScreen = () => {
         }}
       />
 
+      <ConfirmLogoutModal
+        visible={isLogoutModalVisible}
+        onCancel={() => setIsLogoutModalVisible(false)}
+        onConfirm={handleLogout}
+      />
+      {/* Superpuesto: debe ser el último hijo de la raíz de la pantalla */}
       <CambiarEstadoModal
         maquina={maquinaAToggle}
         onClose={() => setMaquinaAToggle(null)}
@@ -358,11 +371,6 @@ export const ShipSupervisorScreen = () => {
           // El cambio queda en la bitácora: aparece en el historial
           historial.refetch();
         }}
-      />
-      <ConfirmLogoutModal
-        visible={isLogoutModalVisible}
-        onCancel={() => setIsLogoutModalVisible(false)}
-        onConfirm={handleLogout}
       />
     </SafeAreaView>
   );

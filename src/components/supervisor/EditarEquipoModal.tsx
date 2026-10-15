@@ -3,13 +3,14 @@ import { View, Text, TouchableOpacity, useColorScheme, TextInput, ActivityIndica
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { Edit2, CheckCircle, ChevronDown, Activity, Truck, ClipboardList, AlertTriangle } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
-import { MaquinaFlota, EstadoOperativo, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
+import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
+import { ESTADOS_MAQUINA, EstadoMaquina, presentacionEstado } from '../../constants/estadosMaquina';
 import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 import { useOperadoresAsignables } from '../../hooks/useOperadoresAsignables';
 import { editarMaquina } from '../../services/flotaService';
 import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
 import { SearchableSelect } from '../common/SearchableSelect';
-import { MOTIVOS_DESHABILITAR, MOTIVOS_EDICION, MOTIVOS_HABILITAR } from '../../constants/motivosJefeTurno';
+import { MOTIVOS_EDICION } from '../../constants/motivosJefeTurno';
 import { styles } from './EditarEquipoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
@@ -37,7 +38,7 @@ const aFormulario = (maquina: MaquinaFlota): EquipoFormState => ({
 });
 
 // Lo que se compara para saber si hay cambios (sin espacios extra ni diferencias de mayúsculas en código y patente)
-const huella = (eq: EquipoFormState, estado: EstadoOperativo) =>
+const huella = (eq: EquipoFormState, estado: EstadoMaquina) =>
   JSON.stringify([
     eq.codigo.trim().toUpperCase(),
     eq.patente.trim().toUpperCase(),
@@ -61,7 +62,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
   const operadores = useOperadoresAsignables(visible);
 
   const [equipo, setEquipo] = useState<EquipoFormState>(EQUIPO_FORM_INICIAL);
-  const [estadoOperativo, setEstadoOperativo] = useState<EstadoOperativo>('OPERATIVO');
+  const [estadoOperativo, setEstadoOperativo] = useState<EstadoMaquina>('ACTIVA');
   const [motivo, setMotivo] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [estadoAbierto, setEstadoAbierto] = useState(false);
@@ -74,7 +75,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
   if (visible && maquina && maquina !== cargadaDe) {
     setCargadaDe(maquina);
     setEquipo(aFormulario(maquina));
-    setEstadoOperativo(maquina.estadoOperativo);
+    setEstadoOperativo(maquina.estado);
     setMotivo('');
     setObservaciones('');
     setEstadoAbierto(false);
@@ -84,11 +85,10 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
 
   if (!maquina) return null;
 
-  const hayCambios = huella(equipo, estadoOperativo) !== huella(aFormulario(maquina), maquina.estadoOperativo);
+  const hayCambios = huella(equipo, estadoOperativo) !== huella(aFormulario(maquina), maquina.estado);
   const anioValido = equipo.anio === '' || equipo.anio.length === 4;
-  // Si cambia el estado, el motivo explica el cambio de estado (queda también en la tarjeta si se deshabilita)
-  const motivosPara = (estado: EstadoOperativo) =>
-    estado === maquina.estadoOperativo ? MOTIVOS_EDICION : estado === 'FUERA_DE_SERVICIO' ? MOTIVOS_DESHABILITAR : MOTIVOS_HABILITAR;
+  // Si cambia el estado, el motivo explica el cambio de estado (queda también en la tarjeta mientras dure)
+  const motivosPara = (estado: EstadoMaquina) => (estado === maquina.estado ? MOTIVOS_EDICION : presentacionEstado(estado).motivos);
   const motivos = motivosPara(estadoOperativo);
 
   const isValid =
@@ -119,7 +119,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
         numeroChasis: equipo.chasis.trim() || null,
         esContratista: equipo.contratista,
         idOperador: equipo.operadorId ? Number(equipo.operadorId) : null,
-        estado: estadoOperativo === 'OPERATIVO' ? 'ACTIVA' : 'BAJA',
+        ...(estadoOperativo !== maquina.estado ? { estado: estadoOperativo } : {}),
         motivo,
         observacion: observaciones.trim() || null,
       });
@@ -148,9 +148,9 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
     </>
   );
 
-  const etiquetaEstado = (estado: EstadoOperativo) => (estado === 'OPERATIVO' ? 'Operativo (En Servicio)' : 'Fuera de Servicio (Detenido)');
-  const opcionEstado = (estado: EstadoOperativo, conBorde: boolean) => (
+  const opcionEstado = (estado: EstadoMaquina, conBorde: boolean) => (
     <TouchableOpacity
+      key={estado}
       style={[styles.dropdownOption, conBorde && styles.dropdownOptionBorder, { borderBottomColor: theme.border }]}
       onPress={() => {
         setEstadoOperativo(estado);
@@ -159,8 +159,10 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
         setEstadoAbierto(false);
       }}
     >
-      <Activity size={16} color={estado === 'OPERATIVO' ? theme.success : theme.danger} />
-      <Text style={[styles.dropdownOptionText, { color: estadoOperativo === estado ? theme.primary : theme.text }]}>{etiquetaEstado(estado)}</Text>
+      <Activity size={16} color={presentacionEstado(estado).color(theme)} />
+      <Text style={[styles.dropdownOptionText, { color: estadoOperativo === estado ? theme.primary : theme.text }]}>
+        {presentacionEstado(estado).etiqueta}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -190,17 +192,16 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
             onPress={() => setEstadoAbierto(!estadoAbierto)}
           >
             <View style={styles.dropdownSelectorInner}>
-              <Activity size={16} color={estadoOperativo === 'OPERATIVO' ? theme.success : theme.danger} />
+              <Activity size={16} color={presentacionEstado(estadoOperativo).color(theme)} />
               <Text style={[styles.dropdownText, { color: theme.text }]} numberOfLines={1}>
-                {etiquetaEstado(estadoOperativo)}
+                {presentacionEstado(estadoOperativo).etiqueta}
               </Text>
             </View>
             <ChevronDown size={18} color={theme.textSecondary} />
           </TouchableOpacity>
           {estadoAbierto && (
             <View style={[styles.dropdownOptionsContainer, { backgroundColor: theme.background, borderColor: theme.border }]}>
-              {opcionEstado('OPERATIVO', true)}
-              {opcionEstado('FUERA_DE_SERVICIO', false)}
+              {ESTADOS_MAQUINA.map((e, i) => opcionEstado(e.valor, i < ESTADOS_MAQUINA.length - 1))}
             </View>
           )}
         </View>

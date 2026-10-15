@@ -3,7 +3,14 @@ import { View, Text, ScrollView, TouchableOpacity, useColorScheme } from 'react-
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { styles } from './FleetFilterChips.styles';
 
-export type FilterOption = 'Todos' | 'Operativos' | 'Fuera de Servicio';
+export type FilterOption =
+  | 'Todos'
+  | 'Operativos'
+  | 'Bajo observación'
+  | 'En mantenimiento'
+  | 'En reserva'
+  | 'Sin operador'
+  | 'Fuera de Servicio';
 
 interface Props<T extends string> {
   activeFilter: T;
@@ -12,7 +19,7 @@ interface Props<T extends string> {
   filters?: readonly T[];
 }
 
-const FILTERS: FilterOption[] = ['Todos', 'Operativos', 'Fuera de Servicio'];
+const FILTERS: FilterOption[] = ['Todos', 'Operativos', 'Bajo observación', 'En mantenimiento', 'En reserva', 'Sin operador', 'Fuera de Servicio'];
 
 export function FleetFilterChips<T extends string = FilterOption>({ activeFilter, onFilterChange, filters }: Props<T>) {
   const colorScheme = useColorScheme();
