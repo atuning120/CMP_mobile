@@ -3,3 +3,9 @@ packages:
 
 allowBuilds:
   unrs-resolver: true
+
+# Parches de seguridad en dependencias transitivas de las herramientas de Expo (pnpm audit),
+# dentro de la misma versión mayor que piden sus paquetes
+overrides:
+  shell-quote@>=1.8.4 <1.11.0: ^1.11.0
+  source-map-js@>=1.0.0 <1.2.2: ^1.2.2
