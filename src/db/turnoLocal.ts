@@ -7,7 +7,9 @@ import { Area, EstadoOperacional, EstadoTurno, Maquina, TurnoActual, ZonaTrabajo
  * en una misma transacción.
  */
 
-export const DURACION_MAXIMA_TURNO_MS = 12 * 60 * 60 * 1000;
+// Igual que DURACION_MAXIMA_TURNO_HORAS del Backend: un turno abierto más tiempo se cierra solo
+export const DURACION_MAXIMA_TURNO_HORAS = 13;
+export const DURACION_MAXIMA_TURNO_MS = DURACION_MAXIMA_TURNO_HORAS * 60 * 60 * 1000;
 
 interface TurnoFila {
   id_cliente: string;
@@ -134,7 +136,7 @@ export const listarTurnosEnCurso = async (idOperador: number): Promise<TurnoLoca
 
 /**
  * Cierra un turno en el teléfono. Aplica la misma regla que el servidor: si el cierre ocurre
- * después de 12 h, queda CERRADO_AUTO en el límite.
+ * después de DURACION_MAXIMA_TURNO_HORAS (13 h), queda CERRADO_AUTO en el límite.
  */
 export const cerrarTurnoLocal = async (
   ejecutor: Db,

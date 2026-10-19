@@ -122,7 +122,7 @@ const registrarReporte = async (
 };
 
 /**
- * Turno en curso del operador, leído del teléfono. Si pasó de 12 h se cierra automáticamente
+ * Turno en curso del operador, leído del teléfono. Si pasó de 13 h se cierra automáticamente
  * (igual que lo hará el servidor al sincronizar).
  */
 export const obtenerTurnoActual = async (): Promise<{

@@ -24,6 +24,7 @@ import { FinalizarTurnoDatos, IniciarTurnoDatos } from '../types/turno';
 import { esperarTransicion, useAccionUnica } from '../hooks/useAccionUnica';
 import { mostrarAviso, vibrar } from '../services/retroalimentacion';
 import { PantallaEncendida } from '../components/workzone/PantallaEncendida';
+import { DURACION_MAXIMA_TURNO_HORAS, limiteCierreAutomatico } from '../db/turnoLocal';
 
 const formatearFechaHora = (iso: string) =>
   new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -90,9 +91,9 @@ export default function WorkzoneScreen() {
     // El resumen del cierre ya se muestra en pantalla: basta la vibración de confirmación
     vibrar('exito');
     const automatico = estado === 'CERRADO_AUTO';
-    // En el cierre automático el turno termina en el límite de 12 h, no en el momento actual
+    // En el cierre automático el turno termina en el límite de duración, no en el momento actual
     const fechaFin = automatico
-      ? new Date(Math.min(Date.now(), new Date(turno.fechaInicio).getTime() + 12 * 60 * 60 * 1000)).toISOString()
+      ? new Date(Math.min(Date.now(), limiteCierreAutomatico(turno.fechaInicio).getTime())).toISOString()
       : new Date().toISOString();
     setResumenCierre({ ...resumen, automatico, fechaFin });
   };
@@ -144,7 +145,7 @@ export default function WorkzoneScreen() {
             <AlertTriangle size={20} color={theme.warning} />
             <Text style={[styles.autoCloseText, { color: theme.text }]}>
               Tu turno{turnoCerradoAutomaticamente.id !== null ? ` #${turnoCerradoAutomaticamente.id}` : ''} (iniciado el {formatearFechaHora(turnoCerradoAutomaticamente.fechaInicio)}) se
-              cerró automáticamente por superar 12 horas. Informa a tu jefe de turno para regularizar el horómetro final.
+              cerró automáticamente por superar {DURACION_MAXIMA_TURNO_HORAS} horas. Informa a tu jefe de turno para regularizar el horómetro final.
             </Text>
           </View>
         )}

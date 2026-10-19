@@ -3,6 +3,7 @@ import { Modal, Pressable, Text, TouchableOpacity, View, useColorScheme } from '
 import { AlertTriangle, CheckCircle2, CloudUpload } from 'lucide-react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { darkTheme, lightTheme } from '../../constants/theme';
+import { DURACION_MAXIMA_TURNO_HORAS } from '../../db/turnoLocal';
 import { styles } from './ShiftClosedModal.styles';
 
 // Datos del turno tomados al momento del cierre (el turno deja de estar disponible en el hook)
@@ -58,7 +59,7 @@ export const ShiftClosedModal: React.FC<Props> = ({ resumen, onClose }) => {
               </Text>
               <Text style={[styles.mensaje, { color: theme.textSecondary }]}>
                 {resumen.automatico
-                  ? 'El turno superó las 12 horas y se cerró en el límite. Informa a tu jefe de turno para regularizar el horómetro final.'
+                  ? `El turno superó las ${DURACION_MAXIMA_TURNO_HORAS} horas y se cerró en el límite. Informa a tu jefe de turno para regularizar el horómetro final.`
                   : 'El cierre quedó registrado correctamente. Buen trabajo.'}
               </Text>
 

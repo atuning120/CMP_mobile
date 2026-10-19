@@ -46,7 +46,8 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
   // Cambio de estado: a cuál pasó (los registros antiguos de habilitar/deshabilitar no lo traen)
   const despues = evento.detalle?.despues as { estado?: unknown } | undefined;
   const estadoNuevo = evento.tipo === 'CAMBIAR_ESTADO' || evento.tipo === 'HABILITAR' ? texto(despues?.estado) : null;
-  // El sistema lo cerró al pasar las 12 h (probablemente el operador olvidó finalizarlo)
+  // El sistema lo cerró al pasar la duración máxima (probablemente el operador olvidó finalizarlo).
+  // Sin número de horas: los turnos antiguos se cerraban a las 12 h y los actuales a las 13 h
   const cierreAutomatico = esTurno && evento.detalle?.estadoTurno === 'CERRADO_AUTO';
 
   // Inicio de turno: dónde y con qué horómetro partió
@@ -86,7 +87,7 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
         {cierreAutomatico && (
           <View style={[styles.motivo, styles.motivoConIcono, { backgroundColor: theme.warning + '14', borderColor: theme.warning + '40' }]}>
             <AlarmClockOff size={12} color={theme.warning} />
-            <Text style={[styles.motivoTexto, { color: theme.warningText }]}>Cierre automático (más de 12 h)</Text>
+            <Text style={[styles.motivoTexto, { color: theme.warningText }]}>Cierre automático (superó la duración máxima)</Text>
           </View>
         )}
         {!!evento.observacion && <Text style={[styles.observacion, { color: theme.textSecondary }]}>{evento.observacion}</Text>}

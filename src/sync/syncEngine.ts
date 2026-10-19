@@ -74,7 +74,7 @@ const enviarOperacion = async (operacion: OperacionPendiente): Promise<void> => 
     case 'FINALIZAR_TURNO': {
       const { idClienteTurno, ...resto } = p as { idClienteTurno: string } & Record<string, unknown>;
       const turno = await api.finalizarTurnoRemoto({ ...resto, ...referenciaTurno(idClienteTurno) });
-      // El servidor es la autoridad sobre el resultado (p. ej. CERRADO_AUTO si pasó de 12 h)
+      // El servidor es la autoridad sobre el resultado (p. ej. CERRADO_AUTO si pasó de 13 h)
       await actualizarTurno(db, idClienteTurno, { estado: turno.estado, fechaFin: turno.fechaFin, horometroFinal: turno.horometroFinal });
       return;
     }
@@ -199,7 +199,7 @@ const conciliarTurno = async (idOperador: number) => {
     }
   }
 
-  // Turnos que el teléfono cree abiertos pero el servidor ya cerró (12 h o jefe de turno).
+  // Turnos que el teléfono cree abiertos pero el servidor ya cerró (13 h o jefe de turno).
   // Solo los ya sincronizados: uno que nunca llegó al servidor sigue siendo válido localmente.
   for (const local of enCursoLocales) {
     if (local.idCliente === idClienteVigente || !local.sincronizado) continue;

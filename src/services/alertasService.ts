@@ -3,7 +3,7 @@ import type { RangoHistorial } from './historialService';
 
 // Pestaña Alertas del jefe de turno (en línea, como el historial). Se calculan desde los turnos:
 // - TURNO_EXTENDIDO: el turno llegó a las 10 h
-// - CIERRE_AUTOMATICO: el sistema lo cerró a las 12 h (probablemente el operador olvidó finalizarlo)
+// - CIERRE_AUTOMATICO: el sistema lo cerró al superar la duración máxima (13 h; antes 12 h) (probablemente el operador olvidó finalizarlo)
 
 export type TipoAlerta = 'TURNO_EXTENDIDO' | 'CIERRE_AUTOMATICO';
 export type FiltroAlertas = 'TODO' | 'EXTENDIDOS' | 'CIERRES_AUTOMATICOS';

@@ -98,7 +98,7 @@ export const useTurnoActual = (): UseTurnoActualResult => {
     }, 0);
     // Se relee cuando cambian los datos locales (acción del operador o sincronización en segundo plano)
     const desuscribir = suscribirCambioDatos(() => void cargar());
-    // Al volver a primer plano y cada minuto se re-evalúa el límite de 12 h
+    // Al volver a primer plano y cada minuto se re-evalúa el límite de 13 h
     const suscripcionApp = AppState.addEventListener('change', (estado) => {
       if (estado === 'active') void cargar();
     });

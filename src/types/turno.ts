@@ -57,7 +57,7 @@ export interface TurnoActual {
   sincronizado: boolean;
 }
 
-// Último turno del operador cerrado por el sistema al superar las 12 horas.
+// Último turno del operador cerrado por el sistema al superar las 13 horas.
 export interface TurnoCerradoAutomaticamente {
   idCliente: string | null;
   id: number | null;
@@ -93,7 +93,7 @@ export interface UseTurnoActualResult {
   error: Error | null;
   refetch: () => void;
   iniciarTurno: (datos: IniciarTurnoDatos) => Promise<void>;
-  // Devuelve el estado final: CERRADO_AUTO si el cierre ocurrió después de las 12 h
+  // Devuelve el estado final: CERRADO_AUTO si el cierre ocurrió después de las 13 h
   finalizarTurno: (datos: FinalizarTurnoDatos) => Promise<EstadoTurno>;
   estadosCatalogo: EstadoOperacional[];
   updateEstadoActual: (nuevoEstado: EstadoOperacional) => void;

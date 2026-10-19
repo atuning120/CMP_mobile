@@ -27,7 +27,7 @@ export const AlertaCard: React.FC<Props> = ({ alerta }) => {
   const ubicacion = [alerta.area, alerta.zona].filter(Boolean).join(' · ');
 
   const etiqueta = esCierreAutomatico
-    ? 'Cierre automático a las 12 h · posible olvido de cierre'
+    ? `Cierre automático tras ${duracion} · posible olvido de cierre`
     : activa
       ? `Turno abierto hace ${duracion}`
       : `Turno de ${duracion}${turno.estado === 'CERRADO_AUTO' ? ' · se cerró automáticamente' : ''}`;

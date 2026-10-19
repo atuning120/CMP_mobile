@@ -19,7 +19,7 @@ npx eas-cli@latest build --platform android --profile preview
 El APK se compila en el PC usando el perfil `preview` de `eas.json`, que apunta al Backend desplegado en Azure (`EXPO_PUBLIC_API_URL`).
 
 ```bash
-eas build --platform android --profile preview --local --output ~/Descargas/cmp-preview.apk
+npx eas-cli@latest build -p android --profile preview
 ```
 
 - La primera vez pide iniciar sesión en Expo (`npx eas-cli@latest login`).
