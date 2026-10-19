@@ -5,6 +5,7 @@ import {
   TurnoActual,
   EstadoOperacional,
   TurnoCerradoAutomaticamente,
+  TurnoCerradoPorJefe,
   IniciarTurnoDatos,
   FinalizarTurnoDatos,
 } from '../types/turno';
@@ -24,6 +25,7 @@ const ESPERA_SINCRONIZACION_MS = 6000;
 export const useTurnoActual = (): UseTurnoActualResult => {
   const [turno, setTurno] = useState<TurnoActual | null>(null);
   const [turnoCerradoAutomaticamente, setTurnoCerradoAutomaticamente] = useState<TurnoCerradoAutomaticamente | null>(null);
+  const [turnoCerradoPorJefe, setTurnoCerradoPorJefe] = useState<TurnoCerradoPorJefe | null>(null);
   const [estadosCatalogo, setEstadosCatalogo] = useState<EstadoOperacional[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
@@ -34,6 +36,7 @@ export const useTurnoActual = (): UseTurnoActualResult => {
       const [actual, estados] = await Promise.all([operaciones.obtenerTurnoActual(), operaciones.catalogoEstados()]);
       setTurno(actual.turno);
       setTurnoCerradoAutomaticamente(actual.turnoCerradoAutomaticamente);
+      setTurnoCerradoPorJefe(actual.turnoCerradoPorJefe);
       setEstadosCatalogo(estados);
       setError(null);
       return actual.turno;
@@ -115,6 +118,7 @@ export const useTurnoActual = (): UseTurnoActualResult => {
   return {
     turno,
     turnoCerradoAutomaticamente,
+    turnoCerradoPorJefe,
     isLoading,
     error,
     refetch: () => void cargar(),

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View, useColorScheme } from 'react-native';
-import { AlarmClockOff, AlertTriangle, Clock, MapPin, Timer } from 'lucide-react-native';
+import { AlarmClockOff, AlertTriangle, Clock, Layers, MapPin, Timer } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import type { Alerta } from '../../services/alertasService';
 import { formatearDuracion, formatearFecha } from '../../utils/historialFechas';
@@ -19,16 +19,19 @@ export const AlertaCard: React.FC<Props> = ({ alerta }) => {
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const { turno } = alerta;
   const esCierreAutomatico = alerta.tipo === 'CIERRE_AUTOMATICO';
-  // Turno extendido que sigue abierto: es la única alerta que todavía requiere acción
+  const jornada = alerta.tipo === 'JORNADA_EXTENDIDA' ? (alerta.jornada ?? null) : null;
+  // Turno o jornada extendidos que siguen abiertos: son las alertas que todavía requieren acción
   const activa = !esCierreAutomatico && turno.estado === 'EN_CURSO';
   const acento = esCierreAutomatico ? theme.danger : theme.warning;
-  const Icono = esCierreAutomatico ? AlarmClockOff : AlertTriangle;
+  const Icono = esCierreAutomatico ? AlarmClockOff : jornada ? Layers : AlertTriangle;
   const duracion = formatearDuracion(minutosEntre(turno.horaInicio, turno.horaTermino));
   const ubicacion = [alerta.area, alerta.zona].filter(Boolean).join(' · ');
 
   const etiqueta = esCierreAutomatico
     ? `Cierre automático tras ${duracion} · posible olvido de cierre`
-    : activa
+    : jornada
+      ? `${formatearDuracion(jornada.horas * 60)} en ${jornada.turnos} turnos${activa ? ' y sigue trabajando' : ''}`
+      : activa
       ? `Turno abierto hace ${duracion}`
       : `Turno de ${duracion}${turno.estado === 'CERRADO_AUTO' ? ' · se cerró automáticamente' : ''}`;
 
@@ -49,6 +52,11 @@ export const AlertaCard: React.FC<Props> = ({ alerta }) => {
           {esCierreAutomatico ? (
             <>
               Se cerró automáticamente el turno de <Text style={styles.actor}>{alerta.operador}</Text> en{' '}
+            </>
+          ) : jornada ? (
+            <>
+              <Text style={styles.actor}>{alerta.operador}</Text> {activa ? 'lleva más de 10 h' : 'superó las 10 h'} de jornada sumando
+              turnos; ahora en{' '}
             </>
           ) : (
             <>
@@ -72,7 +80,9 @@ export const AlertaCard: React.FC<Props> = ({ alerta }) => {
           )}
           <View style={styles.metaItem}>
             <Clock size={12} color={theme.textTertiary} />
-            <Text style={[styles.metaTexto, { color: theme.textSecondary }]}>Inicio {formatearFecha(turno.horaInicio)}</Text>
+            <Text style={[styles.metaTexto, { color: theme.textSecondary }]}>
+              {jornada ? `Jornada desde ${formatearFecha(jornada.inicio)}` : `Inicio ${formatearFecha(turno.horaInicio)}`}
+            </Text>
           </View>
         </View>
 

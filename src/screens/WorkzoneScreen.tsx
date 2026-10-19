@@ -36,6 +36,7 @@ export default function WorkzoneScreen() {
   const {
     turno,
     turnoCerradoAutomaticamente,
+    turnoCerradoPorJefe,
     isLoading,
     error,
     refetch,
@@ -140,7 +141,20 @@ export default function WorkzoneScreen() {
       >
         <TurnoSummaryDropdown turno={turno} onLogout={() => setIsLogoutModalVisible(true)} />
 
-        {!hayTurnoEnCurso && turnoCerradoAutomaticamente && (
+        {/* El jefe de turno cerró el turno (la máquina falló o salió de operación): el operador no tiene que hacer nada */}
+        {!hayTurnoEnCurso && turnoCerradoPorJefe && (
+          <View style={[styles.autoCloseBanner, { backgroundColor: theme.card, borderColor: theme.warning }]}>
+            <AlertTriangle size={20} color={theme.warning} />
+            <Text style={[styles.autoCloseText, { color: theme.text }]}>
+              Tu jefe de turno cerró tu turno{turnoCerradoPorJefe.id !== null ? ` #${turnoCerradoPorJefe.id}` : ''} (iniciado el{' '}
+              {formatearFechaHora(turnoCerradoPorJefe.fechaInicio)}){turnoCerradoPorJefe.motivo ? `: ${turnoCerradoPorJefe.motivo}` : ''}.
+              {turnoCerradoPorJefe.horometroFinal !== null ? ` Quedó con ${turnoCerradoPorJefe.horometroFinal} h de horómetro final.` : ''} Puedes
+              iniciar un turno nuevo en la máquina que te asignen.
+            </Text>
+          </View>
+        )}
+
+        {!hayTurnoEnCurso && !turnoCerradoPorJefe && turnoCerradoAutomaticamente && (
           <View style={[styles.autoCloseBanner, { backgroundColor: theme.card, borderColor: theme.warning }]}>
             <AlertTriangle size={20} color={theme.warning} />
             <Text style={[styles.autoCloseText, { color: theme.text }]}>

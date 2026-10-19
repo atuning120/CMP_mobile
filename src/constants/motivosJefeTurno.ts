@@ -48,6 +48,9 @@ export const MOTIVOS_MANTENIMIENTO = [
 
 export const MOTIVOS_RESERVA = ['Equipo de respaldo', 'Baja demanda operacional', 'Sin frente de trabajo asignado', 'Otro'];
 
+// Al devolver la máquina original (vuelve de la reparación) y sacar a su respaldo
+export const MOTIVOS_DEVOLUCION = ['Reparación finalizada', 'Mantención finalizada', 'Revisión aprobada', 'Otro'];
+
 export const MOTIVOS_REEMPLAZO = [
   'Falla mecánica',
   'Falla eléctrica',

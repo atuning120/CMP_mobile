@@ -4,9 +4,11 @@ import { Activity, AlertTriangle, CheckCircle } from 'lucide-react-native';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { SearchableSelect } from '../common/SearchableSelect';
 import { darkTheme, lightTheme } from '../../constants/theme';
-import { ESTADOS_MAQUINA, EstadoMaquina, presentacionEstado } from '../../constants/estadosMaquina';
+import { conRegreso, ESTADOS_MAQUINA, EstadoMaquina, operaEnEstado, presentacionEstado } from '../../constants/estadosMaquina';
 import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
-import { cambiarEstadoMaquina } from '../../services/flotaService';
+import { cambiarEstadoMaquina, cerrarTurnoDeMaquina } from '../../services/flotaService';
+import { CierreTurnoCampos, leerHorometro } from './CierreTurnoCampos';
+import { RegresoEstimadoChips, regresoDesdeAhora } from './RegresoEstimadoChips';
 import { styles } from './CambiarEstadoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
@@ -30,6 +32,10 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
   const [nuevoEstado, setNuevoEstado] = useState<EstadoMaquina | null>(null);
   const [motivo, setMotivo] = useState('');
   const [observacion, setObservacion] = useState('');
+  const [horasRegreso, setHorasRegreso] = useState<number | null>(null);
+  const [horometroCierre, setHorometroCierre] = useState('');
+  // Si el cambio falla después de cerrar el turno, al reintentar no se vuelve a cerrar
+  const [turnoCerrado, setTurnoCerrado] = useState(false);
   // Bloquea toques repetidos en el botón de confirmar mientras se guarda
   const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [error, setError] = useState<string | null>(null);
@@ -41,12 +47,19 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
     setNuevoEstado(null);
     setMotivo('');
     setObservacion('');
+    setHorasRegreso(null);
+    setHorometroCierre('');
+    setTurnoCerrado(false);
     setError(null);
   }
 
   const destino = nuevoEstado ? presentacionEstado(nuevoEstado) : null;
   const acento = destino ? destino.color(theme) : theme.primary;
-  const listo = destino !== null && motivo !== '';
+  // Sacarla de operación con un operador trabajando: primero se cierra su turno con el horómetro final
+  const pideCierre = !!(nuevoEstado && !operaEnEstado(nuevoEstado) && maquina?.operadorEnTurno && !turnoCerrado);
+  const horometro = leerHorometro(horometroCierre);
+  const cierreListo = !pideCierre || (horometro !== null && horometro >= (maquina?.horometroActual ?? 0));
+  const listo = destino !== null && motivo !== '' && cierreListo;
 
   const cerrar = () => {
     if (!guardando) onClose();
@@ -61,13 +74,22 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
   const confirmar = () => ejecutarUnaVez(async () => {
     if (!maquina || !destino || !motivo) return;
     setError(null);
+    let cerroTurno = false;
     try {
-      const actualizada = await cambiarEstadoMaquina(maquina.id, destino.valor, motivo, observacion.trim() || null);
+      if (pideCierre && horometro !== null) {
+        await cerrarTurnoDeMaquina(maquina.id, horometro, motivo);
+        cerroTurno = true;
+        setTurnoCerrado(true);
+      }
+      const regreso = conRegreso(destino.valor) && horasRegreso !== null ? regresoDesdeAhora(horasRegreso).toISOString() : undefined;
+      const actualizada = await cambiarEstadoMaquina(maquina.id, destino.valor, motivo, observacion.trim() || null, regreso);
       onCambiado(mapMaquinaFlota(actualizada));
       onClose();
       mostrarAviso(`Equipo ${destino.etiqueta.toLowerCase()}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo cambiar el estado del equipo.');
+      const mensaje = err instanceof Error ? err.message : 'No se pudo cambiar el estado del equipo.';
+      // El turno pudo quedar cerrado aunque el cambio fallara: al reintentar ya no se pide el horómetro
+      setError(cerroTurno ? `El turno de ${maquina.operadorEnTurno} quedó cerrado, pero: ${mensaje}` : mensaje);
     }
   });
 
@@ -91,7 +113,7 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
             disabled={!listo || guardando}
           >
             {guardando ? <ActivityIndicator color="#FFF" /> : <CheckCircle size={18} color="#FFF" />}
-            <Text style={[styles.botonTexto, { color: '#FFF' }]}>Confirmar</Text>
+            <Text style={[styles.botonTexto, { color: '#FFF' }]}>{pideCierre ? 'Cerrar turno y confirmar' : 'Confirmar'}</Text>
           </TouchableOpacity>
         </>
       }
@@ -123,14 +145,18 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
         })}
       </View>
 
-      {nuevoEstado === 'BAJA' && (
+      {nuevoEstado && !operaEnEstado(nuevoEstado) && (
         <Text style={[styles.pregunta, { color: theme.dangerText }]}>
-          Los operadores no podrán iniciar turno en él. Fuera de servicio se habilita el reemplazo.
+          Los operadores no podrán iniciar turno en él. Si necesitas que otro equipo lo cubra, usa Sustituir / Reemplazo.
         </Text>
       )}
 
       {destino && (
         <>
+          {conRegreso(destino.valor) && maquina && (
+            <RegresoEstimadoChips horas={horasRegreso} onChange={setHorasRegreso} codigo={maquina.codigo} disabled={guardando} />
+          )}
+
           <View style={styles.campo}>
             <SearchableSelect
               label="MOTIVO *"
@@ -158,6 +184,10 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
             />
           </View>
         </>
+      )}
+
+      {pideCierre && maquina && (
+        <CierreTurnoCampos maquina={maquina} horometro={horometroCierre} onChange={setHorometroCierre} disabled={guardando} />
       )}
 
       {!!error && (

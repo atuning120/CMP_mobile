@@ -4,8 +4,10 @@ import type { RangoHistorial } from './historialService';
 // Pestaña Alertas del jefe de turno (en línea, como el historial). Se calculan desde los turnos:
 // - TURNO_EXTENDIDO: el turno llegó a las 10 h
 // - CIERRE_AUTOMATICO: el sistema lo cerró al superar la duración máxima (13 h; antes 12 h) (probablemente el operador olvidó finalizarlo)
+// - JORNADA_EXTENDIDA: el operador sumó 10 h en una jornada de varios turnos (p. ej. cambió de máquina por una falla):
+//   la fatiga se mide por jornada, así que cambiar de máquina no reinicia la cuenta
 
-export type TipoAlerta = 'TURNO_EXTENDIDO' | 'CIERRE_AUTOMATICO';
+export type TipoAlerta = 'TURNO_EXTENDIDO' | 'CIERRE_AUTOMATICO' | 'JORNADA_EXTENDIDA';
 export type FiltroAlertas = 'TODO' | 'EXTENDIDOS' | 'CIERRES_AUTOMATICOS';
 
 export interface Alerta {
@@ -24,12 +26,14 @@ export interface Alerta {
   };
   area: string | null;
   zona: string | null;
+  // Solo JORNADA_EXTENDIDA (ausente en un Backend anterior): desde cuándo trabaja, en cuántos turnos y cuántas horas lleva
+  jornada?: { inicio: string; turnos: number; horas: number } | null;
 }
 
 export interface PaginaAlertas {
   alertas: Alerta[];
   hayMas: boolean;
-  activas: number; // turnos abiertos hace más de 10 h en este momento
+  activas: number; // operadores con más de 10 h trabajadas ahora mismo (en su turno o sumando su jornada)
 }
 
 export const listarAlertas = (tipo: FiltroAlertas, rango: RangoHistorial, ultimo?: { fecha: string; id: string }) => {

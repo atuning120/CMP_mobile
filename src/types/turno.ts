@@ -65,6 +65,16 @@ export interface TurnoCerradoAutomaticamente {
   fechaFin: string | null; // ISO 8601
 }
 
+// Último turno del operador cerrado por su jefe de turno (p. ej. la máquina falló y la sacaron de operación)
+export interface TurnoCerradoPorJefe {
+  idCliente: string | null;
+  id: number | null;
+  fechaInicio: string; // ISO 8601
+  fechaFin: string | null; // ISO 8601
+  horometroFinal: number | null;
+  motivo: string | null;
+}
+
 // Foto recién tomada con la cámara (uri temporal); se copia al almacenamiento de la app al guardarla
 export interface FotoCapturada {
   uri: string;
@@ -89,6 +99,7 @@ export interface FinalizarTurnoDatos {
 export interface UseTurnoActualResult {
   turno: TurnoActual | null;
   turnoCerradoAutomaticamente: TurnoCerradoAutomaticamente | null;
+  turnoCerradoPorJefe: TurnoCerradoPorJefe | null;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;

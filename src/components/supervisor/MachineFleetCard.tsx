@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
-import { AlertTriangle, User, MapPin, Clock, RefreshCw, Edit2 } from 'lucide-react-native';
+import { AlertTriangle, User, MapPin, Clock, RefreshCw, Edit2, Undo2, CalendarClock, Link2 } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
-import { MaquinaFlota } from '../../hooks/useFlotaResumen';
+import { MaquinaFlota, regresoVencido } from '../../hooks/useFlotaResumen';
 import { presentacionEstado } from '../../constants/estadosMaquina';
 import { styles } from './MachineFleetCard.styles';
 
@@ -11,15 +11,21 @@ interface Props {
   onSustituir: (maquina: MaquinaFlota) => void;
   onEditar: (maquina: MaquinaFlota) => void;
   onCambiarEstado: (maquina: MaquinaFlota) => void;
+  onDevolver: (maquina: MaquinaFlota) => void;
 }
 
-export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEditar, onCambiarEstado }) => {
+const formatoRegreso = new Intl.DateTimeFormat('es-CL', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEditar, onCambiarEstado, onDevolver }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const estado = presentacionEstado(maquina.estado);
   const colorEstado = estado.color(theme);
-  // Solo se reemplaza una máquina fuera de servicio
-  const puedeReemplazar = maquina.estado === 'BAJA';
+  // Se reemplaza una máquina que opera o que salió de operación por una falla; una en reserva no tiene a quién cubrir.
+  // Con un respaldo ya puesto, lo que corresponde es devolverla
+  const puedeReemplazar = maquina.estado !== 'EN_RESERVA' && !maquina.respaldo && !maquina.cubreA;
+  const vencido = regresoVencido(maquina);
+  const conRegreso = !!maquina.regresoEstimado && (maquina.estado === 'EN_MANTENIMIENTO' || maquina.estado === 'BAJA');
   const isDark = colorScheme === 'dark';
   // En modo oscuro los controles secundarios son translúcidos sobre la tarjeta, sin sombras
   const superficieSecundaria = isDark ? 'rgba(255,255,255,0.06)' : theme.cardAlt;
@@ -67,6 +73,30 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
         </View>
       )}
 
+      {/* Regreso estimado: en rojo si ya pasó y la máquina sigue sin volver */}
+      {conRegreso && (
+        <View style={[styles.alertBlock, { backgroundColor: (vencido ? theme.danger : theme.primary) + '15' }]}>
+          <CalendarClock size={16} color={vencido ? theme.danger : theme.primary} style={{ marginTop: 1 }} />
+          <Text style={[styles.alertText, { color: vencido ? theme.dangerText : theme.primaryText }]}>
+            {vencido ? 'Regreso vencido: ' : 'Vuelve: '}
+            {formatoRegreso.format(new Date(maquina.regresoEstimado!))}
+            {vencido ? ' · revisa con mantención' : ''}
+          </Text>
+        </View>
+      )}
+
+      {/* Enlace del reemplazo: quién la cubre, o a quién cubre este respaldo */}
+      {(maquina.respaldo || maquina.cubreA) && (
+        <View style={styles.metaRow}>
+          <View style={styles.metaItem}>
+            <Link2 size={14} color={theme.primary} />
+            <Text style={[styles.metaText, { color: theme.primaryText }]} numberOfLines={1}>
+              {maquina.respaldo ? `Cubierta por ${maquina.respaldo.codigo}` : `Respaldo de ${maquina.cubreA!.codigo}`}
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* Metadata Row 1 */}
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
@@ -96,6 +126,16 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
 
       {/* Actions */}
       <View style={[styles.actionsRow, { borderTopColor: theme.glassSurfaceBorder }]}>
+        {maquina.respaldo ? (
+          <TouchableOpacity
+            style={[styles.btnAction, { backgroundColor: theme.success }]}
+            onPress={() => onDevolver(maquina)}
+            activeOpacity={0.7}
+          >
+            <Undo2 size={16} color="#FFFFFF" />
+            <Text style={[styles.btnActionText, { color: '#FFFFFF' }]}>Devolver a operación</Text>
+          </TouchableOpacity>
+        ) : (
         <TouchableOpacity
           style={[
             styles.btnAction, 
@@ -105,10 +145,10 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
           disabled={!puedeReemplazar}
           activeOpacity={0.7}
         >
-          {/* Solo se permite reemplazo de equipos fuera de servicio */}
           <RefreshCw size={16} color={puedeReemplazar ? "#1A1A1A" : theme.textSecondary} />
           <Text style={[styles.btnActionText, { color: puedeReemplazar ? "#1A1A1A" : theme.textSecondary }]}>Sustituir / Reemplazo</Text>
         </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={[styles.btnIcon, { backgroundColor: superficieSecundaria }]} onPress={() => onEditar(maquina)}>
           <Edit2 size={16} color={theme.text} />

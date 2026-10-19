@@ -23,6 +23,11 @@ export interface MaquinaFlotaApi {
   motivoEstado: { motivo: string; observacion: string | null; fecha: string; reemplazadaPor: string | null } | null;
   ubicacionActual: string | null;
   horometroActual: number | null;
+  // En mantenimiento o fuera de servicio: cuándo se espera que vuelva (ISO). Ausente en un Backend anterior
+  regresoEstimado?: string | null;
+  // Tras un reemplazo: la máquina que la cubre, o (en el respaldo) la original a la que cubre
+  respaldo?: { idMaquina: number; nombre: string; estadoAlDevolver: string } | null;
+  cubreA?: { idMaquina: number; nombre: string } | null;
 }
 
 export const listarFlota = (busqueda: string) => {
@@ -61,6 +66,7 @@ export interface EditarMaquinaApi {
   esContratista: boolean;
   idOperador: number | null; // null deja la máquina sin operador
   estado?: EstadoMaquina; // solo si cambia
+  regresoEstimado?: string | null; // ISO; solo en mantenimiento o fuera de servicio
   motivo: string;
   observacion: string | null;
 }
@@ -70,14 +76,27 @@ export const editarMaquina = (idMaquina: number, datos: EditarMaquinaApi) =>
 
 // Operador que se puede asignar a una máquina, con la que tiene hoy (al asignarlo a otra, se mueve)
 // Cambio de estado: el mismo PATCH, enviando solo el estado (lo demás no se toca)
-export const cambiarEstadoMaquina = (idMaquina: number, estado: EstadoMaquina, motivo: string, observacion: string | null) =>
-  apiRequest<MaquinaFlotaApi>(`/maquinas/${idMaquina}`, { method: 'PATCH', body: JSON.stringify({ estado, motivo, observacion }) });
+// regresoEstimado (ISO) solo en mantenimiento o fuera de servicio; undefined no lo toca
+export const cambiarEstadoMaquina = (
+  idMaquina: number,
+  estado: EstadoMaquina,
+  motivo: string,
+  observacion: string | null,
+  regresoEstimado?: string | null,
+) =>
+  apiRequest<MaquinaFlotaApi>(`/maquinas/${idMaquina}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ estado, motivo, observacion, regresoEstimado }),
+  });
 
 // Reemplazo: la entrante es una de la flota o una nueva; sin idOperador, el de la saliente pasa a la entrante
 export interface ReemplazarMaquinaApi {
   idMaquinaEntrante?: number;
   maquinaNueva?: Omit<CrearMaquinaApi, 'motivo' | 'observacion' | 'idOperador'>;
   idOperador: number | null;
+  // Cómo queda la saliente y cuándo se espera que vuelva (ISO)
+  estadoSaliente: 'EN_MANTENIMIENTO' | 'BAJA';
+  regresoEstimado: string | null;
   motivo: string;
   observacion: string | null;
 }
@@ -87,6 +106,18 @@ export const reemplazarMaquina = (idSaliente: number, datos: ReemplazarMaquinaAp
     method: 'POST',
     body: JSON.stringify(datos),
   });
+
+// La original vuelve a operar con el operador de su respaldo, y el respaldo vuelve a su estado anterior
+export const devolverMaquina = (idMaquina: number, motivo: string, observacion: string | null) =>
+  apiRequest<{ original: MaquinaFlotaApi; respaldo: MaquinaFlotaApi }>(`/maquinas/${idMaquina}/devolucion`, {
+    method: 'POST',
+    body: JSON.stringify({ motivo, observacion }),
+  });
+
+// Cierra el turno en curso de la máquina en nombre del operador (para sacarla de operación). El horómetro final
+// lo obtiene el jefe de turno en terreno o por radio
+export const cerrarTurnoDeMaquina = (idMaquina: number, horometroFinal: number, motivo: string) =>
+  apiRequest<unknown>(`/turnos/maquina/${idMaquina}/cierre`, { method: 'POST', body: JSON.stringify({ horometroFinal, motivo }) });
 
 export interface OperadorAsignableApi {
   idOperador: number;

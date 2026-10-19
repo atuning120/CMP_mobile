@@ -7,8 +7,7 @@ import {
   MOTIVOS_RESERVA,
 } from './motivosJefeTurno';
 
-// Estados de una máquina (MAQUINA.estado en el Backend). BAJA = fuera de servicio: no puede iniciar turno
-// y es la única que se puede reemplazar. "Sin operador" no es un estado: se deduce de la asignación
+// Estados de una máquina (MAQUINA.estado en el Backend). "Sin operador" no es un estado: se deduce de la asignación
 export type EstadoMaquina = 'ACTIVA' | 'BAJO_OBSERVACION' | 'EN_MANTENIMIENTO' | 'EN_RESERVA' | 'BAJA';
 
 export interface PresentacionEstado {
@@ -43,3 +42,11 @@ export const ESTADOS_MAQUINA: PresentacionEstado[] = [
 // Un valor desconocido (Backend más nuevo o dato antiguo) se trata como operativo, como hacía la app
 export const presentacionEstado = (estado: string | null): PresentacionEstado =>
   ESTADOS_MAQUINA.find((e) => e.valor === estado) ?? ESTADOS_MAQUINA[0];
+
+// Igual que el Backend: en mantenimiento, en reserva o fuera de servicio la máquina no trabaja (no inicia turnos y,
+// para pasarla a esos estados, antes hay que cerrar su turno en curso). "Bajo observación" sí opera
+const ESTADOS_SIN_OPERAR: EstadoMaquina[] = ['EN_MANTENIMIENTO', 'EN_RESERVA', 'BAJA'];
+export const operaEnEstado = (estado: EstadoMaquina) => !ESTADOS_SIN_OPERAR.includes(estado);
+
+// Estados con fecha estimada de regreso (una reparación, una falla mayor)
+export const conRegreso = (estado: EstadoMaquina) => estado === 'EN_MANTENIMIENTO' || estado === 'BAJA';
