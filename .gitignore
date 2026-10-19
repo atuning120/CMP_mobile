@@ -44,3 +44,7 @@ example
 
 # Graphify (solo local)
 graphify-out/
+
+
+# generated files
+.apk
