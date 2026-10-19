@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { listarFlota, MaquinaFlotaApi } from '../services/flotaService';
-
-export type EstadoOperativo = 'OPERATIVO' | 'FUERA_DE_SERVICIO';
+import { EstadoMaquina, presentacionEstado } from '../constants/estadosMaquina';
 
 export interface MaquinaFlota {
   id: number;
@@ -15,8 +14,11 @@ export interface MaquinaFlota {
   anio: number | null;
   numeroChasis: string | null;
   esContratista: boolean;
-  estadoOperativo: EstadoOperativo;
-  fallaActiva: string | null;
+  estado: EstadoMaquina;
+  // Motivo del estado actual (si no está operativa)
+  motivoEstado: string | null;
+  // Nadie la tiene asignada ni la está operando: se muestra junto al estado
+  sinOperador: boolean;
   idOperadorAsignado: number | null;
   operadorAsignado: string | null; // a cargo de la máquina
   operadorEnTurno: string | null; // con turno en curso (puede ser otro, p. ej. en un relevo)
@@ -49,17 +51,18 @@ export const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
   anio: maquina.anio,
   numeroChasis: maquina.numeroChasis,
   esContratista: maquina.esContratista,
-  estadoOperativo: maquina.estado === 'BAJA' ? 'FUERA_DE_SERVICIO' : 'OPERATIVO',
-  // Motivo con que se dejó fuera de servicio (y su observación, si la hay)
-  fallaActiva: maquina.fueraDeServicio
+  estado: presentacionEstado(maquina.estado).valor,
+  // Motivo con que pasó a su estado actual (y su observación, si la hay)
+  motivoEstado: maquina.motivoEstado
     ? [
-        maquina.fueraDeServicio.motivo +
-          (maquina.fueraDeServicio.reemplazadaPor ? ` · reemplazada por ${maquina.fueraDeServicio.reemplazadaPor}` : ''),
-        maquina.fueraDeServicio.observacion,
+        maquina.motivoEstado.motivo +
+          (maquina.motivoEstado.reemplazadaPor ? ` · reemplazada por ${maquina.motivoEstado.reemplazadaPor}` : ''),
+        maquina.motivoEstado.observacion,
       ]
         .filter(Boolean)
         .join(': ')
     : null,
+  sinOperador: !maquina.operadorAsignado && !maquina.operadorActual,
   idOperadorAsignado: maquina.operadorAsignado?.idOperador ?? null,
   operadorAsignado: maquina.operadorAsignado?.nombre ?? null,
   operadorEnTurno: maquina.operadorActual,

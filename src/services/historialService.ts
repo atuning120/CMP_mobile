@@ -2,7 +2,7 @@ import { apiRequest } from './apiClient';
 
 // Pestaña Historial del jefe de turno (en línea, como la flota)
 
-export type TipoEventoHistorial = 'INICIO_TURNO' | 'INCORPORAR' | 'EDITAR' | 'HABILITAR' | 'DESHABILITAR' | 'REEMPLAZAR';
+export type TipoEventoHistorial = 'INICIO_TURNO' | 'INCORPORAR' | 'EDITAR' | 'HABILITAR' | 'DESHABILITAR' | 'CAMBIAR_ESTADO' | 'REEMPLAZAR';
 export type FiltroHistorial = 'TODO' | 'TURNOS' | 'FLOTA';
 
 export interface EventoHistorial {

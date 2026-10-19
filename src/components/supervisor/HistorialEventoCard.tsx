@@ -1,10 +1,11 @@
 import React from 'react';
 import { Text, View, useColorScheme } from 'react-native';
-import { AlarmClockOff, Ban, CheckCircle, Clock, Edit2, MapPin, Play, PlusCircle, RefreshCw, Square, LucideIcon } from 'lucide-react-native';
+import { Activity, AlarmClockOff, Ban, CheckCircle, Clock, Edit2, MapPin, Play, PlusCircle, RefreshCw, Square, LucideIcon } from 'lucide-react-native';
 import { darkTheme, lightTheme, ThemeColors } from '../../constants/theme';
 import type { EventoHistorial, TipoEventoHistorial } from '../../services/historialService';
 import { styles } from './HistorialEventoCard.styles';
 import { formatearFecha } from '../../utils/historialFechas';
+import { presentacionEstado } from '../../constants/estadosMaquina';
 
 interface Props {
   evento: EventoHistorial;
@@ -16,6 +17,7 @@ const PRESENTACION: Record<TipoEventoHistorial, { icono: LucideIcon; verbo: stri
   EDITAR: { icono: Edit2, verbo: 'editó', color: (t) => t.warning },
   HABILITAR: { icono: CheckCircle, verbo: 'habilitó', color: (t) => t.success },
   DESHABILITAR: { icono: Ban, verbo: 'deshabilitó', color: (t) => t.danger },
+  CAMBIAR_ESTADO: { icono: Activity, verbo: 'cambió el estado de', color: (t) => t.primary },
   REEMPLAZAR: { icono: RefreshCw, verbo: 'reemplazó', color: (t) => t.warning },
 };
 
@@ -41,6 +43,9 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
   const acento = horaTermino ? theme.danger : presentacion.color(theme);
   const verbo = presentacion.verbo;
   const reemplazadaPor = evento.tipo === 'REEMPLAZAR' ? texto(evento.detalle?.entrante) : null;
+  // Cambio de estado: a cuál pasó (los registros antiguos de habilitar/deshabilitar no lo traen)
+  const despues = evento.detalle?.despues as { estado?: unknown } | undefined;
+  const estadoNuevo = evento.tipo === 'CAMBIAR_ESTADO' || evento.tipo === 'HABILITAR' ? texto(despues?.estado) : null;
   // El sistema lo cerró al pasar las 12 h (probablemente el operador olvidó finalizarlo)
   const cierreAutomatico = esTurno && evento.detalle?.estadoTurno === 'CERRADO_AUTO';
 
@@ -70,6 +75,7 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
               <Text style={[styles.maquina, { color: acento }]}>{reemplazadaPor}</Text>
             </>
           )}
+          {!!estadoNuevo && ` a ${presentacionEstado(estadoNuevo).etiqueta.toLowerCase()}`}
         </Text>
 
         {!!evento.motivo && (

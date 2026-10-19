@@ -10,6 +10,28 @@ export const styles = StyleSheet.create({
   campo: {
     marginBottom: 16,
   },
+  opciones: {
+    gap: 8,
+  },
+  opcion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  opcionDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  opcionTexto: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+  },
   label: {
     fontSize: 12,
     fontWeight: '700',

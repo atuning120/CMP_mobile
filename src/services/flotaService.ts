@@ -1,4 +1,5 @@
 import { apiRequest } from './apiClient';
+import type { EstadoMaquina } from '../constants/estadosMaquina';
 
 /*
  * Vista del jefe de turno: trabaja en línea contra el Backend (no pasa por la base local ni por la
@@ -11,15 +12,15 @@ export interface MaquinaFlotaApi {
   marca: string | null;
   modelo: string | null;
   tipoMaquina: string | null;
-  estado: string | null; // 'ACTIVA' | 'BAJA'
+  estado: string | null; // EstadoMaquina
   patente: string | null;
   anio: number | null;
   numeroChasis: string | null;
   esContratista: boolean;
   operadorAsignado: { idOperador: number; nombre: string } | null; // a cargo de la máquina
   operadorActual: string | null; // con turno en curso
-  // Por qué está en BAJA (deshabilitada o reemplazada)
-  fueraDeServicio: { motivo: string; observacion: string | null; fecha: string; reemplazadaPor: string | null } | null;
+  // Si no está ACTIVA: el motivo del último cambio de estado (o del reemplazo)
+  motivoEstado: { motivo: string; observacion: string | null; fecha: string; reemplazadaPor: string | null } | null;
   ubicacionActual: string | null;
   horometroActual: number | null;
 }
@@ -59,7 +60,7 @@ export interface EditarMaquinaApi {
   numeroChasis: string | null;
   esContratista: boolean;
   idOperador: number | null; // null deja la máquina sin operador
-  estado: 'ACTIVA' | 'BAJA';
+  estado?: EstadoMaquina; // solo si cambia
   motivo: string;
   observacion: string | null;
 }
@@ -68,8 +69,8 @@ export const editarMaquina = (idMaquina: number, datos: EditarMaquinaApi) =>
   apiRequest<MaquinaFlotaApi>(`/maquinas/${idMaquina}`, { method: 'PATCH', body: JSON.stringify(datos) });
 
 // Operador que se puede asignar a una máquina, con la que tiene hoy (al asignarlo a otra, se mueve)
-// Habilitar / deshabilitar: el mismo PATCH, enviando solo el estado (lo demás no se toca)
-export const cambiarEstadoMaquina = (idMaquina: number, estado: 'ACTIVA' | 'BAJA', motivo: string, observacion: string | null) =>
+// Cambio de estado: el mismo PATCH, enviando solo el estado (lo demás no se toca)
+export const cambiarEstadoMaquina = (idMaquina: number, estado: EstadoMaquina, motivo: string, observacion: string | null) =>
   apiRequest<MaquinaFlotaApi>(`/maquinas/${idMaquina}`, { method: 'PATCH', body: JSON.stringify({ estado, motivo, observacion }) });
 
 // Reemplazo: la entrante es una de la flota o una nueva; sin idOperador, el de la saliente pasa a la entrante

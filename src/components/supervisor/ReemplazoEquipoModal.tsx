@@ -5,6 +5,7 @@ import { SearchableSelect } from '../common/SearchableSelect';
 import { AlertCircle, AlertTriangle, CheckCircle, ClipboardList, Gauge, ListChecks, PlusCircle, RefreshCw, Truck, User } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { MOTIVOS_REEMPLAZO } from '../../constants/motivosJefeTurno';
+import { presentacionEstado } from '../../constants/estadosMaquina';
 import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
 import { OperadorSelect } from './OperadorSelect';
 import { SegmentedControl } from './SegmentedControl';
@@ -36,9 +37,12 @@ const comoTexto = (valor: string) => valor;
 const idDe = (m: MaquinaFlota) => m.id;
 const codigoDe = (m: MaquinaFlota) => m.codigo;
 const descripcionDe = (m: MaquinaFlota) =>
-  [m.estadoOperativo === 'FUERA_DE_SERVICIO' ? 'Fuera de servicio (respaldo)' : 'Operativa', m.marcaModelo, m.operadorAsignado]
+  [m.estado === 'BAJA' ? 'Fuera de servicio (respaldo)' : presentacionEstado(m.estado).etiqueta, m.marcaModelo, m.operadorAsignado]
     .filter(Boolean)
     .join(' · ');
+
+// Las que quedan operativas al entrar en un reemplazo (igual que el Backend)
+const esRespaldo = (m: MaquinaFlota) => m.estado === 'BAJA' || m.estado === 'EN_RESERVA';
 
 const equipoValido = (eq: EquipoFormState) => {
   const horometro = Number(eq.horometro);
@@ -87,8 +91,8 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
       setErrorFlota(null);
       try {
         const lista = (await listarFlota('')).map(mapMaquinaFlota);
-        // Primero las de respaldo (fuera de servicio), que son las que normalmente entran
-        lista.sort((a, b) => Number(a.estadoOperativo === 'OPERATIVO') - Number(b.estadoOperativo === 'OPERATIVO'));
+        // Primero las de respaldo (fuera de servicio o en reserva), que son las que normalmente entran
+        lista.sort((a, b) => Number(!esRespaldo(a)) - Number(!esRespaldo(b)));
         if (!cancelado) setFlota(lista);
       } catch (err) {
         if (!cancelado) setErrorFlota(err instanceof Error ? err.message : 'No se pudo cargar la flota.');
@@ -241,9 +245,9 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
               onRetry={() => setIntentoFlota((n) => n + 1)}
               emptyMessage="No hay otras máquinas en la flota"
               hint={
-                entrante?.estadoOperativo === 'FUERA_DE_SERVICIO'
-                  ? 'Está fuera de servicio: quedará operativa al confirmar.'
-                  : 'Las de respaldo (fuera de servicio) aparecen primero.'
+                entrante && esRespaldo(entrante)
+                  ? `Está ${presentacionEstado(entrante.estado).etiqueta.toLowerCase()}: quedará operativa al confirmar.`
+                  : 'Las de respaldo (fuera de servicio o en reserva) aparecen primero.'
               }
             />
           </View>
