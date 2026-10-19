@@ -43,6 +43,7 @@ const VERSION_CATALOGOS = 3;
 // Una foto que no logra subirse se marca con error tras estos intentos (y deja de reintentarse sola)
 const MAX_INTENTOS_EVIDENCIA = 8;
 export const AVISO_CIERRE_AUTO = (idOperador: number) => `aviso_cierre_auto:${idOperador}`;
+export const AVISO_CIERRE_JEFE = (idOperador: number) => `aviso_cierre_jefe:${idOperador}`;
 
 type ResultadoEnvio = 'ok' | 'sin-conexion' | 'sin-sesion' | 'reintentar' | 'rechazada';
 
@@ -74,7 +75,7 @@ const enviarOperacion = async (operacion: OperacionPendiente): Promise<void> => 
     case 'FINALIZAR_TURNO': {
       const { idClienteTurno, ...resto } = p as { idClienteTurno: string } & Record<string, unknown>;
       const turno = await api.finalizarTurnoRemoto({ ...resto, ...referenciaTurno(idClienteTurno) });
-      // El servidor es la autoridad sobre el resultado (p. ej. CERRADO_AUTO si pasó de 12 h)
+      // El servidor es la autoridad sobre el resultado (p. ej. CERRADO_AUTO si pasó de 13 h)
       await actualizarTurno(db, idClienteTurno, { estado: turno.estado, fechaFin: turno.fechaFin, horometroFinal: turno.horometroFinal });
       return;
     }
@@ -152,6 +153,7 @@ const conciliarTurno = async (idOperador: number) => {
   const db = await getDb();
   const enCursoLocales = await listarTurnosEnCurso(idOperador);
   const cerradoAuto = remoto.turnoCerradoAutomaticamente;
+  const cerradoJefe = remoto.turnoCerradoPorJefe ?? null;
   let cambios = false;
 
   const turnoRemoto = remoto.turno;
@@ -199,15 +201,18 @@ const conciliarTurno = async (idOperador: number) => {
     }
   }
 
-  // Turnos que el teléfono cree abiertos pero el servidor ya cerró (12 h o jefe de turno).
+  // Turnos que el teléfono cree abiertos pero el servidor ya cerró (13 h o jefe de turno).
   // Solo los ya sincronizados: uno que nunca llegó al servidor sigue siendo válido localmente.
+  const esElMismo = (remotoCerrado: typeof cerradoAuto, local: (typeof enCursoLocales)[number]) =>
+    remotoCerrado && ((remotoCerrado.idCliente && remotoCerrado.idCliente === local.idCliente) || remotoCerrado.id === local.idServidor);
   for (const local of enCursoLocales) {
     if (local.idCliente === idClienteVigente || !local.sincronizado) continue;
-    const esElCerradoAuto =
-      cerradoAuto && ((cerradoAuto.idCliente && cerradoAuto.idCliente === local.idCliente) || cerradoAuto.id === local.idServidor);
+    // Si lo cerró el servidor, se copian su estado, término y horómetro (el jefe de turno lo informa)
+    const cerrado = esElMismo(cerradoJefe, local) ? cerradoJefe : esElMismo(cerradoAuto, local) ? cerradoAuto : null;
     await actualizarTurno(db, local.idCliente, {
-      estado: esElCerradoAuto ? 'CERRADO_AUTO' : 'CERRADO',
-      fechaFin: (esElCerradoAuto ? cerradoAuto.fechaFin : null) ?? new Date().toISOString(),
+      estado: cerrado ? cerrado.estado : 'CERRADO',
+      fechaFin: cerrado?.fechaFin ?? new Date().toISOString(),
+      ...(cerrado?.horometroFinal !== null && cerrado?.horometroFinal !== undefined ? { horometroFinal: cerrado.horometroFinal } : {}),
     });
     await db.runAsync('UPDATE turno_estado SET fin = ? WHERE id_cliente_turno = ? AND fin IS NULL', [new Date().toISOString(), local.idCliente]);
     cambios = true;
@@ -217,6 +222,19 @@ const conciliarTurno = async (idOperador: number) => {
     await guardarAjuste(
       AVISO_CIERRE_AUTO(idOperador),
       cerradoAuto ? { idCliente: cerradoAuto.idCliente, id: cerradoAuto.id, fechaInicio: cerradoAuto.fechaInicio, fechaFin: cerradoAuto.fechaFin } : null,
+    );
+    await guardarAjuste(
+      AVISO_CIERRE_JEFE(idOperador),
+      cerradoJefe
+        ? {
+            idCliente: cerradoJefe.idCliente,
+            id: cerradoJefe.id,
+            fechaInicio: cerradoJefe.fechaInicio,
+            fechaFin: cerradoJefe.fechaFin,
+            horometroFinal: cerradoJefe.horometroFinal,
+            motivo: cerradoJefe.motivoCierre ?? null,
+          }
+        : null,
     );
     cambios = true;
   }

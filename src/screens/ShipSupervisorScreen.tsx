@@ -15,6 +15,7 @@ import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
 import { useFlotaResumen, MaquinaFlota } from '../hooks/useFlotaResumen';
 import { IncorporacionEquipoModal } from '../components/supervisor/IncorporacionEquipoModal';
 import { ReemplazoEquipoModal } from '../components/supervisor/ReemplazoEquipoModal';
+import { DevolverEquipoModal } from '../components/supervisor/DevolverEquipoModal';
 import { EditarEquipoModal } from '../components/supervisor/EditarEquipoModal';
 import { styles } from './ShipSupervisorScreen.styles';
 import { cerrarSesion } from '../services/authService';
@@ -101,6 +102,7 @@ export const ShipSupervisorScreen = () => {
   const [isEditarModalVisible, setIsEditarModalVisible] = useState(false);
   const [maquinaAEditar, setMaquinaAEditar] = useState<MaquinaFlota | null>(null);
   const [maquinaAToggle, setMaquinaAToggle] = useState<MaquinaFlota | null>(null);
+  const [maquinaADevolver, setMaquinaADevolver] = useState<MaquinaFlota | null>(null);
 
   // La búsqueda la resuelve el Backend; el filtro por estado se aplica sobre el resultado
   const { maquinas, contadorFlota, isLoading, error, refetch, actualizarMaquina } = useFlotaResumen(searchQuery);
@@ -262,6 +264,7 @@ export const ShipSupervisorScreen = () => {
               onSustituir={handleSustituir}
               onEditar={handleEditar}
               onCambiarEstado={handleToggleEstado}
+              onDevolver={setMaquinaADevolver}
             />
           ))
         )}
@@ -362,7 +365,16 @@ export const ShipSupervisorScreen = () => {
         onCancel={() => setIsLogoutModalVisible(false)}
         onConfirm={handleLogout}
       />
-      {/* Superpuesto: debe ser el último hijo de la raíz de la pantalla */}
+      {/* Superpuestos: deben ser los últimos hijos de la raíz de la pantalla (solo uno se abre a la vez) */}
+      <DevolverEquipoModal
+        maquina={maquinaADevolver}
+        onClose={() => setMaquinaADevolver(null)}
+        onDevuelto={() => {
+          // Cambian dos máquinas y un operador: se recarga la flota completa
+          refetch();
+          historial.refetch();
+        }}
+      />
       <CambiarEstadoModal
         maquina={maquinaAToggle}
         onClose={() => setMaquinaAToggle(null)}

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, useColorScheme, TextInput, ActivityIndicator } from 'react-native';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { SearchableSelect } from '../common/SearchableSelect';
-import { AlertCircle, AlertTriangle, CheckCircle, ClipboardList, Gauge, ListChecks, PlusCircle, RefreshCw, Truck, User } from 'lucide-react-native';
+import { AlertCircle, AlertTriangle, Ban, CheckCircle, ClipboardList, Gauge, ListChecks, PlusCircle, RefreshCw, Truck, User, Wrench } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { MOTIVOS_REEMPLAZO } from '../../constants/motivosJefeTurno';
 import { presentacionEstado } from '../../constants/estadosMaquina';
@@ -13,7 +13,9 @@ import { useModelosMaquina } from '../../hooks/useModelosMaquina';
 import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 import { useOperadoresAsignables } from '../../hooks/useOperadoresAsignables';
 import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
-import { listarFlota, reemplazarMaquina } from '../../services/flotaService';
+import { cerrarTurnoDeMaquina, listarFlota, reemplazarMaquina } from '../../services/flotaService';
+import { CierreTurnoCampos, leerHorometro } from './CierreTurnoCampos';
+import { RegresoEstimadoChips, regresoDesdeAhora } from './RegresoEstimadoChips';
 import { styles } from './ReemplazoEquipoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
@@ -32,6 +34,17 @@ const ORIGENES = [
   { valor: 'Nueva', icono: PlusCircle },
 ] as const satisfies readonly { valor: Origen; icono: unknown }[];
 
+// Cómo queda la saliente: en mantenimiento (vuelve tras la reparación) o fuera de servicio
+type QuedaSaliente = 'En mantenimiento' | 'Fuera de servicio';
+const ESTADOS_SALIENTE = [
+  { valor: 'En mantenimiento', icono: Wrench },
+  { valor: 'Fuera de servicio', icono: Ban },
+] as const satisfies readonly { valor: QuedaSaliente; icono: unknown }[];
+const ESTADO_API: Record<QuedaSaliente, 'EN_MANTENIMIENTO' | 'BAJA'> = {
+  'En mantenimiento': 'EN_MANTENIMIENTO',
+  'Fuera de servicio': 'BAJA',
+};
+
 // Accesores estables para SearchableSelect (evitan recalcular la búsqueda en cada render)
 const comoTexto = (valor: string) => valor;
 const idDe = (m: MaquinaFlota) => m.id;
@@ -43,6 +56,8 @@ const descripcionDe = (m: MaquinaFlota) =>
 
 // Las que quedan operativas al entrar en un reemplazo (igual que el Backend)
 const esRespaldo = (m: MaquinaFlota) => m.estado === 'BAJA' || m.estado === 'EN_RESERVA';
+// Puede entrar: no está en mantenimiento ni cubre ya a otra máquina (el Backend lo rechazaría)
+const puedeEntrar = (m: MaquinaFlota) => m.estado !== 'EN_MANTENIMIENTO' && !m.cubreA;
 
 const equipoValido = (eq: EquipoFormState) => {
   const horometro = Number(eq.horometro);
@@ -74,6 +89,11 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
   const [operadorId, setOperadorId] = useState('');
   const [motivo, setMotivo] = useState('');
   const [observaciones, setObservaciones] = useState('');
+  const [queda, setQueda] = useState<QuedaSaliente>('En mantenimiento');
+  const [horasRegreso, setHorasRegreso] = useState<number | null>(null);
+  const [horometroCierre, setHorometroCierre] = useState('');
+  // Si el reemplazo falla después de cerrar el turno, al reintentar no se vuelve a cerrar
+  const [turnoCerrado, setTurnoCerrado] = useState(false);
   // Bloquea toques repetidos en el botón de confirmar mientras se guarda
   const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
@@ -116,14 +136,23 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
     setOperadorId(maquina?.idOperadorAsignado === null || !maquina ? '' : String(maquina.idOperadorAsignado));
     setMotivo('');
     setObservaciones('');
+    // Si ya estaba fuera de servicio lo conserva; si no, lo normal es que vaya a mantenimiento
+    setQueda(maquina?.estado === 'BAJA' ? 'Fuera de servicio' : 'En mantenimiento');
+    setHorasRegreso(null);
+    setHorometroCierre('');
+    setTurnoCerrado(false);
     setErrorEnvio(null);
   }
 
   if (!maquina) return null;
 
-  const candidatas = flota.filter((m) => m.id !== maquina.id);
+  const candidatas = flota.filter((m) => m.id !== maquina.id && puedeEntrar(m));
   const entranteLista = origen === 'De la flota' ? entrante !== null : equipoValido(nueva);
-  const isFormValid = entranteLista && motivo !== '' && !guardando;
+  // Con un operador trabajando en la saliente, primero se cierra su turno con el horómetro final
+  const pideCierre = !!maquina.operadorEnTurno && !turnoCerrado;
+  const horometro = leerHorometro(horometroCierre);
+  const cierreListo = !pideCierre || (horometro !== null && horometro >= maquina.horometroActual);
+  const isFormValid = entranteLista && motivo !== '' && cierreListo && !guardando;
 
   const cerrar = () => {
     if (!guardando) onClose();
@@ -131,7 +160,13 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
 
   const handleSubmit = () => ejecutarUnaVez(async () => {
     setErrorEnvio(null);
+    let cerroTurno = false;
     try {
+      if (pideCierre && horometro !== null) {
+        await cerrarTurnoDeMaquina(maquina.id, horometro, motivo);
+        cerroTurno = true;
+        setTurnoCerrado(true);
+      }
       await reemplazarMaquina(maquina.id, {
         ...(origen === 'De la flota'
           ? { idMaquinaEntrante: entrante!.id }
@@ -149,6 +184,8 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
               },
             }),
         idOperador: operadorId ? Number(operadorId) : null,
+        estadoSaliente: ESTADO_API[queda],
+        regresoEstimado: horasRegreso === null ? null : regresoDesdeAhora(horasRegreso).toISOString(),
         motivo,
         observacion: observaciones.trim() || null,
       });
@@ -156,7 +193,8 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
       onClose();
       mostrarAviso('Reemplazo registrado');
     } catch (err) {
-      setErrorEnvio(err instanceof Error ? err.message : 'No se pudo registrar el reemplazo.');
+      const mensaje = err instanceof Error ? err.message : 'No se pudo registrar el reemplazo.';
+      setErrorEnvio(cerroTurno ? `El turno de ${maquina.operadorEnTurno} quedó cerrado, pero: ${mensaje}` : mensaje);
     }
   });
 
@@ -178,7 +216,9 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
         disabled={!isFormValid}
       >
         {guardando ? <ActivityIndicator color="#FFF" /> : <CheckCircle size={18} color="#FFF" />}
-        <Text style={styles.btnPrimarioText}>{guardando ? 'Reemplazando...' : 'Confirmar Reemplazo'}</Text>
+        <Text style={styles.btnPrimarioText}>
+          {guardando ? 'Reemplazando...' : pideCierre ? 'Cerrar turno y reemplazar' : 'Confirmar Reemplazo'}
+        </Text>
       </TouchableOpacity>
     </>
   );
@@ -188,7 +228,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
       visible={visible}
       onClose={cerrar}
       title="Reemplazo de Equipo"
-      subtitle={`${maquina.codigo} sale de servicio y otro equipo toma su lugar`}
+      subtitle={`${maquina.codigo} sale de operación y otro equipo toma su lugar hasta que vuelva`}
       icon={<RefreshCw size={22} color={theme.warning} />}
       iconBadgeColor={theme.warning + '15'}
       headerTop={headerTop}
@@ -200,7 +240,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
             <AlertCircle size={18} color={theme.danger} />
-            <Text style={[styles.sectionTitle, { color: theme.dangerText, marginBottom: 0 }]}>1. EQUIPO SALIENTE (QUEDA FUERA DE SERVICIO)</Text>
+            <Text style={[styles.sectionTitle, { color: theme.dangerText, marginBottom: 0 }]}>1. EQUIPO SALIENTE</Text>
           </View>
         </View>
         <Text style={[styles.salienteCodigo, { color: theme.text }]}>{maquina.codigo}</Text>
@@ -217,6 +257,14 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
             <Text style={[styles.salienteDetalle, { color: theme.textSecondary }]}>{maquina.operadorAsignado ?? 'Sin operador asignado'}</Text>
           </View>
         </View>
+        <View style={styles.fieldFull}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>CÓMO QUEDA {maquina.codigo}</Text>
+          <SegmentedControl opciones={ESTADOS_SALIENTE} activo={queda} onChange={setQueda} />
+        </View>
+        <RegresoEstimadoChips horas={horasRegreso} onChange={setHorasRegreso} codigo={maquina.codigo} disabled={guardando} />
+        {pideCierre && (
+          <CierreTurnoCampos maquina={maquina} horometro={horometroCierre} onChange={setHorometroCierre} disabled={guardando} />
+        )}
       </View>
 
       {/* 2. Entrante: de la flota o nueva */}
@@ -243,7 +291,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
               isLoading={cargandoFlota}
               error={errorFlota}
               onRetry={() => setIntentoFlota((n) => n + 1)}
-              emptyMessage="No hay otras máquinas en la flota"
+              emptyMessage="No hay otras máquinas que puedan entrar"
               hint={
                 entrante && esRespaldo(entrante)
                   ? `Está ${presentacionEstado(entrante.estado).etiqueta.toLowerCase()}: quedará operativa al confirmar.`

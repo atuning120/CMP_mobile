@@ -25,6 +25,11 @@ export interface MaquinaFlota {
   zonaActual: string | null;
   horometroActual: number;
   combustible: { porcentaje: number; tipo: string } | null;
+  // En mantenimiento o fuera de servicio: cuándo se espera que vuelva (ISO)
+  regresoEstimado: string | null;
+  // Tras un reemplazo: quién la cubre (y a qué estado vuelve al devolver) o, en el respaldo, a quién cubre
+  respaldo: { id: number; codigo: string; estadoAlDevolver: EstadoMaquina } | null;
+  cubreA: { id: number; codigo: string } | null;
 }
 
 export interface UseFlotaResumenResult {
@@ -69,7 +74,18 @@ export const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
   zonaActual: maquina.ubicacionActual,
   horometroActual: maquina.horometroActual ?? 0,
   combustible: null,
+  regresoEstimado: maquina.regresoEstimado ?? null,
+  respaldo: maquina.respaldo
+    ? { id: maquina.respaldo.idMaquina, codigo: maquina.respaldo.nombre, estadoAlDevolver: presentacionEstado(maquina.respaldo.estadoAlDevolver).valor }
+    : null,
+  cubreA: maquina.cubreA ? { id: maquina.cubreA.idMaquina, codigo: maquina.cubreA.nombre } : null,
 });
+
+// Pasó su regreso estimado y sigue sin volver a operar: el jefe de turno debe hacer seguimiento
+export const regresoVencido = (maquina: MaquinaFlota, ahora: number = Date.now()) =>
+  !!maquina.regresoEstimado &&
+  (maquina.estado === 'EN_MANTENIMIENTO' || maquina.estado === 'BAJA') &&
+  new Date(maquina.regresoEstimado).getTime() <= ahora;
 
 export const useFlotaResumen = (busqueda: string): UseFlotaResumenResult => {
   const [maquinas, setMaquinas] = useState<MaquinaFlota[]>([]);

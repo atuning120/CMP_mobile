@@ -51,6 +51,9 @@ export interface TurnoApi {
   horometroFinal: number | null;
   conflicto: boolean;
   conflictoDetalle: string | null;
+  // Lo cerró un jefe de turno en nombre del operador (Backend nuevo; ausente en versiones anteriores)
+  cerradoPorJefe?: boolean;
+  motivoCierre?: string | null;
 }
 
 export interface TurnoActualApi {
@@ -63,6 +66,7 @@ export interface TurnoActualApi {
       })
     | null;
   turnoCerradoAutomaticamente: TurnoApi | null;
+  turnoCerradoPorJefe?: TurnoApi | null;
 }
 
 export const mapMaquina = (maquina: MaquinaApi): Maquina => ({

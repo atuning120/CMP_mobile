@@ -57,12 +57,22 @@ export interface TurnoActual {
   sincronizado: boolean;
 }
 
-// Último turno del operador cerrado por el sistema al superar las 12 horas.
+// Último turno del operador cerrado por el sistema al superar las 13 horas.
 export interface TurnoCerradoAutomaticamente {
   idCliente: string | null;
   id: number | null;
   fechaInicio: string; // ISO 8601
   fechaFin: string | null; // ISO 8601
+}
+
+// Último turno del operador cerrado por su jefe de turno (p. ej. la máquina falló y la sacaron de operación)
+export interface TurnoCerradoPorJefe {
+  idCliente: string | null;
+  id: number | null;
+  fechaInicio: string; // ISO 8601
+  fechaFin: string | null; // ISO 8601
+  horometroFinal: number | null;
+  motivo: string | null;
 }
 
 // Foto recién tomada con la cámara (uri temporal); se copia al almacenamiento de la app al guardarla
@@ -89,11 +99,12 @@ export interface FinalizarTurnoDatos {
 export interface UseTurnoActualResult {
   turno: TurnoActual | null;
   turnoCerradoAutomaticamente: TurnoCerradoAutomaticamente | null;
+  turnoCerradoPorJefe: TurnoCerradoPorJefe | null;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
   iniciarTurno: (datos: IniciarTurnoDatos) => Promise<void>;
-  // Devuelve el estado final: CERRADO_AUTO si el cierre ocurrió después de las 12 h
+  // Devuelve el estado final: CERRADO_AUTO si el cierre ocurrió después de las 13 h
   finalizarTurno: (datos: FinalizarTurnoDatos) => Promise<EstadoTurno>;
   estadosCatalogo: EstadoOperacional[];
   updateEstadoActual: (nuevoEstado: EstadoOperacional) => void;

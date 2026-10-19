@@ -4,10 +4,12 @@ import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { Edit2, CheckCircle, ChevronDown, Activity, Truck, ClipboardList, AlertTriangle } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
-import { ESTADOS_MAQUINA, EstadoMaquina, presentacionEstado } from '../../constants/estadosMaquina';
+import { conRegreso, ESTADOS_MAQUINA, EstadoMaquina, operaEnEstado, presentacionEstado } from '../../constants/estadosMaquina';
 import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 import { useOperadoresAsignables } from '../../hooks/useOperadoresAsignables';
-import { editarMaquina } from '../../services/flotaService';
+import { cerrarTurnoDeMaquina, editarMaquina } from '../../services/flotaService';
+import { CierreTurnoCampos, leerHorometro } from './CierreTurnoCampos';
+import { RegresoEstimadoChips, regresoDesdeAhora } from './RegresoEstimadoChips';
 import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
 import { SearchableSelect } from '../common/SearchableSelect';
 import { MOTIVOS_EDICION } from '../../constants/motivosJefeTurno';
@@ -66,6 +68,10 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
   const [motivo, setMotivo] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [estadoAbierto, setEstadoAbierto] = useState(false);
+  const [horasRegreso, setHorasRegreso] = useState<number | null>(null);
+  const [horometroCierre, setHorometroCierre] = useState('');
+  // Si la edición falla después de cerrar el turno, al reintentar no se vuelve a cerrar
+  const [turnoCerrado, setTurnoCerrado] = useState(false);
   // Bloquea toques repetidos en el botón de confirmar mientras se guarda
   const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
@@ -79,6 +85,9 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
     setMotivo('');
     setObservaciones('');
     setEstadoAbierto(false);
+    setHorasRegreso(null);
+    setHorometroCierre('');
+    setTurnoCerrado(false);
     setErrorEnvio(null);
   }
   if (!visible && cargadaDe) setCargadaDe(null);
@@ -91,8 +100,15 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
   const motivosPara = (estado: EstadoMaquina) => (estado === maquina.estado ? MOTIVOS_EDICION : presentacionEstado(estado).motivos);
   const motivos = motivosPara(estadoOperativo);
 
+  const cambiaEstado = estadoOperativo !== maquina.estado;
+  // Sacarla de operación con un operador trabajando: primero se cierra su turno con el horómetro final
+  const pideCierre = cambiaEstado && !operaEnEstado(estadoOperativo) && !!maquina.operadorEnTurno && !turnoCerrado;
+  const horometro = leerHorometro(horometroCierre);
+  const cierreListo = !pideCierre || (horometro !== null && horometro >= maquina.horometroActual);
+
   const isValid =
     hayCambios &&
+    cierreListo &&
     anioValido &&
     motivo !== '' &&
     equipo.codigo.trim() !== '' &&
@@ -108,7 +124,13 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
 
   const handleSave = () => ejecutarUnaVez(async () => {
     setErrorEnvio(null);
+    let cerroTurno = false;
     try {
+      if (pideCierre && horometro !== null) {
+        await cerrarTurnoDeMaquina(maquina.id, horometro, motivo);
+        cerroTurno = true;
+        setTurnoCerrado(true);
+      }
       const actualizada = await editarMaquina(maquina.id, {
         nombre: equipo.codigo.trim(),
         marca: equipo.marca.trim(),
@@ -119,7 +141,10 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
         numeroChasis: equipo.chasis.trim() || null,
         esContratista: equipo.contratista,
         idOperador: equipo.operadorId ? Number(equipo.operadorId) : null,
-        ...(estadoOperativo !== maquina.estado ? { estado: estadoOperativo } : {}),
+        ...(cambiaEstado ? { estado: estadoOperativo } : {}),
+        ...(cambiaEstado && conRegreso(estadoOperativo) && horasRegreso !== null
+          ? { regresoEstimado: regresoDesdeAhora(horasRegreso).toISOString() }
+          : {}),
         motivo,
         observacion: observaciones.trim() || null,
       });
@@ -127,7 +152,8 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
       onClose();
       mostrarAviso('Cambios guardados');
     } catch (err) {
-      setErrorEnvio(err instanceof Error ? err.message : 'No se pudieron guardar los cambios.');
+      const mensaje = err instanceof Error ? err.message : 'No se pudieron guardar los cambios.';
+      setErrorEnvio(cerroTurno ? `El turno de ${maquina.operadorEnTurno} quedó cerrado, pero: ${mensaje}` : mensaje);
     }
   });
 
@@ -205,6 +231,12 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
             </View>
           )}
         </View>
+        {cambiaEstado && conRegreso(estadoOperativo) && (
+          <RegresoEstimadoChips horas={horasRegreso} onChange={setHorasRegreso} codigo={maquina.codigo} disabled={guardando} />
+        )}
+        {pideCierre && (
+          <CierreTurnoCampos maquina={maquina} horometro={horometroCierre} onChange={setHorometroCierre} disabled={guardando} />
+        )}
       </View>
 
       <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>

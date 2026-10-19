@@ -17,7 +17,7 @@ import {
 } from '../db/turnoLocal';
 import { descartarOperacionesDeEntidad, encolar } from '../sync/colaSync';
 import { emitirCambioDatos } from '../sync/eventos';
-import { AVISO_CIERRE_AUTO, refrescarContadores, solicitarSincronizacion } from '../sync/syncEngine';
+import { AVISO_CIERRE_AUTO, AVISO_CIERRE_JEFE, refrescarContadores, solicitarSincronizacion } from '../sync/syncEngine';
 import { leerSesion } from './authStorage';
 import { eliminarFotoLocal, guardarFotoLocal } from './fotos';
 import { FOTOS_HABILITADAS } from '../constants/features';
@@ -29,6 +29,7 @@ import {
   IniciarTurnoDatos,
   TurnoActual,
   TurnoCerradoAutomaticamente,
+  TurnoCerradoPorJefe,
 } from '../types/turno';
 
 /*
@@ -122,16 +123,17 @@ const registrarReporte = async (
 };
 
 /**
- * Turno en curso del operador, leído del teléfono. Si pasó de 12 h se cierra automáticamente
+ * Turno en curso del operador, leído del teléfono. Si pasó de 13 h se cierra automáticamente
  * (igual que lo hará el servidor al sincronizar).
  */
 export const obtenerTurnoActual = async (): Promise<{
   turno: TurnoActual | null;
   turnoCerradoAutomaticamente: TurnoCerradoAutomaticamente | null;
+  turnoCerradoPorJefe: TurnoCerradoPorJefe | null;
 }> => {
   const sesion = await leerSesion();
   const idOperador = sesion?.idOperador;
-  if (!idOperador) return { turno: null, turnoCerradoAutomaticamente: null };
+  if (!idOperador) return { turno: null, turnoCerradoAutomaticamente: null, turnoCerradoPorJefe: null };
 
   const [vigente, ...anteriores] = await listarTurnosEnCurso(idOperador);
   const db = await getDb();
@@ -147,12 +149,13 @@ export const obtenerTurnoActual = async (): Promise<{
       fechaFin: limiteCierreAutomatico(vigente.fechaInicio).toISOString(),
     };
     await guardarAjuste(AVISO_CIERRE_AUTO(idOperador), aviso);
-    return { turno: null, turnoCerradoAutomaticamente: aviso };
+    return { turno: null, turnoCerradoAutomaticamente: aviso, turnoCerradoPorJefe: null };
   }
 
   return {
     turno: vigente ? await detallarTurno(vigente) : null,
     turnoCerradoAutomaticamente: vigente ? null : await leerAjuste<TurnoCerradoAutomaticamente>(AVISO_CIERRE_AUTO(idOperador)),
+    turnoCerradoPorJefe: vigente ? null : await leerAjuste<TurnoCerradoPorJefe>(AVISO_CIERRE_JEFE(idOperador)),
   };
 };
 
@@ -204,6 +207,7 @@ export const iniciarTurno = async (datos: IniciarTurnoDatos): Promise<void> => {
     }
   });
   await guardarAjuste(AVISO_CIERRE_AUTO(idOperador), null);
+  await guardarAjuste(AVISO_CIERRE_JEFE(idOperador), null);
   await despues();
 };
 

@@ -1,6 +1,21 @@
 import React from 'react';
 import { Text, View, useColorScheme } from 'react-native';
-import { Activity, AlarmClockOff, Ban, CheckCircle, Clock, Edit2, MapPin, Play, PlusCircle, RefreshCw, Square, LucideIcon } from 'lucide-react-native';
+import {
+  Activity,
+  AlarmClockOff,
+  Ban,
+  CheckCircle,
+  Clock,
+  Edit2,
+  MapPin,
+  Play,
+  PlusCircle,
+  RefreshCw,
+  Square,
+  Undo2,
+  UserCheck,
+  LucideIcon,
+} from 'lucide-react-native';
 import { darkTheme, lightTheme, ThemeColors } from '../../constants/theme';
 import type { EventoHistorial, TipoEventoHistorial } from '../../services/historialService';
 import { styles } from './HistorialEventoCard.styles';
@@ -19,6 +34,7 @@ const PRESENTACION: Record<TipoEventoHistorial, { icono: LucideIcon; verbo: stri
   DESHABILITAR: { icono: Ban, verbo: 'deshabilitó', color: (t) => t.danger },
   CAMBIAR_ESTADO: { icono: Activity, verbo: 'cambió el estado de', color: (t) => t.primary },
   REEMPLAZAR: { icono: RefreshCw, verbo: 'reemplazó', color: (t) => t.warning },
+  DEVOLVER: { icono: Undo2, verbo: 'devolvió a operación', color: (t) => t.success },
 };
 
 const texto = (valor: unknown) => (typeof valor === 'string' && valor.trim() !== '' ? valor : null);
@@ -46,7 +62,14 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
   // Cambio de estado: a cuál pasó (los registros antiguos de habilitar/deshabilitar no lo traen)
   const despues = evento.detalle?.despues as { estado?: unknown } | undefined;
   const estadoNuevo = evento.tipo === 'CAMBIAR_ESTADO' || evento.tipo === 'HABILITAR' ? texto(despues?.estado) : null;
-  // El sistema lo cerró al pasar las 12 h (probablemente el operador olvidó finalizarlo)
+  // Reemplazo: cómo quedó la saliente (los registros antiguos no lo traen). Devolución: el respaldo que sale
+  const estadoSaliente = evento.tipo === 'REEMPLAZAR' ? texto(despues?.estado) : null;
+  const respaldoDevuelto = evento.tipo === 'DEVOLVER' ? texto(evento.detalle?.respaldo) : null;
+  // Turno cerrado por un jefe de turno en nombre del operador (falla de la máquina, mantención)
+  const cerradoPor = esTurno ? texto(evento.detalle?.cerradoPor) : null;
+  const motivoCierre = esTurno ? texto(evento.detalle?.motivoCierre) : null;
+  // El sistema lo cerró al pasar la duración máxima (probablemente el operador olvidó finalizarlo).
+  // Sin número de horas: los turnos antiguos se cerraban a las 12 h y los actuales a las 13 h
   const cierreAutomatico = esTurno && evento.detalle?.estadoTurno === 'CERRADO_AUTO';
 
   // Inicio de turno: dónde y con qué horómetro partió
@@ -76,6 +99,13 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
             </>
           )}
           {!!estadoNuevo && ` a ${presentacionEstado(estadoNuevo).etiqueta.toLowerCase()}`}
+          {!!estadoSaliente && ` · queda ${presentacionEstado(estadoSaliente).etiqueta.toLowerCase()}`}
+          {!!respaldoDevuelto && (
+            <>
+              {' · sale el respaldo '}
+              <Text style={[styles.maquina, { color: acento }]}>{respaldoDevuelto}</Text>
+            </>
+          )}
         </Text>
 
         {!!evento.motivo && (
@@ -83,10 +113,19 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
             <Text style={[styles.motivoTexto, { color: acento }]}>{evento.motivo}</Text>
           </View>
         )}
-        {cierreAutomatico && (
+        {!!cerradoPor && (
+          <View style={[styles.motivo, styles.motivoConIcono, { backgroundColor: theme.warning + '14', borderColor: theme.warning + '40' }]}>
+            <UserCheck size={12} color={theme.warning} />
+            <Text style={[styles.motivoTexto, { color: theme.warningText }]}>
+              Cerrado por {cerradoPor}
+              {motivoCierre ? `: ${motivoCierre}` : ''}
+            </Text>
+          </View>
+        )}
+        {cierreAutomatico && !cerradoPor && (
           <View style={[styles.motivo, styles.motivoConIcono, { backgroundColor: theme.warning + '14', borderColor: theme.warning + '40' }]}>
             <AlarmClockOff size={12} color={theme.warning} />
-            <Text style={[styles.motivoTexto, { color: theme.warningText }]}>Cierre automático (más de 12 h)</Text>
+            <Text style={[styles.motivoTexto, { color: theme.warningText }]}>Cierre automático (superó la duración máxima)</Text>
           </View>
         )}
         {!!evento.observacion && <Text style={[styles.observacion, { color: theme.textSecondary }]}>{evento.observacion}</Text>}
