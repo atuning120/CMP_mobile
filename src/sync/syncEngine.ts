@@ -38,8 +38,9 @@ import { actualizarEstadoSincronizacion, emitirCambioDatos } from './eventos';
 
 const CATALOGO_VIGENCIA_MS = 30 * 60 * 1000;
 // Subir este número cuando cambie el formato de un catálogo: los teléfonos lo vuelven a descargar
-// (2: estados operacionales con descripción y esProductivo; 3: máquinas con su operador asignado)
-const VERSION_CATALOGOS = 3;
+// (2: estados operacionales con descripción y esProductivo; 3: máquinas con su operador asignado;
+// 4: máquinas con su último horómetro final)
+const VERSION_CATALOGOS = 4;
 // Una foto que no logra subirse se marca con error tras estos intentos (y deja de reintentarse sola)
 const MAX_INTENTOS_EVIDENCIA = 8;
 export const AVISO_CIERRE_AUTO = (idOperador: number) => `aviso_cierre_auto:${idOperador}`;
@@ -82,6 +83,11 @@ const enviarOperacion = async (operacion: OperacionPendiente): Promise<void> => 
     case 'REGISTRAR_ESTADO': {
       const { idClienteTurno, ...resto } = p as { idClienteTurno: string } & Record<string, unknown>;
       await api.registrarEstadoRemoto({ ...resto, ...referenciaTurno(idClienteTurno) });
+      return;
+    }
+    case 'CAMBIAR_UBICACION': {
+      const { idClienteTurno, ...resto } = p as { idClienteTurno: string } & Record<string, unknown>;
+      await api.cambiarUbicacionRemota({ ...resto, ...referenciaTurno(idClienteTurno) });
       return;
     }
     case 'CREAR_REPORTE': {

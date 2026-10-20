@@ -47,4 +47,5 @@ graphify-out/
 
 
 # generated files
-.apk
+*.apk
+*.aab

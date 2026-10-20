@@ -113,6 +113,27 @@ export const actualizarTurno = async (
   await ejecutor.runAsync(`UPDATE turno SET ${sets} WHERE id_cliente = ?`, [...valores, idCliente]);
 };
 
+// Ubicación vigente del turno (la que muestra la pantalla); el recorrido completo queda en el servidor
+export const actualizarUbicacionTurno = async (ejecutor: Db, idCliente: string, area: Area, zona: ZonaTrabajo | null) => {
+  await ejecutor.runAsync('UPDATE turno SET area = ?, zona = ? WHERE id_cliente = ?', [
+    JSON.stringify(area),
+    zona ? JSON.stringify(zona) : null,
+    idCliente,
+  ]);
+};
+
+// Horómetro final del turno más reciente de la máquina registrado en este teléfono (aunque no se haya sincronizado)
+export const ultimoHorometroFinalLocal = async (idMaquina: number): Promise<number | null> => {
+  const db = await getDb();
+  const fila = await db.getFirstAsync<{ horometro_final: number }>(
+    `SELECT horometro_final FROM turno
+      WHERE json_extract(maquina, '$.id') = ? AND horometro_final IS NOT NULL
+      ORDER BY fecha_inicio DESC LIMIT 1`,
+    [idMaquina],
+  );
+  return fila?.horometro_final ?? null;
+};
+
 export const obtenerTurno = async (idCliente: string): Promise<TurnoLocal | null> => {
   const db = await getDb();
   const fila = await db.getFirstAsync<TurnoFila>('SELECT * FROM turno WHERE id_cliente = ?', [idCliente]);

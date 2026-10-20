@@ -51,7 +51,7 @@ export const MachineStatusCard: React.FC<Props> = ({ turno, variant = 'default' 
             {turno.maquina.nombreCompleto}
           </Text>
           <Text style={[styles.secondaryText, isCompact && styles.secondaryTextCompact, { color: theme.textSecondary }]}>
-            Área: {turno.area?.nombre ?? 'Sin asignar'} · Horóm. Inicial: <Text style={{ color: theme.warningText, fontWeight: 'bold' }}>{turno.horometroInicial}h</Text>
+            Área: {turno.area?.nombre ?? 'Sin asignar'}{turno.zona ? ` (${turno.zona.nombre})` : ''} · Horóm. Inicial: <Text style={{ color: theme.warningText, fontWeight: 'bold' }}>{turno.horometroInicial}h</Text>
           </Text>
         </View>
         <View style={[styles.statusPill, isCompact && styles.statusPillCompact, { backgroundColor: theme.success + '20', borderColor: theme.success }]}>

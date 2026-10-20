@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState } from 'react-native';
 import {
+  Area,
+  ZonaTrabajo,
   UseTurnoActualResult,
   TurnoActual,
   EstadoOperacional,
@@ -59,6 +61,14 @@ export const useTurnoActual = (): UseTurnoActualResult => {
     async (datos: FinalizarTurnoDatos) => {
       if (!turno) throw new operaciones.OperacionError('No hay un turno en curso.');
       return operaciones.finalizarTurno(turno.idCliente, datos);
+    },
+    [turno],
+  );
+
+  const cambiarUbicacion = useCallback(
+    async (area: Area, zona: ZonaTrabajo | null) => {
+      if (!turno) throw new operaciones.OperacionError('No hay un turno en curso.');
+      await operaciones.cambiarUbicacion(turno.idCliente, area, zona);
     },
     [turno],
   );
@@ -126,5 +136,6 @@ export const useTurnoActual = (): UseTurnoActualResult => {
     finalizarTurno,
     estadosCatalogo,
     updateEstadoActual,
+    cambiarUbicacion,
   };
 };

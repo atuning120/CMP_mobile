@@ -4,6 +4,8 @@ import { apiRequest } from './apiClient';
 
 export type TipoEventoHistorial =
   | 'INICIO_TURNO'
+  | 'FIN_TURNO'
+  | 'CAMBIO_UBICACION'
   | 'INCORPORAR'
   | 'EDITAR'
   | 'HABILITAR'

@@ -29,6 +29,7 @@ interface MaquinaApi {
   tipoMaquina: string | null;
   estado: string | null;
   idOperadorAsignado?: number | null; // solo en el catálogo (GET /maquinas)
+  horometroUltimo?: number | null; // solo en el catálogo (GET /maquinas)
 }
 
 interface EstadoOperacionalApi {
@@ -76,6 +77,7 @@ export const mapMaquina = (maquina: MaquinaApi): Maquina => ({
   tipoMaquina: maquina.tipoMaquina ?? '',
   modelo: maquina.modelo ?? '',
   idOperadorAsignado: maquina.idOperadorAsignado ?? null,
+  horometroUltimo: maquina.horometroUltimo ?? null,
 });
 
 export const mapArea = (area: AreaApi): Area => ({ id: area.idArea, nombre: area.nombre, descripcion: area.descripcion });
@@ -110,6 +112,7 @@ export const obtenerTurnoActualRemoto = () => apiRequest<TurnoActualApi>('/turno
 export const iniciarTurnoRemoto = (body: Record<string, unknown>) => post<TurnoActualApi>('/turnos/iniciar', body);
 export const finalizarTurnoRemoto = (body: Record<string, unknown>) => post<TurnoApi>('/turnos/finalizar', body);
 export const registrarEstadoRemoto = (body: Record<string, unknown>) => post<{ id: number }>('/turnos/estados', body);
+export const cambiarUbicacionRemota = (body: Record<string, unknown>) => post<{ id: number }>('/turnos/ubicacion', body);
 export const crearReporteRemoto = (body: Record<string, unknown>) => post<{ id: number }>('/reportes', body);
 
 export const subirEvidenciaRemota = async (datos: {

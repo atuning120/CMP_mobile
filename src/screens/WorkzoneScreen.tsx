@@ -13,6 +13,8 @@ import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdow
 import { StartShiftModal } from '../components/workzone/StartShiftModal';
 import { EndShiftModal } from '../components/workzone/EndShiftModal';
 import { ChangeStateModal } from '../components/workzone/ChangeStateModal';
+import { ChangeLocationModal } from '../components/workzone/ChangeLocationModal';
+import { LocationChangeBanner } from '../components/workzone/LocationChangeBanner';
 import { ResumenCierreTurno, ShiftClosedModal } from '../components/workzone/ShiftClosedModal';
 import { cerrarSesion } from '../services/authService';
 import { ConfirmLogoutModal } from '../components/common/ConfirmLogoutModal';
@@ -20,7 +22,7 @@ import { useSyncStatus } from '../hooks/useSyncStatus';
 import { useRecargaManual } from '../hooks/useRecargaManual';
 import { sincronizar, sincronizarCatalogos } from '../sync/syncEngine';
 import { FOTOS_HABILITADAS } from '../constants/features';
-import { FinalizarTurnoDatos, IniciarTurnoDatos } from '../types/turno';
+import { Area, FinalizarTurnoDatos, IniciarTurnoDatos, ZonaTrabajo } from '../types/turno';
 import { esperarTransicion, useAccionUnica } from '../hooks/useAccionUnica';
 import { mostrarAviso, vibrar } from '../services/retroalimentacion';
 import { PantallaEncendida } from '../components/workzone/PantallaEncendida';
@@ -44,12 +46,14 @@ export default function WorkzoneScreen() {
     finalizarTurno,
     estadosCatalogo,
     updateEstadoActual,
+    cambiarUbicacion,
   } = useTurnoActual();
   // Sin turno en curso solo se puede iniciar; con turno en curso solo se puede cerrar
   const hayTurnoEnCurso = turno !== null;
   const [isStartShiftModalVisible, setIsStartShiftModalVisible] = useState(false);
   const [isEndShiftModalVisible, setIsEndShiftModalVisible] = useState(false);
   const [isChangeStateModalVisible, setIsChangeStateModalVisible] = useState(false);
+  const [isChangeLocationModalVisible, setIsChangeLocationModalVisible] = useState(false);
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
   const [resumenCierre, setResumenCierre] = useState<ResumenCierreTurno | null>(null);
   // Un doble toque en "Evidencias" apilaba dos veces la misma pantalla
@@ -76,6 +80,12 @@ export default function WorkzoneScreen() {
     await iniciarTurno(datos);
     setIsStartShiftModalVisible(false);
     mostrarAviso(`Turno iniciado en ${datos.maquina.codigoCorto}`);
+  };
+
+  const handleCambiarUbicacion = async (area: Area, zona: ZonaTrabajo | null) => {
+    await cambiarUbicacion(area, zona);
+    setIsChangeLocationModalVisible(false);
+    mostrarAviso(`Ahora trabajas en ${zona ? `${area.nombre} · ${zona.nombre}` : area.nombre}`);
   };
 
   const handleFinalizarTurno = async (datos: FinalizarTurnoDatos) => {
@@ -207,6 +217,10 @@ export default function WorkzoneScreen() {
             onPress={() => setIsChangeStateModalVisible(true)}
           />
         )}
+
+        {hayTurnoEnCurso && (
+          <LocationChangeBanner turno={turno} onPress={() => setIsChangeLocationModalVisible(true)} />
+        )}
       </ScrollView>
     );
   };
@@ -245,6 +259,13 @@ export default function WorkzoneScreen() {
         estadoActual={turno?.estadoOperacionalActual || null}
         // El panel queda abierto tras cambiar de estado: solo se cierra cuando el operador lo decide
         onStateChange={updateEstadoActual}
+      />
+
+      <ChangeLocationModal
+        visible={isChangeLocationModalVisible}
+        onClose={() => setIsChangeLocationModalVisible(false)}
+        turno={turno}
+        onConfirm={handleCambiarUbicacion}
       />
 
       <ConfirmLogoutModal
