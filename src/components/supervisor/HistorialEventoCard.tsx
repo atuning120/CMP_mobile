@@ -108,7 +108,22 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
 
       <View style={styles.cuerpo}>
         <Text style={[styles.titulo, { color: theme.text }]}>
-          <Text style={styles.actor}>{evento.actor}</Text> {verbo} <Text style={[styles.maquina, { color: acento }]}>{evento.maquina.nombre}</Text>
+          {/* El cierre no siempre lo hace el operador: lo puede cerrar su jefe de turno o el sistema */}
+          {cierreAutomatico && !cerradoPor ? (
+            <>
+              El turno de <Text style={styles.actor}>{evento.actor}</Text> en{' '}
+              <Text style={[styles.maquina, { color: acento }]}>{evento.maquina.nombre}</Text> se cerró automáticamente
+            </>
+          ) : cerradoPor ? (
+            <>
+              <Text style={styles.actor}>{cerradoPor}</Text> cerró el turno de <Text style={styles.actor}>{evento.actor}</Text> en{' '}
+              <Text style={[styles.maquina, { color: acento }]}>{evento.maquina.nombre}</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.actor}>{evento.actor}</Text> {verbo} <Text style={[styles.maquina, { color: acento }]}>{evento.maquina.nombre}</Text>
+            </>
+          )}
           {/* Reemplazo: qué máquina entró en su lugar */}
           {!!reemplazadaPor && (
             <>
@@ -135,15 +150,14 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
           <View style={[styles.motivo, styles.motivoConIcono, { backgroundColor: theme.warning + '14', borderColor: theme.warning + '40' }]}>
             <UserCheck size={12} color={theme.warning} />
             <Text style={[styles.motivoTexto, { color: theme.warningText }]}>
-              Cerrado por {cerradoPor}
-              {motivoCierre ? `: ${motivoCierre}` : ''}
+              {motivoCierre ? `Motivo: ${motivoCierre}` : 'Cerrado por el jefe de turno'}
             </Text>
           </View>
         )}
         {cierreAutomatico && !cerradoPor && (
           <View style={[styles.motivo, styles.motivoConIcono, { backgroundColor: theme.warning + '14', borderColor: theme.warning + '40' }]}>
             <AlarmClockOff size={12} color={theme.warning} />
-            <Text style={[styles.motivoTexto, { color: theme.warningText }]}>Cierre automático (superó la duración máxima)</Text>
+            <Text style={[styles.motivoTexto, { color: theme.warningText }]}>Superó la duración máxima del turno</Text>
           </View>
         )}
         {!!evento.observacion && <Text style={[styles.observacion, { color: theme.textSecondary }]}>{evento.observacion}</Text>}
