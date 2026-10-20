@@ -1,13 +1,13 @@
 import React from 'react';
-import { Alert, Text, TouchableOpacity } from 'react-native';
+import { Alert } from 'react-native';
 import { CloudCheck, CloudOff, RefreshCw, CloudUpload } from 'lucide-react-native';
 import { ThemeColors } from '../constants/theme';
 import { useSyncStatus } from '../hooks/useSyncStatus';
 import { leerSesion } from '../services/authStorage';
 import { listarOperacionesConError, reintentarOperacionesConError } from '../sync/colaSync';
 import { solicitarSincronizacion } from '../sync/syncEngine';
-import { styles } from './SyncIndicator.styles';
 import { useAccionUnica } from '../hooks/useAccionUnica';
+import { StatusChip } from './StatusChip';
 
 const ETIQUETAS: Record<string, string> = {
   INICIAR_TURNO: 'Inicio de turno',
@@ -47,32 +47,40 @@ export const SyncIndicator: React.FC<{ theme: ThemeColors }> = ({ theme }) => {
 
   if (errores > 0) {
     return (
-      <TouchableOpacity style={styles.fila} onPress={mostrarErrores}>
-        <CloudOff size={12} color={theme.danger} />
-        <Text style={[styles.texto, { color: theme.dangerText }]}>{errores} con error · ver</Text>
-      </TouchableOpacity>
+      <StatusChip
+        theme={theme}
+        icon={CloudOff}
+        iconColor={theme.danger}
+        textColor={theme.dangerText}
+        label={`${errores} con error · ver`}
+        onPress={mostrarErrores}
+      />
     );
   }
   if (sincronizando && pendientes > 0) {
     return (
-      <TouchableOpacity style={styles.fila} disabled>
-        <RefreshCw size={12} color={theme.primary} />
-        <Text style={[styles.texto, { color: theme.primaryText }]}>Sincronizando {pendientes}…</Text>
-      </TouchableOpacity>
+      <StatusChip
+        theme={theme}
+        icon={RefreshCw}
+        iconColor={theme.primary}
+        textColor={theme.primaryText}
+        label={`Sincronizando ${pendientes}…`}
+      />
     );
   }
   if (pendientes > 0) {
     return (
-      <TouchableOpacity style={styles.fila} onPress={solicitarSincronizacion}>
-        <CloudUpload size={12} color={theme.warning} />
-        <Text style={[styles.texto, { color: theme.warningText }]}>{pendientes} por sincronizar</Text>
-      </TouchableOpacity>
+      <StatusChip
+        theme={theme}
+        icon={CloudUpload}
+        iconColor={theme.warning}
+        textColor={theme.warningText}
+        label={`${pendientes} por sincronizar`}
+        onPress={solicitarSincronizacion}
+      />
     );
   }
   return (
-    <TouchableOpacity style={styles.fila} disabled>
-      <CloudCheck size={12} color={theme.success} />
-      <Text style={[styles.texto, { color: theme.successText }]}>Todo sincronizado</Text>
-    </TouchableOpacity>
+    <StatusChip theme={theme} icon={CloudCheck} iconColor={theme.success} textColor={theme.successText} label="Sincronizado" />
   );
 };

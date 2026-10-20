@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useNetInfo } from '@react-native-community/netinfo';
 
 import { AuthError, loginOffline, loginOnline, OFFLINE_MAX_DIAS } from '../services/authService';
 import { despertarBackend } from '../services/backendUrl';
@@ -64,7 +63,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
-  const netInfo = useNetInfo();
 
   // Al abrir el login (o al recuperar la red) se despierta el servidor para que el ingreso no espere su arranque
   useEffect(() => {
@@ -201,9 +199,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <Text style={[styles.offlineText, { color: theme.text }]}>Soporte Offline-First</Text>
               </View>
               <Text style={[styles.networkStatusText, { color: theme.text }]}>
-                {networkState === 'online'
-                  ? `🟢 Conectado ${netInfo.type === 'wifi' ? '(WiFi)' : netInfo.type === 'cellular' ? '(Móvil)' : ''}`
-                  : '🟠 Modo Local'}
+                {networkState === 'online' ? '🟢 Conectado' : '🟠 Modo Local'}
               </Text>
             </View>
           </View>
