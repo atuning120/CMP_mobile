@@ -14,6 +14,8 @@ import { sincronizarCatalogos } from '../../sync/syncEngine';
 import { Area, FotoCapturada, IniciarTurnoDatos, ZonaTrabajo } from '../../types/turno';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { vibrar } from '../../services/retroalimentacion';
+import { horometroMinimoInicial } from '../../services/operacionesTurno';
+import { formatearHorometro } from '../../utils/validacionHorometro';
 
 interface Props {
   visible: boolean;
@@ -92,11 +94,31 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
     setHorometro(formattedText);
   };
 
+  // El horómetro no retrocede: el inicial debe ser mayor o igual al último final registrado de la máquina.
+  // No se muestra de antemano para que el operador lea el valor real de la cabina
+  const maquinaElegida = maquinas.find((m) => m.id === selectedMaquina);
+  const [minimo, setMinimo] = useState<{ idMaquina: number; valor: number | null } | null>(null);
+  useEffect(() => {
+    if (!maquinaElegida) return;
+    let cancelado = false;
+    horometroMinimoInicial(maquinaElegida)
+      .then((valor) => {
+        if (!cancelado) setMinimo({ idMaquina: maquinaElegida.id, valor });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelado = true;
+    };
+  }, [maquinaElegida]);
+  const minimoVigente = minimo && minimo.idMaquina === selectedMaquina ? minimo.valor : null;
+
   const numericHorometro = parseFloat(horometro);
+  const horometroMenor = minimoVigente !== null && !isNaN(numericHorometro) && numericHorometro < minimoVigente;
   const canSubmit =
     selectedMaquina !== null &&
     areaSeleccionada !== null &&
     !isNaN(numericHorometro) &&
+    !horometroMenor &&
     !isSubmitting;
 
   const handleClose = () => {
@@ -267,7 +289,7 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
               {
                 color: theme.warningText,
                 backgroundColor: theme.background,
-                borderColor: theme.border,
+                borderColor: horometroMenor ? theme.danger : theme.border,
               }
             ]}
             value={horometro}
@@ -278,6 +300,11 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
           />
           <Text style={{ color: theme.textSecondary, fontSize: 18, fontWeight: '700' }}>hrs</Text>
         </View>
+        {horometroMenor && minimoVigente !== null && (
+          <Text style={[styles.errorText, { color: theme.dangerText, textAlign: 'center' }]}>
+            No puede ser menor que el último horómetro final de la máquina ({formatearHorometro(minimoVigente)} hrs).
+          </Text>
+        )}
       </View>
 
       {/* Evidencias (desactivadas hasta integrar Cloudinary) */}

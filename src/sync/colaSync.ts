@@ -6,7 +6,13 @@ import { Db, getDb } from '../db/database';
  * hay red, nada se pierde y el motor de sincronización la enviará después, en orden.
  */
 
-export type TipoOperacion = 'INICIAR_TURNO' | 'FINALIZAR_TURNO' | 'REGISTRAR_ESTADO' | 'CREAR_REPORTE' | 'SUBIR_EVIDENCIA';
+export type TipoOperacion =
+  | 'INICIAR_TURNO'
+  | 'FINALIZAR_TURNO'
+  | 'REGISTRAR_ESTADO'
+  | 'CAMBIAR_UBICACION'
+  | 'CREAR_REPORTE'
+  | 'SUBIR_EVIDENCIA';
 
 export interface OperacionPendiente {
   id: number;

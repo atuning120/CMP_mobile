@@ -3,6 +3,7 @@ import { Text, View, useColorScheme } from 'react-native';
 import {
   Activity,
   AlarmClockOff,
+  ArrowLeftRight,
   Ban,
   CheckCircle,
   Clock,
@@ -28,6 +29,8 @@ interface Props {
 
 const PRESENTACION: Record<TipoEventoHistorial, { icono: LucideIcon; verbo: string; color: (t: ThemeColors) => string }> = {
   INICIO_TURNO: { icono: Play, verbo: 'inició turno en', color: (t) => t.success },
+  FIN_TURNO: { icono: Square, verbo: 'cerró turno en', color: (t) => t.danger },
+  CAMBIO_UBICACION: { icono: ArrowLeftRight, verbo: 'trasladó', color: (t) => t.primary },
   INCORPORAR: { icono: PlusCircle, verbo: 'incorporó', color: (t) => t.primary },
   EDITAR: { icono: Edit2, verbo: 'editó', color: (t) => t.warning },
   HABILITAR: { icono: CheckCircle, verbo: 'habilitó', color: (t) => t.success },
@@ -52,11 +55,11 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
   const presentacion = PRESENTACION[evento.tipo];
   // Un tipo que esta versión de la app no conoce (Backend más nuevo) no debe romper la lista
   if (!presentacion) return null;
-  const esTurno = evento.tipo === 'INICIO_TURNO';
-  // Un turno ya cerrado se marca en rojo en la misma tarjeta de su inicio
-  const horaTermino = esTurno ? texto(evento.detalle?.horaTermino) : null;
-  const Icono = horaTermino ? Square : presentacion.icono;
-  const acento = horaTermino ? theme.danger : presentacion.color(theme);
+  // El inicio y el cierre del turno son eventos separados, cada uno en su fecha
+  const esTurno = evento.tipo === 'INICIO_TURNO' || evento.tipo === 'FIN_TURNO';
+  const esCierre = evento.tipo === 'FIN_TURNO';
+  const Icono = presentacion.icono;
+  const acento = presentacion.color(theme);
   const verbo = presentacion.verbo;
   const reemplazadaPor = evento.tipo === 'REEMPLAZAR' ? texto(evento.detalle?.entrante) : null;
   // Cambio de estado: a cuál pasó (los registros antiguos de habilitar/deshabilitar no lo traen)
@@ -66,15 +69,30 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
   const estadoSaliente = evento.tipo === 'REEMPLAZAR' ? texto(despues?.estado) : null;
   const respaldoDevuelto = evento.tipo === 'DEVOLVER' ? texto(evento.detalle?.respaldo) : null;
   // Turno cerrado por un jefe de turno en nombre del operador (falla de la máquina, mantención)
-  const cerradoPor = esTurno ? texto(evento.detalle?.cerradoPor) : null;
-  const motivoCierre = esTurno ? texto(evento.detalle?.motivoCierre) : null;
+  const cerradoPor = esCierre ? texto(evento.detalle?.cerradoPor) : null;
+  const motivoCierre = esCierre ? texto(evento.detalle?.motivoCierre) : null;
   // El sistema lo cerró al pasar la duración máxima (probablemente el operador olvidó finalizarlo).
   // Sin número de horas: los turnos antiguos se cerraban a las 12 h y los actuales a las 13 h
-  const cierreAutomatico = esTurno && evento.detalle?.estadoTurno === 'CERRADO_AUTO';
+  const cierreAutomatico = esCierre && evento.detalle?.estadoTurno === 'CERRADO_AUTO';
 
-  // Inicio de turno: dónde y con qué horómetro partió
+  // Inicio: dónde y con qué horómetro partió. Cierre: dónde terminó y cuánto avanzó el horómetro.
+  // Cambio de área/zona: desde dónde y a dónde fue
   const ubicacion = [texto(evento.detalle?.area), texto(evento.detalle?.zona)].filter(Boolean).join(' · ');
-  const horometro = numero(evento.detalle?.horometroInicial);
+  const horometroInicial = numero(evento.detalle?.horometroInicial);
+  const horometroFinal = esCierre ? numero(evento.detalle?.horometroFinal) : null;
+  const formatoHoras = (valor: number) => valor.toLocaleString('es-CL', { maximumFractionDigits: 1 });
+  const horometro = esCierre
+    ? horometroFinal !== null
+      ? `${horometroInicial !== null ? `${formatoHoras(horometroInicial)} → ` : ''}${formatoHoras(horometroFinal)} hrs`
+      : 'Sin horómetro final'
+    : horometroInicial !== null
+      ? `${formatoHoras(horometroInicial)} hrs`
+      : null;
+  const esCambioUbicacion = evento.tipo === 'CAMBIO_UBICACION';
+  const ubicacionAnterior = esCambioUbicacion
+    ? [texto(evento.detalle?.areaAnterior), texto(evento.detalle?.zonaAnterior)].filter(Boolean).join(' · ')
+    : '';
+  const traslado = esCambioUbicacion ? [ubicacionAnterior, ubicacion].filter(Boolean).join(' → ') : '';
 
   return (
     <View
@@ -141,21 +159,22 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
             {horometro !== null && (
               <View style={styles.metaItem}>
                 <Clock size={12} color={theme.textTertiary} />
-                <Text style={[styles.metaTexto, { color: theme.textSecondary }]}>
-                  {horometro.toLocaleString('es-CL', { maximumFractionDigits: 1 })} hrs
-                </Text>
+                <Text style={[styles.metaTexto, { color: theme.textSecondary }]}>{horometro}</Text>
               </View>
             )}
           </View>
         )}
 
-        {horaTermino ? (
-          <Text style={[styles.fecha, { color: theme.textTertiary }]}>
-            Inicio {formatearFecha(evento.fecha)} · Fin {formatearFecha(horaTermino)}
-          </Text>
-        ) : (
-          <Text style={[styles.fecha, { color: theme.textTertiary }]}>{formatearFecha(evento.fecha)}</Text>
+        {!!traslado && (
+          <View style={styles.metaFila}>
+            <View style={styles.metaItem}>
+              <MapPin size={12} color={theme.textTertiary} />
+              <Text style={[styles.metaTexto, { color: theme.textSecondary }]} numberOfLines={2}>{traslado}</Text>
+            </View>
+          </View>
         )}
+
+        <Text style={[styles.fecha, { color: theme.textTertiary }]}>{formatearFecha(evento.fecha)}</Text>
       </View>
     </View>
   );

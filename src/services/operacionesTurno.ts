@@ -2,6 +2,7 @@ import * as Crypto from 'expo-crypto';
 import { ahoraIso, getDb, guardarAjuste, leerAjuste } from '../db/database';
 import { leerCatalogo } from '../db/catalogoLocal';
 import {
+  actualizarUbicacionTurno,
   cerrarTurnoLocal,
   detallarTurno,
   eliminarEvidenciaLocal,
@@ -13,6 +14,7 @@ import {
   listarEvidencias,
   listarTurnosEnCurso,
   obtenerTurno,
+  ultimoHorometroFinalLocal,
   EvidenciaLocal,
 } from '../db/turnoLocal';
 import { descartarOperacionesDeEntidad, encolar } from '../sync/colaSync';
@@ -21,15 +23,19 @@ import { AVISO_CIERRE_AUTO, AVISO_CIERRE_JEFE, refrescarContadores, solicitarSin
 import { leerSesion } from './authStorage';
 import { eliminarFotoLocal, guardarFotoLocal } from './fotos';
 import { FOTOS_HABILITADAS } from '../constants/features';
+import { formatearHorometro } from '../utils/validacionHorometro';
 import {
+  Area,
   EstadoOperacional,
   EstadoTurno,
   FinalizarTurnoDatos,
   FotoCapturada,
   IniciarTurnoDatos,
+  Maquina,
   TurnoActual,
   TurnoCerradoAutomaticamente,
   TurnoCerradoPorJefe,
+  ZonaTrabajo,
 } from '../types/turno';
 
 /*
@@ -159,6 +165,16 @@ export const obtenerTurnoActual = async (): Promise<{
   };
 };
 
+/**
+ * Mínimo aceptado como horómetro inicial: el último horómetro final de la máquina, sea el que informó el
+ * servidor (catálogo) o uno registrado en este teléfono que aún no se sincroniza. El horómetro no retrocede.
+ */
+export const horometroMinimoInicial = async (maquina: Maquina): Promise<number | null> => {
+  const local = await ultimoHorometroFinalLocal(maquina.id);
+  const candidatos = [maquina.horometroUltimo ?? null, local].filter((valor): valor is number => valor !== null);
+  return candidatos.length > 0 ? Math.max(...candidatos) : null;
+};
+
 export const iniciarTurno = async (datos: IniciarTurnoDatos): Promise<void> => {
   const idOperador = await idOperadorActual();
   if ((await listarTurnosEnCurso(idOperador)).length > 0) {
@@ -166,6 +182,10 @@ export const iniciarTurno = async (datos: IniciarTurnoDatos): Promise<void> => {
   }
   if (!Number.isFinite(datos.horometroInicial) || datos.horometroInicial < 0) {
     throw new OperacionError('El horómetro inicial no es válido.');
+  }
+  const minimo = await horometroMinimoInicial(datos.maquina);
+  if (minimo !== null && datos.horometroInicial < minimo) {
+    throw new OperacionError(`El horómetro inicial no puede ser menor que el último horómetro final de la máquina (${formatearHorometro(minimo)} hrs).`);
   }
 
   const idCliente = nuevoId();
@@ -258,6 +278,33 @@ export const cambiarEstadoOperacional = async (idClienteTurno: string, estado: E
       idEntidad: idCliente,
       idOperador,
       payload: { idCliente, idClienteTurno, idEstado: estado.id, inicio },
+    });
+  });
+  await despues();
+};
+
+/**
+ * El operador pasa a trabajar en otra área o zona con la misma máquina (lo reasignaron o volvió de
+ * colación a otro frente). Desde este momento las horas del turno se imputan a la nueva ubicación.
+ */
+export const cambiarUbicacion = async (idClienteTurno: string, area: Area, zona: ZonaTrabajo | null): Promise<void> => {
+  const idOperador = await idOperadorActual();
+  const turno = await obtenerTurno(idClienteTurno);
+  if (!turno || turno.estado !== 'EN_CURSO') throw new OperacionError('El turno ya no está en curso.');
+  if (turno.area?.id === area.id && (turno.zona?.id ?? null) === (zona?.id ?? null)) {
+    throw new OperacionError('Ya estás trabajando en esa área y zona.');
+  }
+
+  const idCliente = nuevoId();
+  const inicio = ahoraIso();
+  const db = await getDb();
+  await db.withExclusiveTransactionAsync(async (txn) => {
+    await actualizarUbicacionTurno(txn, idClienteTurno, area, zona);
+    await encolar(txn, {
+      tipo: 'CAMBIAR_UBICACION',
+      idEntidad: idCliente,
+      idOperador,
+      payload: { idCliente, idClienteTurno, idArea: area.id, idZona: zona?.id ?? null, inicio },
     });
   });
   await despues();

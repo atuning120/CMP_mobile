@@ -36,6 +36,8 @@ export interface Maquina {
   modelo: string;
   // Operador a cargo de la máquina: la tiene preseleccionada al iniciar turno
   idOperadorAsignado: number | null;
+  // Último horómetro final registrado en el servidor: el horómetro inicial no puede ser menor
+  horometroUltimo: number | null;
 }
 
 export type EstadoTurno = 'EN_CURSO' | 'CERRADO' | 'CERRADO_AUTO';
@@ -108,4 +110,6 @@ export interface UseTurnoActualResult {
   finalizarTurno: (datos: FinalizarTurnoDatos) => Promise<EstadoTurno>;
   estadosCatalogo: EstadoOperacional[];
   updateEstadoActual: (nuevoEstado: EstadoOperacional) => void;
+  // El operador pasa a trabajar en otra área o zona con la misma máquina
+  cambiarUbicacion: (area: Area, zona: ZonaTrabajo | null) => Promise<void>;
 }
