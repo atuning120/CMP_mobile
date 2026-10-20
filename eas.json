@@ -14,7 +14,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://cmp-backend.blueglacier-678ef622.chilecentral.azurecontainerapps.io"
+        "EXPO_PUBLIC_API_URL": "https://cmp-backend.blueglacier-678ef622.chilecentral.azurecontainerapps.io",
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a,x86_64"
       }
     },
     "production": {
