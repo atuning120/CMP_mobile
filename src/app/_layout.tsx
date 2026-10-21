@@ -4,6 +4,8 @@ import { useColorScheme, View } from 'react-native';
 import { useEffect } from 'react';
 import { iniciarMotorSync } from '../sync/motorSync';
 import { AvisoFlotante } from '../components/common/AvisoFlotante';
+// Define la tarea de ubicación en segundo plano: debe existir apenas arranca la app
+import '../services/seguimientoUbicacion';
 
 SplashScreen.preventAutoHideAsync();
 

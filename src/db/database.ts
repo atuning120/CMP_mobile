@@ -83,6 +83,18 @@ const MIGRACIONES: string[] = [
   );
   CREATE INDEX IF NOT EXISTS idx_operacion_operador ON operacion_pendiente (id_operador, estado, id);
   `,
+  `
+  -- Posiciones GPS del turno esperando ser enviadas al adaptador (TCP, protocolo GT06). Se borran al confirmarse
+  CREATE TABLE IF NOT EXISTS posicion_pendiente (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_maquina  INTEGER NOT NULL,
+    fecha_hora  TEXT NOT NULL,
+    latitud     REAL NOT NULL,
+    longitud    REAL NOT NULL,
+    velocidad   REAL,                           -- km/h
+    rumbo       REAL                            -- grados desde el norte
+  );
+  `,
 ];
 
 export type Db = SQLite.SQLiteDatabase;
