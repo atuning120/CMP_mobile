@@ -15,7 +15,7 @@ import * as operaciones from '../services/operacionesTurno';
 import { suscribirCambioDatos } from '../sync/eventos';
 import { sincronizacionEnCurso } from '../sync/syncEngine';
 import { mostrarAviso } from '../services/retroalimentacion';
-import { activarSeguimiento, detenerSeguimiento, sincronizarSeguimiento } from '../services/seguimientoUbicacion';
+import { activarSeguimiento, finalizarSeguimiento, sincronizarSeguimiento } from '../services/seguimientoUbicacion';
 
 // Tope de espera a la sincronización al abrir la pantalla: con mala señal no se bloquea al operador
 const ESPERA_SINCRONIZACION_MS = 6000;
@@ -66,7 +66,8 @@ export const useTurnoActual = (): UseTurnoActualResult => {
     async (datos: FinalizarTurnoDatos) => {
       if (!turno) throw new operaciones.OperacionError('No hay un turno en curso.');
       const estado = await operaciones.finalizarTurno(turno.idCliente, datos);
-      void detenerSeguimiento();
+      // Sin esperar: manda la última posición de la máquina y detiene el envío
+      void finalizarSeguimiento(turno.maquina.id);
       return estado;
     },
     [turno],

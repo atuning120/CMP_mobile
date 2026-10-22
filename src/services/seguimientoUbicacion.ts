@@ -11,7 +11,8 @@ import { mostrarAviso } from './retroalimentacion';
 /*
  * Ubicación de la máquina durante el turno, mientras llegan los GPS LL301: el teléfono del operador toma su
  * posición cada 30 segundos con el GPS (también con la pantalla apagada, con una notificación fija de Android) y
- * la manda al adaptador como si fuera un LL301. Al terminar el turno se detiene.
+ * la manda al adaptador como si fuera un LL301. Al iniciar y al finalizar el turno se manda una posición en el
+ * momento, sin esperar al intervalo. Al terminar el turno se detiene.
  */
 
 const TAREA_UBICACION = 'geoplanta-ubicacion-turno';
@@ -19,10 +20,16 @@ const TAREA_UBICACION = 'geoplanta-ubicacion-turno';
 const INTERVALO_MS = 30 * 1000;
 // Android puede entregar la ubicación algo antes de lo pedido
 const MARGEN_MS = 5 * 1000;
+// Lectura en el momento (inicio y fin del turno): tope de espera al GPS; si no responde se usa la última posición
+// conocida del teléfono, si no es más antigua que esto
+const ESPERA_LECTURA_MS = 5 * 1000;
+const ANTIGUEDAD_CONOCIDA_MS = 60 * 1000;
 
 // Filtro de deriva (como el de los GPS vehiculares): detenido, cada lectura cae en otro punto de su círculo de error.
 // Una lectura imprecisa (bajo techo o entre galpones) no mueve la máquina, y una precisa solo la mueve si se alejó
-// claramente del punto anterior; si no, se repite ese punto (con la hora nueva, para que el mapa la vea vigente)
+// claramente del punto anterior; si no, se repite ese punto (con la hora nueva, para que el mapa la vea vigente).
+// La primera lectura del turno se acepta aunque sea imprecisa, para que la máquina aparezca de inmediato en el mapa;
+// la primera lectura precisa que caiga lejos de ella la corrige
 const PRECISION_MAXIMA_M = 25;
 const DESPLAZAMIENTO_MINIMO_M = 15;
 
@@ -39,8 +46,8 @@ const distanciaM = (a: { latitud: number; longitud: number }, b: { latitud: numb
 
 // true si la lectura cuenta como movimiento real: precisa y más lejos del ancla que su propio margen de error
 const seMovio = (punto: { latitud: number; longitud: number }, precision: number | null) => {
-  if (precision !== null && precision > PRECISION_MAXIMA_M) return false;
   if (!ancla) return true;
+  if (precision !== null && precision > PRECISION_MAXIMA_M) return false;
   return distanciaM(ancla, punto) > Math.max(2 * (precision ?? 0), DESPLAZAMIENTO_MINIMO_M);
 };
 
@@ -51,6 +58,39 @@ const maquinaEnTurno = async (): Promise<number | null> => {
   const [turno] = await listarTurnosEnCurso(idOperador);
   if (!turno || Date.now() > limiteCierreAutomatico(turno.fechaInicio).getTime()) return null;
   return turno.maquina.id;
+};
+
+// Guarda una lectura del GPS para la máquina, pasada por el filtro de deriva. Ignora las que ya se guardaron
+const registrarLectura = async (idMaquina: number, lectura: Location.LocationObject) => {
+  if (lectura.timestamp <= ultimaGuardada) return;
+  const { latitude, longitude, speed, heading, accuracy } = lectura.coords;
+  const punto = { latitud: latitude, longitud: longitude };
+  const movida = seMovio(punto, accuracy);
+  if (movida) ancla = punto;
+  ultimaGuardada = lectura.timestamp;
+  await guardarPosicion({
+    idMaquina,
+    fechaHora: new Date(lectura.timestamp).toISOString(),
+    ...(ancla ?? punto),
+    // m/s -> km/h; negativo o null cuando el teléfono no lo sabe. Sin moverse, detenida y sin rumbo
+    velocidad: !movida ? 0 : speed !== null && speed >= 0 ? speed * 3.6 : null,
+    rumbo: movida && heading !== null && heading >= 0 ? heading : null,
+  });
+};
+
+// Posición actual sin esperar a la tarea: la del GPS si llega a tiempo, si no la última conocida (si es reciente)
+const leerAhora = async (): Promise<Location.LocationObject | null> => {
+  const actual = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }).catch(() => null);
+  const espera = new Promise<null>((resolve) => setTimeout(() => resolve(null), ESPERA_LECTURA_MS));
+  const lectura = await Promise.race([actual, espera]);
+  return lectura ?? Location.getLastKnownPositionAsync({ maxAge: ANTIGUEDAD_CONOCIDA_MS }).catch(() => null);
+};
+
+// Lee y manda la posición en el momento, sin esperar al intervalo de 30 s
+const enviarPosicionAhora = async (idMaquina: number) => {
+  const lectura = await leerAhora();
+  if (lectura) await registrarLectura(idMaquina, lectura);
+  await enviarPosicionesPendientes();
 };
 
 // En el ámbito global (se importa desde src/app/_layout.tsx): Android puede arrancar la app en segundo plano
@@ -64,21 +104,7 @@ TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TAREA_UBICACION
   }
   const ultima = data.locations.at(-1);
   if (!ultima || ultima.timestamp - ultimaGuardada < INTERVALO_MS - MARGEN_MS) return;
-  const { latitude, longitude, speed, heading, accuracy } = ultima.coords;
-  const punto = { latitud: latitude, longitud: longitude };
-  const movida = seMovio(punto, accuracy);
-  if (movida) ancla = punto;
-  // Sin un primer punto preciso todavía no hay nada confiable que mostrar
-  if (!ancla) return;
-  ultimaGuardada = ultima.timestamp;
-  await guardarPosicion({
-    idMaquina,
-    fechaHora: new Date(ultima.timestamp).toISOString(),
-    ...ancla,
-    // m/s -> km/h; negativo o null cuando el teléfono no lo sabe. Sin moverse, detenida y sin rumbo
-    velocidad: !movida ? 0 : speed !== null && speed >= 0 ? speed * 3.6 : null,
-    rumbo: movida && heading !== null && heading >= 0 ? heading : null,
-  });
+  await registrarLectura(idMaquina, ultima);
   await enviarPosicionesPendientes();
 });
 
@@ -119,8 +145,8 @@ const pedirPermisos = async (): Promise<boolean> => {
 };
 
 /**
- * Al iniciar el turno: pide los permisos (si faltan) y empieza a enviar la ubicación. Sin permiso el turno sigue
- * igual; solo se avisa que la máquina no aparecerá en el mapa con su posición real.
+ * Al iniciar el turno: pide los permisos (si faltan), manda la posición en el momento y sigue cada 30 s. Sin permiso
+ * el turno sigue igual; solo se avisa que la máquina no aparecerá en el mapa con su posición real.
  */
 export const activarSeguimiento = async () => {
   if (!getAdaptadorHost()) return;
@@ -133,6 +159,8 @@ export const activarSeguimiento = async () => {
       return;
     }
     await arrancar();
+    const idMaquina = await maquinaEnTurno();
+    if (idMaquina !== null) await enviarPosicionAhora(idMaquina);
   } catch (error) {
     console.warn('No se pudo activar el envío de ubicación:', error);
   }
@@ -150,6 +178,22 @@ export const detenerSeguimiento = async () => {
   }
   // Lo que quedó sin enviar (p. ej. sin señal) se manda igual
   void enviarPosicionesPendientes();
+};
+
+/**
+ * Al finalizar el turno desde la app: manda la última posición de la máquina y detiene el envío. Recibe la máquina
+ * porque el turno ya quedó finalizado en el teléfono. Sin permiso de ubicación solo se detiene.
+ */
+export const finalizarSeguimiento = async (idMaquina: number) => {
+  if (getAdaptadorHost()) {
+    try {
+      const lectura = await leerAhora();
+      if (lectura) await registrarLectura(idMaquina, lectura);
+    } catch (error) {
+      console.warn('No se pudo leer la última ubicación del turno:', error);
+    }
+  }
+  await detenerSeguimiento();
 };
 
 /**
