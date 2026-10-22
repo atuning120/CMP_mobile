@@ -5,8 +5,8 @@ import { getDb } from './database';
  * señal se acumulan y se envían todas al recuperarla, como hace un GPS real.
  */
 
-// ~2,7 días a una posición cada 2 minutos; el Backend no acepta posiciones de más de 7 días
-const MAXIMO_GUARDADAS = 2000;
+// ~24 h a una posición cada 30 segundos; el Backend no acepta posiciones de más de 7 días
+const MAXIMO_GUARDADAS = 2880;
 
 export interface PosicionPendiente {
   id: number;

@@ -2,6 +2,7 @@ import { AppState } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { leerSesion } from '../services/authStorage';
 import { sincronizarSesion } from '../services/authService';
+import { enviarPosicionesPendientes } from '../services/envioUbicacion';
 import { adelantarReintentos } from './colaSync';
 import { refrescarContadores, sincronizar } from './syncEngine';
 
@@ -15,6 +16,8 @@ export const iniciarMotorSync = () => {
   let conectado: boolean | null = null;
 
   const alRecuperarRed = async () => {
+    // Las posiciones van por TCP al adaptador, sin sesión: no esperan a la próxima posición del turno
+    void enviarPosicionesPendientes();
     // Primero la sesión (refresh token o login silencioso tras un ingreso offline), luego los datos
     await sincronizarSesion();
     const sesion = await leerSesion();

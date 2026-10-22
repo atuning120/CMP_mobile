@@ -216,10 +216,18 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
               onPress={() => setSelectedMaquina(maq.id)}
             >
               <View style={styles.maquinaCardTop}>
-                <Text style={[styles.maquinaId, { color: theme.text }]}>{maq.codigoCorto}</Text>
-                <Text style={[styles.maquinaTipo, { color: theme.warningText }]}>{maq.tipoMaquina}</Text>
+                <Text style={[styles.maquinaId, { color: theme.text }]} numberOfLines={1}>{maq.codigoCorto}</Text>
+                {isSelected && <CheckCircle size={18} color={theme.primary} />}
               </View>
-              <Text style={[styles.maquinaModelo, { color: theme.textSecondary }]} numberOfLines={1}>{maq.modelo}</Text>
+              {/* Tipo como etiqueta bajo el código: al lado no cabe con códigos largos */}
+              <View style={styles.maquinaDetalle}>
+                {!!maq.tipoMaquina && (
+                  <View style={[styles.maquinaTipo, { backgroundColor: theme.warning + '1F', borderColor: theme.warning + '55' }]}>
+                    <Text style={[styles.maquinaTipoTexto, { color: theme.warningText }]} numberOfLines={1}>{maq.tipoMaquina}</Text>
+                  </View>
+                )}
+                <Text style={[styles.maquinaModelo, { color: theme.textSecondary }]} numberOfLines={1}>{maq.modelo}</Text>
+              </View>
               {esAsignada && (
                 <View style={styles.asignadaFila}>
                   <UserCheck size={12} color={theme.success} />
@@ -357,29 +365,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    justifyContent: 'center',
     marginBottom: 20,
   },
+  // Dos por fila a todo el ancho; una sola (o la última impar) ocupa la fila completa
   maquinaCard: {
-    width: '31%',
-    minWidth: 150,
+    flexGrow: 1,
+    flexBasis: '45%',
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 12,
   },
   maquinaCardTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    gap: 8,
+    marginBottom: 6,
   },
   maquinaId: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: 'bold',
   },
+  maquinaDetalle: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+  },
   maquinaTipo: {
-    fontSize: 10,
-    opacity: 0.8,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  maquinaTipoTexto: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   asignadaFila: {
     flexDirection: 'row',
@@ -392,8 +413,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   maquinaModelo: {
-    fontSize: 12,
-    marginBottom: 4,
+    flexShrink: 1,
+    fontSize: 13,
   },
   errorText: {
     fontSize: 12,

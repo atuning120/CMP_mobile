@@ -20,7 +20,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.atuning120.Frontmobile"
+      "package": "com.atuning120.Frontmobile",
+      "permissions": ["android.permission.RECEIVE_BOOT_COMPLETED"]
     },
     "web": {
       "output": "static",
@@ -42,7 +43,7 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "GeoPlanta usa tu ubicación para mostrar dónde está la máquina de tu turno en el mapa.",
-          "locationAlwaysAndWhenInUsePermission": "GeoPlanta envía la ubicación de la máquina de tu turno cada 2 minutos, también con la pantalla apagada.",
+          "locationAlwaysAndWhenInUsePermission": "GeoPlanta envía la ubicación de la máquina de tu turno cada 30 segundos, también con la pantalla apagada.",
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true,
           "isIosBackgroundLocationEnabled": true
