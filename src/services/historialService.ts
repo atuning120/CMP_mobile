@@ -1,4 +1,5 @@
 import { apiRequest } from './apiClient';
+import { getBackendBaseUrl } from './backendUrl';
 
 // Pestaña Historial del jefe de turno (en línea, como la flota)
 
@@ -6,6 +7,7 @@ export type TipoEventoHistorial =
   | 'INICIO_TURNO'
   | 'FIN_TURNO'
   | 'CAMBIO_UBICACION'
+  | 'NOVEDAD'
   | 'INCORPORAR'
   | 'EDITAR'
   | 'HABILITAR'
@@ -25,6 +27,16 @@ export interface EventoHistorial {
   observacion: string | null;
   detalle: Record<string, unknown> | null;
 }
+
+// Foto que subió un operador. Viene en detalle.reporte.evidencias (inicio y cierre de turno, junto con las
+// instrucciones o novedades que escribió) o en detalle.evidencias (novedad durante el turno, con su texto en observacion)
+export interface EvidenciaHistorial {
+  id: string; // id_cliente (UUID) de la evidencia
+  fecha: string; // ISO 8601
+}
+
+// El archivo exige el token: se carga con expo-image enviando el header Authorization
+export const urlEvidencia = (idEvidencia: string) => `${getBackendBaseUrl()}/evidencias/${encodeURIComponent(idEvidencia)}/archivo`;
 
 export interface PaginaHistorial {
   eventos: EventoHistorial[];
