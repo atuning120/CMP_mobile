@@ -7,7 +7,7 @@ import { darkTheme, lightTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
-import { Truck, History, ShieldAlert, AlertTriangle, LayoutList, UserRound, AlarmClockOff } from 'lucide-react-native';
+import { Truck, History, ShieldAlert, AlertTriangle, LayoutList, UserRound, AlarmClockOff, CheckCircle, CircleDashed, Layers } from 'lucide-react-native';
 import { CambiarEstadoModal } from '../components/supervisor/CambiarEstadoModal';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
@@ -29,10 +29,11 @@ import { SegmentedControl } from '../components/supervisor/SegmentedControl';
 import { RangoFechasFiltro } from '../components/supervisor/RangoFechasFiltro';
 import { ListaPorDia } from '../components/supervisor/ListaPorDia';
 import { AlertaCard } from '../components/supervisor/AlertaCard';
+import { AtenderAlertaModal } from '../components/supervisor/AtenderAlertaModal';
 import { useRangoFechas } from '../hooks/useRangoFechas';
 import { useAlertas } from '../hooks/useAlertas';
 import { useRecargaManual } from '../hooks/useRecargaManual';
-import type { FiltroAlertas } from '../services/alertasService';
+import type { Alerta, EstadoAtencion, FiltroAlertas } from '../services/alertasService';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
@@ -65,6 +66,18 @@ const FILTRO_ALERTAS_API: Record<FiltroAlertasUI, FiltroAlertas> = {
   Todas: 'TODO',
   '+10 horas': 'EXTENDIDOS',
   'Cierre auto': 'CIERRES_AUTOMATICOS',
+};
+// Si alguien ya atendió la alerta
+type EstadoAtencionUI = 'Cualquiera' | 'Pendientes' | 'Atendidas';
+const ESTADOS_ATENCION = [
+  { valor: 'Cualquiera', icono: Layers },
+  { valor: 'Pendientes', icono: CircleDashed },
+  { valor: 'Atendidas', icono: CheckCircle },
+] as const satisfies readonly { valor: EstadoAtencionUI; icono: unknown }[];
+const ESTADO_ATENCION_API: Record<EstadoAtencionUI, EstadoAtencion> = {
+  Cualquiera: 'TODAS',
+  Pendientes: 'PENDIENTES',
+  Atendidas: 'ATENDIDAS',
 };
 // Distancia al final (px) desde la que se pide la siguiente página del historial o de las alertas
 const DISTANCIA_CARGA_MAS = 600;
@@ -113,7 +126,10 @@ export const ShipSupervisorScreen = () => {
 
   const [filtroAlertas, setFiltroAlertas] = useState<FiltroAlertasUI>('Todas');
   const rangoAlertas = useRangoFechas();
-  const alertas = useAlertas(FILTRO_ALERTAS_API[filtroAlertas], rangoAlertas.rango);
+  const [estadoAlertas, setEstadoAlertas] = useState<EstadoAtencionUI>('Cualquiera');
+  const alertas = useAlertas(FILTRO_ALERTAS_API[filtroAlertas], ESTADO_ATENCION_API[estadoAlertas], rangoAlertas.rango);
+  // Alerta que se está atendiendo (modal abierto); null = cerrado
+  const [alertaAAtender, setAlertaAAtender] = useState<Alerta | null>(null);
 
   // Deslizar hacia abajo recarga la pestaña visible (en Flota también el contador de alertas)
   const { refetch: refetchHistorial } = historial;
@@ -230,8 +246,14 @@ export const ShipSupervisorScreen = () => {
   const renderAlertas = () => (
     <GlassCapsule blurTarget={fondoRef}>
       <SegmentedControl opciones={FILTROS_ALERTAS} activo={filtroAlertas} onChange={setFiltroAlertas} />
+      <SegmentedControl opciones={ESTADOS_ATENCION} activo={estadoAlertas} onChange={setEstadoAlertas} />
       <RangoFechasFiltro estado={rangoAlertas} />
-      <ListaPorDia lista={alertas} nombre="alertas" recargando={recarga.refreshing} renderItem={(alerta) => <AlertaCard alerta={alerta} />} />
+      <ListaPorDia
+        lista={alertas}
+        nombre="alertas"
+        recargando={recarga.refreshing}
+        renderItem={(alerta) => <AlertaCard alerta={alerta} onAtender={setAlertaAAtender} />}
+      />
     </GlassCapsule>
   );
 
@@ -374,6 +396,12 @@ export const ShipSupervisorScreen = () => {
           refetch();
           historial.refetch();
         }}
+      />
+      <AtenderAlertaModal
+        alerta={alertaAAtender}
+        onClose={() => setAlertaAAtender(null)}
+        // Se actualiza la tarjeta aunque ya no calce con el filtro, para que no desaparezca mientras se mira
+        onAtendida={(idAlerta, atenciones) => alertas.actualizar(idAlerta, (a) => ({ ...a, atenciones }))}
       />
       <CambiarEstadoModal
         maquina={maquinaAToggle}

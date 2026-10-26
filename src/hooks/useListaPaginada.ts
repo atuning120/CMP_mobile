@@ -24,6 +24,8 @@ export interface ListaPaginada<T, P> {
   errorMas: string | null;
   refetch: () => void;
   cargarMas: () => void;
+  // Cambia un elemento ya cargado sin volver a pedir la lista (p. ej. una alerta recién atendida)
+  actualizar: (id: string, cambio: (item: T) => T) => void;
 }
 
 const mensajeError = (err: unknown) => (err instanceof Error ? err.message : 'No se pudo cargar la información.');
@@ -101,5 +103,9 @@ export const useListaPaginada = <T extends ElementoPaginado, P extends PaginaLis
     }
   }, [items, hayMas, isLoading, desde, hasta]);
 
-  return { items, hayMas, ultimaPagina, isLoading, isLoadingMas, error, errorMas, refetch, cargarMas };
+  const actualizar = useCallback((id: string, cambio: (item: T) => T) => {
+    setItems((prev) => prev.map((item) => (item.id === id ? cambio(item) : item)));
+  }, []);
+
+  return { items, hayMas, ultimaPagina, isLoading, isLoadingMas, error, errorMas, refetch, cargarMas, actualizar };
 };

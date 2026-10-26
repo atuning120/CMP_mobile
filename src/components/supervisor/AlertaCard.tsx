@@ -1,20 +1,23 @@
 import React from 'react';
-import { Text, View, useColorScheme } from 'react-native';
-import { AlarmClockOff, AlertTriangle, Clock, Layers, MapPin, Timer } from 'lucide-react-native';
+import { Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { AlarmClockOff, AlertTriangle, CheckCircle, Clock, Layers, MapPin, MessageSquarePlus, Timer } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import type { Alerta } from '../../services/alertasService';
 import { formatearDuracion, formatearFecha } from '../../utils/historialFechas';
 import { styles } from './HistorialEventoCard.styles';
+import { estilosAtencion } from './AlertaCard.styles';
 
 interface Props {
   alerta: Alerta;
+  // Abre el modal para atenderla o agregarle una nota
+  onAtender?: (alerta: Alerta) => void;
 }
 
 const minutosEntre = (desde: string, hasta: string | null) =>
   ((hasta ? new Date(hasta).getTime() : Date.now()) - new Date(desde).getTime()) / 60000;
 
 // Misma tarjeta que el historial: icono, quién y qué máquina, una etiqueta con el estado y los datos del turno
-export const AlertaCard: React.FC<Props> = ({ alerta }) => {
+export const AlertaCard: React.FC<Props> = ({ alerta, onAtender }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const { turno } = alerta;
@@ -26,6 +29,8 @@ export const AlertaCard: React.FC<Props> = ({ alerta }) => {
   const Icono = esCierreAutomatico ? AlarmClockOff : jornada ? Layers : AlertTriangle;
   const duracion = formatearDuracion(minutosEntre(turno.horaInicio, turno.horaTermino));
   const ubicacion = [alerta.area, alerta.zona].filter(Boolean).join(' · ');
+  // La primera atención es quién la atendió; las siguientes, notas posteriores
+  const [atencion, ...notas] = alerta.atenciones ?? [];
 
   const etiqueta = esCierreAutomatico
     ? `Cierre automático tras ${duracion} · posible olvido de cierre`
@@ -85,6 +90,44 @@ export const AlertaCard: React.FC<Props> = ({ alerta }) => {
             </Text>
           </View>
         </View>
+
+        {!!atencion && (
+          <View style={[estilosAtencion.registro, { backgroundColor: theme.cardAlt, borderLeftColor: theme.success }]}>
+            <View style={estilosAtencion.fila}>
+              <CheckCircle size={13} color={theme.success} />
+              <Text style={[estilosAtencion.texto, { color: theme.text }]}>
+                Atendida por <Text style={styles.actor}>{atencion.usuario}</Text> · {formatearFecha(atencion.fecha)}
+              </Text>
+            </View>
+            {!!atencion.comentario && <Text style={[estilosAtencion.texto, { color: theme.text }]}>{atencion.comentario}</Text>}
+            {notas.map((nota, i) => (
+              <View key={i} style={[estilosAtencion.nota, { borderTopColor: theme.border }]}>
+                <Text style={[estilosAtencion.autor, { color: theme.textTertiary }]}>
+                  Nota de {nota.usuario} · {formatearFecha(nota.fecha)}
+                </Text>
+                <Text style={[estilosAtencion.texto, { color: theme.text }]}>{nota.comentario}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {!!onAtender && alerta.atenciones !== undefined && (
+          <TouchableOpacity
+            style={[
+              estilosAtencion.boton,
+              atencion
+                ? { borderColor: theme.border }
+                : { borderColor: theme.success + '73', backgroundColor: theme.success + '1A' },
+            ]}
+            onPress={() => onAtender(alerta)}
+            activeOpacity={0.7}
+          >
+            {atencion ? <MessageSquarePlus size={14} color={theme.primary} /> : <CheckCircle size={14} color={theme.success} />}
+            <Text style={[estilosAtencion.botonTexto, { color: atencion ? theme.primary : theme.success }]}>
+              {atencion ? 'Agregar nota' : 'Atender'}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <Text style={[styles.fecha, { color: theme.textTertiary }]}>{formatearFecha(alerta.fecha)}</Text>
       </View>
