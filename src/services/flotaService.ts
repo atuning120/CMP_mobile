@@ -28,7 +28,13 @@ export interface MaquinaFlotaApi {
   // Tras un reemplazo: la máquina que la cubre, o (en el respaldo) la original a la que cubre
   respaldo?: { idMaquina: number; nombre: string; estadoAlDevolver: string } | null;
   cubreA?: { idMaquina: number; nombre: string } | null;
+  // Sube con cada acción de un jefe de turno. Ausente en un Backend anterior
+  version?: number;
 }
+
+// versionBase (en editar, cambiar estado, reemplazar y devolver): la `version` de la máquina que vio el jefe de turno.
+// Si otro la cambió mientras tanto, el Backend no aplica la acción y responde 409 con este código
+export const MAQUINA_MODIFICADA = 'MAQUINA_MODIFICADA';
 
 export const listarFlota = (busqueda: string) => {
   const texto = busqueda.trim();
@@ -69,6 +75,7 @@ export interface EditarMaquinaApi {
   regresoEstimado?: string | null; // ISO; solo en mantenimiento o fuera de servicio
   motivo: string;
   observacion: string | null;
+  versionBase?: number;
 }
 
 export const editarMaquina = (idMaquina: number, datos: EditarMaquinaApi) =>
@@ -79,6 +86,7 @@ export const editarMaquina = (idMaquina: number, datos: EditarMaquinaApi) =>
 // regresoEstimado (ISO) solo en mantenimiento o fuera de servicio; undefined no lo toca
 export const cambiarEstadoMaquina = (
   idMaquina: number,
+  versionBase: number | undefined,
   estado: EstadoMaquina,
   motivo: string,
   observacion: string | null,
@@ -86,7 +94,7 @@ export const cambiarEstadoMaquina = (
 ) =>
   apiRequest<MaquinaFlotaApi>(`/maquinas/${idMaquina}`, {
     method: 'PATCH',
-    body: JSON.stringify({ estado, motivo, observacion, regresoEstimado }),
+    body: JSON.stringify({ estado, motivo, observacion, regresoEstimado, versionBase }),
   });
 
 // Reemplazo: la entrante es una de la flota o una nueva; sin idOperador, el de la saliente pasa a la entrante
@@ -99,6 +107,7 @@ export interface ReemplazarMaquinaApi {
   regresoEstimado: string | null;
   motivo: string;
   observacion: string | null;
+  versionBase?: number; // la de la saliente
 }
 
 export const reemplazarMaquina = (idSaliente: number, datos: ReemplazarMaquinaApi) =>
@@ -108,10 +117,10 @@ export const reemplazarMaquina = (idSaliente: number, datos: ReemplazarMaquinaAp
   });
 
 // La original vuelve a operar con el operador de su respaldo, y el respaldo vuelve a su estado anterior
-export const devolverMaquina = (idMaquina: number, motivo: string, observacion: string | null) =>
+export const devolverMaquina = (idMaquina: number, versionBase: number | undefined, motivo: string, observacion: string | null) =>
   apiRequest<{ original: MaquinaFlotaApi; respaldo: MaquinaFlotaApi }>(`/maquinas/${idMaquina}/devolucion`, {
     method: 'POST',
-    body: JSON.stringify({ motivo, observacion }),
+    body: JSON.stringify({ motivo, observacion, versionBase }),
   });
 
 // Cierra el turno en curso de la máquina en nombre del operador (para sacarla de operación). El horómetro final

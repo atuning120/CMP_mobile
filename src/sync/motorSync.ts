@@ -3,7 +3,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { leerSesion } from '../services/authStorage';
 import { sincronizarSesion } from '../services/authService';
 import { enviarPosicionesPendientes } from '../services/envioUbicacion';
-import { adelantarReintentos } from './colaSync';
+import { adelantarReintentos, duenoDeSesion } from './colaSync';
 import { refrescarContadores, sincronizar } from './syncEngine';
 
 const INTERVALO_MS = 60 * 1000;
@@ -20,8 +20,8 @@ export const iniciarMotorSync = () => {
     void enviarPosicionesPendientes();
     // Primero la sesión (refresh token o login silencioso tras un ingreso offline), luego los datos
     await sincronizarSesion();
-    const sesion = await leerSesion();
-    if (sesion?.idOperador) await adelantarReintentos(sesion.idOperador);
+    const dueno = duenoDeSesion(await leerSesion());
+    if (dueno) await adelantarReintentos(dueno);
     await sincronizar();
   };
 

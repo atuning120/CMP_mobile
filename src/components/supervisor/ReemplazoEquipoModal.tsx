@@ -20,6 +20,7 @@ import { styles } from './ReemplazoEquipoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
 import { mensajeDeError } from '../../utils/errores';
+import { useVersionBase } from '../../hooks/useVersionBase';
 
 interface Props {
   // Máquina que sale (la de la tarjeta); null = modal cerrado
@@ -101,6 +102,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
 
   // Candidatas a entrar: toda la flota (no solo lo filtrado en la pantalla), salvo la saliente
   const [flota, setFlota] = useState<MaquinaFlota[]>([]);
+  const { versionBase, explicarError } = useVersionBase(maquina);
   const [cargandoFlota, setCargandoFlota] = useState(false);
   const [errorFlota, setErrorFlota] = useState<string | null>(null);
   const [intentoFlota, setIntentoFlota] = useState(0);
@@ -169,6 +171,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
         setTurnoCerrado(true);
       }
       await reemplazarMaquina(maquina.id, {
+        versionBase,
         ...(origen === 'De la flota'
           ? { idMaquinaEntrante: entrante!.id }
           : {
@@ -194,7 +197,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
       onClose();
       mostrarAviso('Reemplazo registrado');
     } catch (err) {
-      const mensaje = mensajeDeError(err, 'No se pudo registrar el reemplazo.');
+      const mensaje = await explicarError(err, 'No se pudo registrar el reemplazo.');
       setErrorEnvio(cerroTurno ? `El turno de ${maquina.operadorEnTurno} quedó cerrado, pero: ${mensaje}` : mensaje);
     }
   });

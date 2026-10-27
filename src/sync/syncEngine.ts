@@ -15,9 +15,12 @@ import { FOTOS_HABILITADAS } from '../constants/features';
 import { mensajeDeError } from '../utils/errores';
 import { leerSesion } from '../services/authStorage';
 import * as api from '../services/turnoService';
+import { atenderAlerta } from '../services/alertasService';
 import {
   completarOperacion,
   contarOperaciones,
+  DuenoCola,
+  duenoDeSesion,
   marcarOperacionConError,
   OperacionPendiente,
   reprogramarOperacion,
@@ -32,6 +35,8 @@ import { actualizarEstadoSincronizacion, emitirCambioDatos } from './eventos';
  *    teléfono, por lo que reintentarla nunca duplica datos en el servidor.
  * 2. Con la cola vacía, trae del servidor lo que pudo cambiar fuera del teléfono (turno cerrado
  *    automáticamente o por el jefe de turno) y refresca los catálogos.
+ *
+ * Con la sesión de un jefe de turno solo envía su cola (lo que hizo sin señal, p. ej. atender una alerta).
  *
  * Nunca bloquea la UI: todo corre en promesas, una sola ejecución a la vez, y la UI se entera de
  * los cambios por eventos (src/sync/eventos.ts).
@@ -102,12 +107,18 @@ const enviarOperacion = async (operacion: OperacionPendiente): Promise<void> => 
       await actualizarEstadoEvidencia(operacion.idEntidad, 'SINCRONIZADO');
       return;
     }
+    case 'ATENDER_ALERTA': {
+      const { idAlerta, comentario, atencionesVistas } = p as { idAlerta: string; comentario: string; atencionesVistas: number };
+      // Si la respuesta no llegó y se reenvía, el idCliente evita registrarla dos veces
+      await atenderAlerta(idAlerta, comentario, operacion.idEntidad, atencionesVistas, operacion.fechaAccion ?? undefined);
+      return;
+    }
   }
 };
 
-const procesarCola = async (idOperador: number): Promise<ResultadoEnvio> => {
+const procesarCola = async (dueno: DuenoCola): Promise<ResultadoEnvio> => {
   for (;;) {
-    const operacion = await siguienteOperacion(idOperador);
+    const operacion = await siguienteOperacion(dueno);
     if (!operacion) return 'ok';
 
     // Fotos desactivadas: una subida que quedó en cola se descarta (la foto sigue en el teléfono)
@@ -278,28 +289,27 @@ export const sincronizarCatalogos = async (forzar = false, tipos?: TipoCatalogo[
   if (cambios) emitirCambioDatos();
 };
 
-const actualizarContadores = async (idOperador: number) => {
-  const { pendientes, errores } = await contarOperaciones(idOperador);
+const actualizarContadores = async (dueno: DuenoCola) => {
+  const { pendientes, errores } = await contarOperaciones(dueno);
   actualizarEstadoSincronizacion({ pendientes, errores });
 };
 
 const ejecutar = async () => {
-  const sesion = await leerSesion();
-  const idOperador = sesion?.idOperador;
-  if (!idOperador) return;
+  const dueno = duenoDeSesion(await leerSesion());
+  if (!dueno) return;
 
   actualizarEstadoSincronizacion({ sincronizando: true });
   try {
-    const resultado = await procesarCola(idOperador);
-    await actualizarContadores(idOperador);
+    const resultado = await procesarCola(dueno);
+    await actualizarContadores(dueno);
     if (resultado !== 'ok') {
       if (resultado === 'reintentar') actualizarEstadoSincronizacion({ ultimoError: 'El servidor no respondió; se reintentará.' });
       return;
     }
 
-    const { pendientes } = await contarOperaciones(idOperador);
-    if (pendientes === 0) {
-      await conciliarTurno(idOperador);
+    const { pendientes } = await contarOperaciones(dueno);
+    if (pendientes === 0 && 'idOperador' in dueno) {
+      await conciliarTurno(dueno.idOperador);
       await sincronizarCatalogos();
     }
     actualizarEstadoSincronizacion({ ultimaSincronizacion: new Date().toISOString(), ultimoError: null });
@@ -343,6 +353,6 @@ export const solicitarSincronizacion = () => {
 export const sincronizacionEnCurso = (): Promise<void> | null => ejecucionEnCurso;
 
 export const refrescarContadores = async () => {
-  const sesion = await leerSesion();
-  if (sesion?.idOperador) await actualizarContadores(sesion.idOperador);
+  const dueno = duenoDeSesion(await leerSesion());
+  if (dueno) await actualizarContadores(dueno);
 };

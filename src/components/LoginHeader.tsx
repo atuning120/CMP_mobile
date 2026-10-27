@@ -1,8 +1,8 @@
-import { useNetInfo } from '@react-native-community/netinfo';
 import { Moon, Sun, Wifi, WifiOff } from 'lucide-react-native';
 import React from 'react';
 import { Appearance, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { darkTheme, lightTheme, ThemeColors } from '../constants/theme';
+import { useConectado } from '../hooks/useConectado';
 import { CmpLogo } from './CmpLogo';
 import { GeoPlantaBrand } from './GeoPlantaBrand';
 import { styles } from './LoginHeader.styles';
@@ -11,14 +11,12 @@ import { SyncIndicator } from './SyncIndicator';
 
 export interface LoginHeaderProps {
   showConnectionStatus?: boolean;
-  // Registros pendientes de subir al servidor (pantallas del operador)
+  // Registros pendientes de subir al servidor (del operador o lo que el jefe de turno hizo sin señal)
   showSyncStatus?: boolean;
 }
 
 const ConnectionChip: React.FC<{ theme: ThemeColors }> = ({ theme }) => {
-  const netInfo = useNetInfo();
-  // Mismo criterio que motorSync: un WiFi sin salida a internet no cuenta como conectado
-  const conectado = netInfo.isConnected === true && netInfo.isInternetReachable !== false;
+  const conectado = useConectado();
 
   return conectado ? (
     <StatusChip theme={theme} icon={Wifi} iconColor={theme.success} textColor={theme.successText} label="Conectado" />

@@ -33,6 +33,8 @@ export interface MaquinaFlota {
   // Tras un reemplazo: quién la cubre (y a qué estado vuelve al devolver) o, en el respaldo, a quién cubre
   respaldo: { id: number; codigo: string; estadoAlDevolver: EstadoMaquina } | null;
   cubreA: { id: number; codigo: string } | null;
+  // Versión en el Backend: se envía como versionBase al modificarla (null si vino de un Backend anterior)
+  version: number | null;
 }
 
 export interface UseFlotaResumenResult {
@@ -98,6 +100,7 @@ export const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
     ? { id: maquina.respaldo.idMaquina, codigo: maquina.respaldo.nombre, estadoAlDevolver: presentacionEstado(maquina.respaldo.estadoAlDevolver).valor }
     : null,
   cubreA: maquina.cubreA ? { id: maquina.cubreA.idMaquina, codigo: maquina.cubreA.nombre } : null,
+  version: maquina.version ?? null,
 });
 
 // Pasó su regreso estimado y sigue sin volver a operar: el jefe de turno debe hacer seguimiento

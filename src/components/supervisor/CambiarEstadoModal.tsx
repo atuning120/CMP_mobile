@@ -12,7 +12,7 @@ import { RegresoEstimadoChips, regresoDesdeAhora } from './RegresoEstimadoChips'
 import { styles } from './CambiarEstadoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
-import { mensajeDeError } from '../../utils/errores';
+import { useVersionBase } from '../../hooks/useVersionBase';
 
 interface Props {
   // Máquina a la que se cambia el estado; null = modal cerrado
@@ -40,6 +40,7 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
   // Bloquea toques repetidos en el botón de confirmar mientras se guarda
   const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [error, setError] = useState<string | null>(null);
+  const { versionBase, explicarError } = useVersionBase(maquina);
 
   // Cada apertura parte en blanco
   const [abiertaPara, setAbiertaPara] = useState<MaquinaFlota | null>(null);
@@ -83,12 +84,12 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
         setTurnoCerrado(true);
       }
       const regreso = conRegreso(destino.valor) && horasRegreso !== null ? regresoDesdeAhora(horasRegreso).toISOString() : undefined;
-      const actualizada = await cambiarEstadoMaquina(maquina.id, destino.valor, motivo, observacion.trim() || null, regreso);
+      const actualizada = await cambiarEstadoMaquina(maquina.id, versionBase, destino.valor, motivo, observacion.trim() || null, regreso);
       onCambiado(mapMaquinaFlota(actualizada));
       onClose();
       mostrarAviso(`Equipo ${destino.etiqueta.toLowerCase()}`);
     } catch (err) {
-      const mensaje = mensajeDeError(err, 'No se pudo cambiar el estado del equipo.');
+      const mensaje = await explicarError(err, 'No se pudo cambiar el estado del equipo.');
       // El turno pudo quedar cerrado aunque el cambio fallara: al reintentar ya no se pide el horómetro
       setError(cerroTurno ? `El turno de ${maquina.operadorEnTurno} quedó cerrado, pero: ${mensaje}` : mensaje);
     }

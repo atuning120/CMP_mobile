@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { View, Text, Image, NativeScrollEvent, NativeSyntheticEvent, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { Alert, View, Text, Image, NativeScrollEvent, NativeSyntheticEvent, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -7,7 +7,7 @@ import { darkTheme, lightTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
-import { Truck, History, ShieldAlert, AlertTriangle, LayoutList, UserRound, AlarmClockOff, CheckCircle, CircleDashed, Layers } from 'lucide-react-native';
+import { Truck, History, ShieldAlert, AlertTriangle, LayoutList, UserRound, AlarmClockOff, CheckCircle, CircleDashed, Layers, Wrench } from 'lucide-react-native';
 import { CambiarEstadoModal } from '../components/supervisor/CambiarEstadoModal';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
@@ -35,6 +35,8 @@ import { useAlertas } from '../hooks/useAlertas';
 import { useRecargaManual } from '../hooks/useRecargaManual';
 import { AvisoDatosGuardados } from '../components/supervisor/AvisoDatosGuardados';
 import type { Alerta, EstadoAtencion, FiltroAlertas } from '../services/alertasService';
+import { descartarAtencionPendiente } from '../services/accionesJefe';
+import { useConectado } from '../hooks/useConectado';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
@@ -57,16 +59,18 @@ const FILTROS_HISTORIAL = [
 ] as const satisfies readonly { valor: FiltroHistorialUI; icono: unknown }[];
 const FILTRO_HISTORIAL_API: Record<FiltroHistorialUI, FiltroHistorial> = { Todo: 'TODO', Turnos: 'TURNOS', Flota: 'FLOTA' };
 
-type FiltroAlertasUI = 'Todas' | '+10 horas' | 'Cierre auto';
+type FiltroAlertasUI = 'Todas' | '+10 horas' | 'Cierre auto' | 'Mantención';
 const FILTROS_ALERTAS = [
   { valor: 'Todas', icono: ShieldAlert },
   { valor: '+10 horas', icono: AlertTriangle },
   { valor: 'Cierre auto', icono: AlarmClockOff },
+  { valor: 'Mantención', icono: Wrench },
 ] as const satisfies readonly { valor: FiltroAlertasUI; icono: unknown }[];
 const FILTRO_ALERTAS_API: Record<FiltroAlertasUI, FiltroAlertas> = {
   Todas: 'TODO',
   '+10 horas': 'EXTENDIDOS',
   'Cierre auto': 'CIERRES_AUTOMATICOS',
+  Mantención: 'MANTENCIONES',
 };
 // Si alguien ya atendió la alerta
 type EstadoAtencionUI = 'Cualquiera' | 'Pendientes' | 'Atendidas';
@@ -131,6 +135,13 @@ export const ShipSupervisorScreen = () => {
   const alertas = useAlertas(FILTRO_ALERTAS_API[filtroAlertas], ESTADO_ATENCION_API[estadoAlertas], rangoAlertas.rango);
   // Alerta que se está atendiendo (modal abierto); null = cerrado
   const [alertaAAtender, setAlertaAAtender] = useState<Alerta | null>(null);
+  const conectado = useConectado();
+
+  const confirmarDescarte = (idOperacion: number) =>
+    Alert.alert('Descartar atención', 'El servidor no la aceptó. Si la descartas, se borra de este teléfono y no se envía.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Descartar', style: 'destructive', onPress: () => void descartarAtencionPendiente(idOperacion) },
+    ]);
 
   // Deslizar hacia abajo recarga la pestaña visible (en Flota también el contador de alertas)
   const { refetch: refetchHistorial } = historial;
@@ -255,7 +266,7 @@ export const ShipSupervisorScreen = () => {
         lista={alertas}
         nombre="alertas"
         recargando={recarga.refreshing}
-        renderItem={(alerta) => <AlertaCard alerta={alerta} onAtender={setAlertaAAtender} />}
+        renderItem={(alerta) => <AlertaCard alerta={alerta} onAtender={setAlertaAAtender} onDescartarPendiente={confirmarDescarte} />}
       />
     </GlassCapsule>
   );
@@ -293,6 +304,7 @@ export const ShipSupervisorScreen = () => {
               onEditar={handleEditar}
               onCambiarEstado={handleToggleEstado}
               onDevolver={setMaquinaADevolver}
+              conectado={conectado}
             />
           ))
         )}
@@ -302,7 +314,8 @@ export const ShipSupervisorScreen = () => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
-      <LoginHeader showConnectionStatus />
+      {/* Lo que el jefe de turno hizo sin señal también queda por sincronizar */}
+      <LoginHeader showConnectionStatus showSyncStatus />
 
       <View
         style={styles.mainContent}

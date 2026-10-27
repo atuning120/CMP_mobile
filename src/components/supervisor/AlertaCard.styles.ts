@@ -29,6 +29,23 @@ export const estilosAtencion = StyleSheet.create({
   autor: {
     fontSize: 11,
   },
+  // Atención hecha sin señal que aún no llega al servidor
+  envio: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  envioTexto: {
+    flexShrink: 1,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  descartar: {
+    fontSize: 11,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
   boton: {
     alignSelf: 'flex-start',
     flexDirection: 'row',

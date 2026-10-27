@@ -4,7 +4,7 @@ import { CloudCheck, CloudOff, RefreshCw, CloudUpload } from 'lucide-react-nativ
 import { ThemeColors } from '../constants/theme';
 import { useSyncStatus } from '../hooks/useSyncStatus';
 import { leerSesion } from '../services/authStorage';
-import { listarOperacionesConError, reintentarOperacionesConError } from '../sync/colaSync';
+import { duenoDeSesion, listarOperacionesConError, reintentarOperacionesConError } from '../sync/colaSync';
 import { solicitarSincronizacion } from '../sync/syncEngine';
 import { useAccionUnica } from '../hooks/useAccionUnica';
 import { StatusChip } from './StatusChip';
@@ -15,6 +15,7 @@ const ETIQUETAS: Record<string, string> = {
   REGISTRAR_ESTADO: 'Cambio de estado',
   CREAR_REPORTE: 'Reporte',
   SUBIR_EVIDENCIA: 'Foto de evidencia',
+  ATENDER_ALERTA: 'Atención de alerta',
 };
 
 /**
@@ -26,9 +27,9 @@ export const SyncIndicator: React.FC<{ theme: ThemeColors }> = ({ theme }) => {
   // Dos toques rápidos mostraban el aviso dos veces (cada uno lee la base antes de abrirlo)
   const [, ejecutarUnaVez] = useAccionUnica();
   const mostrarErrores = () => ejecutarUnaVez(async () => {
-    const sesion = await leerSesion();
-    if (!sesion?.idOperador) return;
-    const operaciones = await listarOperacionesConError(sesion.idOperador);
+    const dueno = duenoDeSesion(await leerSesion());
+    if (!dueno) return;
+    const operaciones = await listarOperacionesConError(dueno);
     const detalle = operaciones
       .slice(0, 5)
       .map((op) => `• ${ETIQUETAS[op.tipo] ?? op.tipo}: ${op.ultimoError ?? 'error desconocido'}`)
@@ -38,7 +39,7 @@ export const SyncIndicator: React.FC<{ theme: ThemeColors }> = ({ theme }) => {
       {
         text: 'Reintentar',
         onPress: async () => {
-          await reintentarOperacionesConError(sesion.idOperador!);
+          await reintentarOperacionesConError(dueno);
           solicitarSincronizacion();
         },
       },

@@ -16,7 +16,7 @@ import { MOTIVOS_EDICION } from '../../constants/motivosJefeTurno';
 import { styles } from './EditarEquipoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
-import { mensajeDeError } from '../../utils/errores';
+import { useVersionBase } from '../../hooks/useVersionBase';
 
 interface Props {
   visible: boolean;
@@ -76,6 +76,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
   // Bloquea toques repetidos en el botón de confirmar mientras se guarda
   const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
+  const { versionBase, explicarError } = useVersionBase(maquina);
 
   // Al abrir (o cambiar de máquina) el formulario parte desde los datos guardados
   const [cargadaDe, setCargadaDe] = useState<MaquinaFlota | null>(null);
@@ -133,6 +134,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
         setTurnoCerrado(true);
       }
       const actualizada = await editarMaquina(maquina.id, {
+        versionBase,
         nombre: equipo.codigo.trim(),
         marca: equipo.marca.trim(),
         modelo: equipo.modelo.trim(),
@@ -153,7 +155,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
       onClose();
       mostrarAviso('Cambios guardados');
     } catch (err) {
-      const mensaje = mensajeDeError(err, 'No se pudieron guardar los cambios.');
+      const mensaje = await explicarError(err, 'No se pudieron guardar los cambios.');
       setErrorEnvio(cerroTurno ? `El turno de ${maquina.operadorEnTurno} quedó cerrado, pero: ${mensaje}` : mensaje);
     }
   });

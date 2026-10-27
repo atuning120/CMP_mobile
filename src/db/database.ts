@@ -133,6 +133,14 @@ const MIGRACIONES: (string | MigracionCodigo)[] = [
       }
     }
   },
+  `
+  -- Acciones del jefe de turno hechas sin señal. No tienen operador (id_operador = 0): se envían con la sesión de usuario
+  ALTER TABLE operacion_pendiente ADD COLUMN usuario TEXT;        -- identificador de la sesión (email o RUT normalizado)
+  -- Una operación espera a las anteriores con su misma clave (p. ej. "alerta:E-12"), aunque estén con error; las demás siguen
+  ALTER TABLE operacion_pendiente ADD COLUMN clave_bloqueo TEXT;
+  ALTER TABLE operacion_pendiente ADD COLUMN fecha_accion TEXT;   -- cuándo la hizo el usuario (ISO 8601)
+  CREATE INDEX IF NOT EXISTS idx_operacion_usuario ON operacion_pendiente (usuario, estado, id);
+  `,
 ];
 
 export type Db = SQLite.SQLiteDatabase;

@@ -13,6 +13,7 @@ import { styles } from './CambiarEstadoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
 import { mensajeDeError } from '../../utils/errores';
+import { useVersionBase } from '../../hooks/useVersionBase';
 
 interface Props {
   // Máquina original que vuelve de la reparación; null = modal cerrado
@@ -41,6 +42,7 @@ export const DevolverEquipoModal: React.FC<Props> = ({ maquina, onClose, onDevue
 
   // El respaldo con sus datos al día (quién lo opera ahora); puede no estar en la lista filtrada de la pantalla
   const [respaldo, setRespaldo] = useState<MaquinaFlota | null>(null);
+  const { versionBase, explicarError } = useVersionBase(maquina);
   const [cargando, setCargando] = useState(false);
   useEffect(() => {
     if (!maquina?.respaldo) return;
@@ -97,12 +99,12 @@ export const DevolverEquipoModal: React.FC<Props> = ({ maquina, onClose, onDevue
         cerroTurno = true;
         setTurnoCerrado(true);
       }
-      await devolverMaquina(maquina.id, motivo, observacion.trim() || null);
+      await devolverMaquina(maquina.id, versionBase, motivo, observacion.trim() || null);
       onDevuelto();
       onClose();
       mostrarAviso(`${maquina.codigo} volvió a operar`);
     } catch (err) {
-      const mensaje = mensajeDeError(err, 'No se pudo registrar la devolución.');
+      const mensaje = await explicarError(err, 'No se pudo registrar la devolución.');
       setError(cerroTurno ? `El turno de ${respaldo.operadorEnTurno} quedó cerrado, pero: ${mensaje}` : mensaje);
     }
   });

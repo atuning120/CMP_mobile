@@ -20,8 +20,17 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
+  segmentoCompacto: {
+    flexDirection: 'column',
+    gap: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+  },
   texto: {
     fontSize: 14,
     fontWeight: '700',
+  },
+  textoCompacto: {
+    fontSize: 12,
   },
 });

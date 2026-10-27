@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import * as Crypto from 'expo-crypto';
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, useColorScheme } from 'react-native';
 import { CheckCircle, MessageSquarePlus } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
-import { atenderAlerta, LARGO_MAXIMO_COMENTARIO, type Alerta, type AtencionAlerta } from '../../services/alertasService';
+import { LARGO_MAXIMO_COMENTARIO, type Alerta, type AtencionAlerta } from '../../services/alertasService';
+import { atenderAlertaJefe } from '../../services/accionesJefe';
 import { styles } from './AtenderAlertaModal.styles';
 import { mensajeDeError } from '../../utils/errores';
 
@@ -12,12 +14,13 @@ interface Props {
   // Alerta que se atiende; null = modal cerrado
   alerta: Alerta | null;
   onClose: () => void;
+  // Llegó al Backend: todas sus atenciones. Sin señal queda en la cola y la tarjeta la muestra como pendiente
   onAtendida: (idAlerta: string, atenciones: AtencionAlerta[]) => void;
 }
 
 /**
  * Atiende una alerta (comentario opcional) o, si ya fue atendida, le agrega una nota (comentario obligatorio).
- * Nada se edita ni se borra: queda quién lo hizo, cuándo y qué dijo.
+ * Nada se edita ni se borra: queda quién lo hizo, cuándo y qué dijo. Funciona sin señal: se envía al volver la red.
  */
 export const AtenderAlertaModal: React.FC<Props> = ({ alerta, onClose, onAtendida }) => {
   const colorScheme = useColorScheme();
@@ -27,11 +30,15 @@ export const AtenderAlertaModal: React.FC<Props> = ({ alerta, onClose, onAtendid
   // Bloquea toques repetidos en el botón mientras se guarda
   const [guardando, ejecutarUnaVez] = useAccionUnica();
   const esNota = (alerta?.atenciones?.length ?? 0) > 0;
+  // Identifica esta atención: si la respuesta no llega y se reintenta, el Backend no la registra dos veces.
+  // La fecha es la del primer intento: es cuando el jefe de turno la atendió
+  const atencion = useRef<{ idCliente: string; fechaAccion: string } | null>(null);
 
   const cerrar = () => {
     if (guardando) return;
     setComentario('');
     setError('');
+    atencion.current = null;
     onClose();
   };
 
@@ -44,9 +51,12 @@ export const AtenderAlertaModal: React.FC<Props> = ({ alerta, onClose, onAtendid
       }
       setError('');
       try {
-        const { atenciones } = await atenderAlerta(alerta.id, comentario.trim());
-        onAtendida(alerta.id, atenciones);
+        atencion.current ??= { idCliente: Crypto.randomUUID(), fechaAccion: new Date().toISOString() };
+        const { idCliente, fechaAccion } = atencion.current;
+        const resultado = await atenderAlertaJefe(alerta, comentario.trim(), idCliente, fechaAccion);
+        if (resultado.enviada) onAtendida(alerta.id, resultado.atenciones);
         setComentario('');
+        atencion.current = null;
         onClose();
       } catch (e) {
         setError(mensajeDeError(e, 'No se pudo guardar la atención.'));

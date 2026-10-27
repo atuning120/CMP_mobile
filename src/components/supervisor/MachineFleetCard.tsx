@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
-import { AlertTriangle, User, MapPin, Clock, RefreshCw, Edit2, Undo2, CalendarClock, Link2 } from 'lucide-react-native';
+import { AlertTriangle, User, MapPin, Clock, RefreshCw, Edit2, Undo2, CalendarClock, Link2, WifiOff } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { MaquinaFlota, regresoVencido } from '../../hooks/useFlotaResumen';
 import { presentacionEstado } from '../../constants/estadosMaquina';
@@ -12,11 +12,13 @@ interface Props {
   onEditar: (maquina: MaquinaFlota) => void;
   onCambiarEstado: (maquina: MaquinaFlota) => void;
   onDevolver: (maquina: MaquinaFlota) => void;
+  // Reemplazar y devolver cambian dos máquinas a la vez: solo se hacen con conexión, nunca quedan en cola
+  conectado: boolean;
 }
 
 const formatoRegreso = new Intl.DateTimeFormat('es-CL', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEditar, onCambiarEstado, onDevolver }) => {
+export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEditar, onCambiarEstado, onDevolver, conectado }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const estado = presentacionEstado(maquina.estado);
@@ -126,7 +128,14 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
 
       {/* Actions */}
       <View style={[styles.actionsRow, { borderTopColor: theme.glassSurfaceBorder }]}>
-        {maquina.respaldo ? (
+        {!conectado && (maquina.respaldo || puedeReemplazar) ? (
+          <View style={[styles.btnAction, { backgroundColor: superficieSecundaria, opacity: 0.6 }]}>
+            <WifiOff size={16} color={theme.textSecondary} />
+            <Text style={[styles.btnActionText, { color: theme.textSecondary }]}>
+              {maquina.respaldo ? 'Devolver' : 'Reemplazo'} · Requiere conexión
+            </Text>
+          </View>
+        ) : maquina.respaldo ? (
           <TouchableOpacity
             style={[styles.btnAction, { backgroundColor: theme.success }]}
             onPress={() => onDevolver(maquina)}
