@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { MENSAJE_SIN_CONEXION, mensajeDeRespuesta } from '../utils/errores';
 
 /*
  * Base de datos local (SQLite) de la app. Es la fuente de verdad mientras se trabaja: la UI lee y
@@ -8,8 +9,26 @@ import * as SQLite from 'expo-sqlite';
  * Fechas en ISO 8601 (TEXT), booleanos 0/1 y objetos de catálogo como JSON (TEXT).
  */
 
+/*
+ * Errores de sincronización guardados antes de sanear los mensajes: venían como "CODIGO: mensaje",
+ * "400: mensaje" o con el texto técnico del error. Se dejan como los escribe hoy el motor de sincronización.
+ */
+const sanearErrorAntiguo = (texto: string): string => {
+  // Error de negocio del Backend: su mensaje ya es para el usuario
+  const conCodigo = /^[A-Z][A-Z0-9_]*: ([\s\S]+)$/.exec(texto);
+  if (conCodigo) return conCodigo[1];
+  const conStatus = /^(\d{3}): /.exec(texto);
+  if (conStatus) return mensajeDeRespuesta(Number(conStatus[1]), null);
+  if (texto.startsWith('No se pudo conectar con el servidor')) return MENSAJE_SIN_CONEXION;
+  if (texto.startsWith('La foto ya no existe en el teléfono')) return 'La foto ya no está guardada en el teléfono.';
+  return 'Ocurrió un error inesperado al sincronizar.';
+};
+
+// Cambio de datos que no se puede expresar solo en SQL
+type MigracionCodigo = (txn: Db) => Promise<void>;
+
 // Cada entrada es una versión; nunca modificar una ya publicada, solo agregar nuevas al final.
-const MIGRACIONES: string[] = [
+const MIGRACIONES: (string | MigracionCodigo)[] = [
   `
   CREATE TABLE IF NOT EXISTS catalogo (
     tipo      TEXT NOT NULL,     -- maquina | area | zona | estado
@@ -103,6 +122,17 @@ const MIGRACIONES: string[] = [
     guardado_en TEXT NOT NULL
   );
   `,
+  async (txn) => {
+    const filas = await txn.getAllAsync<{ id: number; ultimo_error: string }>(
+      'SELECT id, ultimo_error FROM operacion_pendiente WHERE ultimo_error IS NOT NULL',
+    );
+    for (const fila of filas) {
+      const saneado = sanearErrorAntiguo(fila.ultimo_error);
+      if (saneado !== fila.ultimo_error) {
+        await txn.runAsync('UPDATE operacion_pendiente SET ultimo_error = ? WHERE id = ?', [saneado, fila.id]);
+      }
+    }
+  },
 ];
 
 export type Db = SQLite.SQLiteDatabase;
@@ -114,7 +144,9 @@ const migrar = async (db: Db) => {
   const actual = fila?.user_version ?? 0;
   for (let version = actual; version < MIGRACIONES.length; version++) {
     await db.withExclusiveTransactionAsync(async (txn) => {
-      await txn.execAsync(MIGRACIONES[version]);
+      const migracion = MIGRACIONES[version];
+      if (typeof migracion === 'string') await txn.execAsync(migracion);
+      else await migracion(txn);
       await txn.execAsync(`PRAGMA user_version = ${version + 1}`);
     });
   }
