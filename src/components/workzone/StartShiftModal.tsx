@@ -16,6 +16,7 @@ import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { vibrar } from '../../services/retroalimentacion';
 import { horometroMinimoInicial } from '../../services/operacionesTurno';
 import { formatearHorometro } from '../../utils/validacionHorometro';
+import { mensajeDeError } from '../../utils/errores';
 
 interface Props {
   visible: boolean;
@@ -147,7 +148,7 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
       setHorometro('');
       setInstrucciones('');
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : 'No se pudo iniciar el turno.');
+      setSubmitError(mensajeDeError(e, 'No se pudo iniciar el turno.'));
       vibrar('error');
     }
   });

@@ -6,6 +6,7 @@ import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { FotoCapturada } from '../../types/turno';
 import { styles } from './NovedadModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
+import { mensajeDeError } from '../../utils/errores';
 
 interface Props {
   foto: FotoCapturada | null;
@@ -38,7 +39,7 @@ export const NovedadModal: React.FC<Props> = ({ foto, onClose, onGuardar }) => {
       await onGuardar(descripcion);
       setDescripcion('');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar la evidencia.');
+      setError(mensajeDeError(e, 'No se pudo guardar la evidencia.'));
     }
   });
 

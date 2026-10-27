@@ -1,5 +1,6 @@
 import { Operador } from '../types/mining';
 import { fetchBackend } from './backendUrl';
+import { ErrorParaUsuario, MENSAJE_SIN_CONEXION, mensajeDeRespuesta } from '../utils/errores';
 import { crearCredencialOffline, verificarCredencialOffline } from './credencialOffline';
 import {
   actualizarSesion,
@@ -25,7 +26,7 @@ import {
 
 export const OFFLINE_MAX_DIAS = 30;
 
-export class AuthError extends Error {
+export class AuthError extends ErrorParaUsuario {
   constructor(
     message: string,
     // 0 = sin conexión con el servidor
@@ -95,7 +96,7 @@ const postAuth = async (path: string, body: string): Promise<Response> => {
   try {
     return await fetchBackend(path, { method: 'POST', body });
   } catch {
-    throw new AuthError('No se pudo conectar con el servidor.', 0);
+    throw new AuthError(MENSAJE_SIN_CONEXION, 0);
   }
 };
 
@@ -118,7 +119,7 @@ export const loginOnline = async (
   const response = await postAuth('/auth/login', cuerpoLogin(id, password));
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
-    throw new AuthError(errorData?.message ?? 'No se pudo iniciar sesión.', response.status, errorData?.code);
+    throw new AuthError(mensajeDeRespuesta(response.status, errorData), response.status, errorData?.code);
   }
   const data = (await response.json()) as SesionMovilApi;
 

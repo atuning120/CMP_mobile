@@ -1,7 +1,7 @@
 import { apiRequest } from './apiClient';
 import { getBackendBaseUrl } from './backendUrl';
 
-// Pestaña Historial del jefe de turno (en línea, como la flota)
+// Pestaña Historial del jefe de turno (en línea, como la flota; la primera página se guarda para verla sin señal)
 
 export type TipoEventoHistorial =
   | 'INICIO_TURNO'

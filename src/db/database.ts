@@ -95,6 +95,14 @@ const MIGRACIONES: string[] = [
     rumbo       REAL                            -- grados desde el norte
   );
   `,
+  `
+  -- Última respuesta del Backend a las consultas del jefe de turno (flota, historial, alertas) para verlas sin señal
+  CREATE TABLE IF NOT EXISTS consulta_guardada (
+    clave       TEXT PRIMARY KEY NOT NULL,      -- consulta y sus filtros, p. ej. "alertas|TODO|PENDIENTES|ultimos-7"
+    datos       TEXT NOT NULL,                  -- JSON tal como lo entregó el Backend
+    guardado_en TEXT NOT NULL
+  );
+  `,
 ];
 
 export type Db = SQLite.SQLiteDatabase;

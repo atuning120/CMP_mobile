@@ -19,6 +19,7 @@ import { RegresoEstimadoChips, regresoDesdeAhora } from './RegresoEstimadoChips'
 import { styles } from './ReemplazoEquipoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
+import { mensajeDeError } from '../../utils/errores';
 
 interface Props {
   // Máquina que sale (la de la tarjeta); null = modal cerrado
@@ -115,7 +116,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
         lista.sort((a, b) => Number(!esRespaldo(a)) - Number(!esRespaldo(b)));
         if (!cancelado) setFlota(lista);
       } catch (err) {
-        if (!cancelado) setErrorFlota(err instanceof Error ? err.message : 'No se pudo cargar la flota.');
+        if (!cancelado) setErrorFlota(mensajeDeError(err, 'No se pudo cargar la flota.'));
       } finally {
         if (!cancelado) setCargandoFlota(false);
       }
@@ -193,7 +194,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
       onClose();
       mostrarAviso('Reemplazo registrado');
     } catch (err) {
-      const mensaje = err instanceof Error ? err.message : 'No se pudo registrar el reemplazo.';
+      const mensaje = mensajeDeError(err, 'No se pudo registrar el reemplazo.');
       setErrorEnvio(cerroTurno ? `El turno de ${maquina.operadorEnTurno} quedó cerrado, pero: ${mensaje}` : mensaje);
     }
   });

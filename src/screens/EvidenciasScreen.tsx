@@ -14,6 +14,7 @@ import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { esperarTransicion, useAccionUnica } from '../hooks/useAccionUnica';
 import { mostrarAviso } from '../services/retroalimentacion';
+import { mensajeDeError } from '../utils/errores';
 
 export default function EvidenciasScreen() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function EvidenciasScreen() {
           style: "destructive",
           onPress: () => {
             eliminarEvidenciaPendiente(evidencia.origen).catch((e) =>
-              Alert.alert('No se pudo eliminar', e instanceof Error ? e.message : String(e)),
+              Alert.alert('No se pudo eliminar', mensajeDeError(e, 'Intenta nuevamente en unos segundos.')),
             );
           },
         },

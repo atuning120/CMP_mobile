@@ -6,6 +6,7 @@ import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { atenderAlerta, LARGO_MAXIMO_COMENTARIO, type Alerta, type AtencionAlerta } from '../../services/alertasService';
 import { styles } from './AtenderAlertaModal.styles';
+import { mensajeDeError } from '../../utils/errores';
 
 interface Props {
   // Alerta que se atiende; null = modal cerrado
@@ -48,7 +49,7 @@ export const AtenderAlertaModal: React.FC<Props> = ({ alerta, onClose, onAtendid
         setComentario('');
         onClose();
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'No se pudo guardar la atención.');
+        setError(mensajeDeError(e, 'No se pudo guardar la atención.'));
       }
     });
 

@@ -10,6 +10,7 @@ import { FOTOS_HABILITADAS } from '../../constants/features';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { vibrar } from '../../services/retroalimentacion';
 import { formatearHorometro, revisarHorometroFinal } from '../../utils/validacionHorometro';
+import { mensajeDeError } from '../../utils/errores';
 
 interface Props {
   visible: boolean;
@@ -97,7 +98,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
       setFoto(null);
       setConfirmando(false);
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : 'No se pudo cerrar el turno.');
+      setSubmitError(mensajeDeError(e, 'No se pudo cerrar el turno.'));
       vibrar('error');
     }
   });

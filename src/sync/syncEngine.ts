@@ -12,6 +12,7 @@ import {
 import { ApiError } from '../services/apiClient';
 import { FotoNoEncontradaError } from '../services/fotos';
 import { FOTOS_HABILITADAS } from '../constants/features';
+import { mensajeDeError } from '../utils/errores';
 import { leerSesion } from '../services/authStorage';
 import * as api from '../services/turnoService';
 import {
@@ -51,7 +52,8 @@ type ResultadoEnvio = 'ok' | 'sin-conexion' | 'sin-sesion' | 'reintentar' | 'rec
 let ejecucionEnCurso: Promise<void> | null = null;
 let solicitudPendiente = false;
 
-const mensajeDe = (error: unknown) => (error instanceof Error ? error.message : String(error));
+// Queda en la operación y el operador lo ve al tocar los registros no sincronizados: nunca el texto técnico
+const mensajeDe = (error: unknown) => mensajeDeError(error, 'Ocurrió un error inesperado al sincronizar.');
 
 // Las operaciones referencian el turno por su UUID; los turnos que vinieron del servidor sin UUID usan "srv-<id>"
 const referenciaTurno = (idClienteTurno: string) =>
@@ -137,7 +139,7 @@ const procesarCola = async (idOperador: number): Promise<ResultadoEnvio> => {
         if (error.status === 401) return 'sin-sesion';
         // 4xx: el servidor rechazó los datos y reenviarlos no cambiará el resultado
         if (error.status >= 400 && error.status < 500 && error.status !== 408 && error.status !== 429) {
-          await marcarOperacionConError(operacion, `${error.code ?? error.status}: ${error.message}`);
+          await marcarOperacionConError(operacion, error.message);
           if (operacion.tipo === 'SUBIR_EVIDENCIA') await actualizarEstadoEvidencia(operacion.idEntidad, 'ERROR_SINCRONIZACION');
           emitirCambioDatos();
           continue;

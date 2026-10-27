@@ -21,9 +21,11 @@ export function ListaPorDia<T extends ElementoPaginado, P>({ lista, renderItem, 
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const dias = useMemo(() => agruparPorDia(lista.items), [lista.items]);
 
-  if (lista.isLoading && !(recargando && lista.items.length > 0)) return <ActivityIndicator size="large" color={theme.primary} style={styles.cargando} />;
+  // Con datos guardados en el teléfono se muestran esos mientras responde el Backend
+  if (lista.isLoading && !lista.guardadoEn && !(recargando && lista.items.length > 0)) return <ActivityIndicator size="large" color={theme.primary} style={styles.cargando} />;
 
-  if (lista.error && lista.items.length === 0) {
+  // Con una copia guardada (aunque sea una lista vacía) no es un error: se muestra esa, con el aviso de su antigüedad
+  if (lista.error && !lista.guardadoEn && lista.items.length === 0) {
     return (
       <View style={styles.errorCaja}>
         <Text style={[styles.centrado, { color: theme.dangerText }]}>{lista.error}</Text>

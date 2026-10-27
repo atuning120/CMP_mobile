@@ -2,8 +2,8 @@ import { apiRequest } from './apiClient';
 import type { EstadoMaquina } from '../constants/estadosMaquina';
 
 /*
- * Vista del jefe de turno: trabaja en línea contra el Backend (no pasa por la base local ni por la
- * cola de sincronización, que son solo del operador).
+ * Vista del jefe de turno: sus acciones van en línea contra el Backend (no pasan por la cola de
+ * sincronización, que es solo del operador). Lo último consultado se guarda para verlo sin señal (src/db/consultaLocal.ts).
  */
 
 export interface MaquinaFlotaApi {

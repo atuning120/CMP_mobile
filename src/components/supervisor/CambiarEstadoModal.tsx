@@ -12,6 +12,7 @@ import { RegresoEstimadoChips, regresoDesdeAhora } from './RegresoEstimadoChips'
 import { styles } from './CambiarEstadoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
+import { mensajeDeError } from '../../utils/errores';
 
 interface Props {
   // Máquina a la que se cambia el estado; null = modal cerrado
@@ -87,7 +88,7 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
       onClose();
       mostrarAviso(`Equipo ${destino.etiqueta.toLowerCase()}`);
     } catch (err) {
-      const mensaje = err instanceof Error ? err.message : 'No se pudo cambiar el estado del equipo.';
+      const mensaje = mensajeDeError(err, 'No se pudo cambiar el estado del equipo.');
       // El turno pudo quedar cerrado aunque el cambio fallara: al reintentar ya no se pide el horómetro
       setError(cerroTurno ? `El turno de ${maquina.operadorEnTurno} quedó cerrado, pero: ${mensaje}` : mensaje);
     }

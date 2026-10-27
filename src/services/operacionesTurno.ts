@@ -37,13 +37,15 @@ import {
   TurnoCerradoPorJefe,
   ZonaTrabajo,
 } from '../types/turno';
+import { ErrorParaUsuario } from '../utils/errores';
 
 /*
  * Acciones del operador, offline-first: cada una se guarda en SQLite y se encola para el Backend
  * en una sola transacción, y responde de inmediato. La sincronización corre en segundo plano.
  */
 
-export class OperacionError extends Error {}
+// Regla del turno que no se cumple: su mensaje se muestra tal cual al operador
+export class OperacionError extends ErrorParaUsuario {}
 
 const nuevoId = () => Crypto.randomUUID();
 

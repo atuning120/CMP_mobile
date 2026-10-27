@@ -14,6 +14,6 @@ export const useAlertas = (filtro: FiltroAlertas, estado: EstadoAtencion, rango:
     },
     [filtro, estado],
   );
-  const lista = useListaPaginada<Alerta, PaginaAlertasLista>(cargar, `${filtro}|${estado}`, rango);
+  const lista = useListaPaginada<Alerta, PaginaAlertasLista>(cargar, `${filtro}|${estado}`, rango, 'alertas');
   return { ...lista, activas: lista.ultimaPagina?.activas ?? null };
 };

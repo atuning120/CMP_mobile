@@ -15,6 +15,7 @@ import * as operaciones from '../services/operacionesTurno';
 import { suscribirCambioDatos } from '../sync/eventos';
 import { sincronizacionEnCurso } from '../sync/syncEngine';
 import { mostrarAviso } from '../services/retroalimentacion';
+import { mensajeDeError } from '../utils/errores';
 import { activarSeguimiento, finalizarSeguimiento, sincronizarSeguimiento } from '../services/seguimientoUbicacion';
 
 // Tope de espera a la sincronización al abrir la pantalla: con mala señal no se bloquea al operador
@@ -46,7 +47,7 @@ export const useTurnoActual = (): UseTurnoActualResult => {
       void sincronizarSeguimiento(actual.turno !== null);
       return actual.turno;
     } catch (e) {
-      setError(e instanceof Error ? e : new Error('Error al cargar el turno'));
+      setError(new Error(mensajeDeError(e, 'No se pudo cargar el turno.')));
       return null;
     }
   }, []);
@@ -92,8 +93,9 @@ export const useTurnoActual = (): UseTurnoActualResult => {
         .cambiarEstadoOperacional(turno.idCliente, nuevoEstado)
         .then(() => mostrarAviso(`Estado: ${nuevoEstado.nombre}`))
         .catch((e) => {
-          setError(e instanceof Error ? e : new Error(String(e)));
-          mostrarAviso('No se pudo cambiar el estado', { detalle: e instanceof Error ? e.message : undefined, tipo: 'error' });
+          const mensaje = mensajeDeError(e, 'Intenta nuevamente.');
+          setError(new Error(mensaje));
+          mostrarAviso('No se pudo cambiar el estado', { detalle: mensaje, tipo: 'error' });
         })
         .finally(() => {
           cambiandoEstado.current = false;

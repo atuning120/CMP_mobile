@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listarOperadoresAsignables, OperadorAsignableApi } from '../services/flotaService';
+import { mensajeDeError } from '../utils/errores';
 
 export interface OperadoresAsignables {
   operadores: OperadorAsignableApi[];
@@ -26,7 +27,7 @@ export const useOperadoresAsignables = (habilitado: boolean): OperadoresAsignabl
         const lista = await listarOperadoresAsignables();
         if (!cancelado) setOperadores(lista);
       } catch (err) {
-        if (!cancelado) setError(err instanceof Error ? err.message : 'No se pudieron cargar los operadores.');
+        if (!cancelado) setError(mensajeDeError(err, 'No se pudieron cargar los operadores.'));
       } finally {
         if (!cancelado) setCargando(false);
       }

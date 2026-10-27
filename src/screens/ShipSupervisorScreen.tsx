@@ -33,6 +33,7 @@ import { AtenderAlertaModal } from '../components/supervisor/AtenderAlertaModal'
 import { useRangoFechas } from '../hooks/useRangoFechas';
 import { useAlertas } from '../hooks/useAlertas';
 import { useRecargaManual } from '../hooks/useRecargaManual';
+import { AvisoDatosGuardados } from '../components/supervisor/AvisoDatosGuardados';
 import type { Alerta, EstadoAtencion, FiltroAlertas } from '../services/alertasService';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
@@ -118,7 +119,7 @@ export const ShipSupervisorScreen = () => {
   const [maquinaADevolver, setMaquinaADevolver] = useState<MaquinaFlota | null>(null);
 
   // La búsqueda la resuelve el Backend; el filtro por estado se aplica sobre el resultado
-  const { maquinas, contadorFlota, isLoading, error, refetch, actualizarMaquina } = useFlotaResumen(searchQuery);
+  const { maquinas, contadorFlota, isLoading, error, guardadoEn, refetch, actualizarMaquina } = useFlotaResumen(searchQuery);
 
   const [filtroHistorial, setFiltroHistorial] = useState<FiltroHistorialUI>('Todo');
   const rangoHistorial = useRangoFechas();
@@ -228,7 +229,7 @@ export const ShipSupervisorScreen = () => {
           </Text>
         </View>
         <Text style={[styles.tabCounter, { color: activeTab === 'ALERTAS' ? theme.textSecondary : theme.textTertiary }]}>
-          {alertas.activas === null ? 'Cargando...' : alertas.activas === 1 ? '1 activa' : `${alertas.activas} activas`}
+          {alertas.activas === null ? (alertas.isLoading ? 'Cargando...' : 'Sin datos') : alertas.activas === 1 ? '1 activa' : `${alertas.activas} activas`}
         </Text>
       </TouchableOpacity>
     </View>
@@ -239,6 +240,7 @@ export const ShipSupervisorScreen = () => {
       {/* Qué se ve (segmentos) va separado de cuándo (chips de rango) */}
       <SegmentedControl opciones={FILTROS_HISTORIAL} activo={filtroHistorial} onChange={setFiltroHistorial} />
       <RangoFechasFiltro estado={rangoHistorial} />
+      <AvisoDatosGuardados guardadoEn={historial.isLoading ? null : historial.guardadoEn} onReintentar={historial.refetch} />
       <ListaPorDia lista={historial} nombre="eventos" recargando={recarga.refreshing} renderItem={(evento) => <HistorialEventoCard evento={evento} />} />
     </GlassCapsule>
   );
@@ -248,6 +250,7 @@ export const ShipSupervisorScreen = () => {
       <SegmentedControl opciones={FILTROS_ALERTAS} activo={filtroAlertas} onChange={setFiltroAlertas} />
       <SegmentedControl opciones={ESTADOS_ATENCION} activo={estadoAlertas} onChange={setEstadoAlertas} />
       <RangoFechasFiltro estado={rangoAlertas} />
+      <AvisoDatosGuardados guardadoEn={alertas.isLoading ? null : alertas.guardadoEn} onReintentar={alertas.refetch} />
       <ListaPorDia
         lista={alertas}
         nombre="alertas"
@@ -265,11 +268,14 @@ export const ShipSupervisorScreen = () => {
       <GlassCapsule blurTarget={fondoRef}>
         <FleetSearchBar value={searchQuery} onChangeText={setSearchQuery} />
         <FleetFilterChips activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+        {/* Sin respuesta del Backend: la flota guardada en el teléfono, con su antigüedad */}
+        <AvisoDatosGuardados guardadoEn={isLoading ? null : guardadoEn} onReintentar={refetch} />
 
-        {/* Al deslizar para recargar se mantiene la lista: el indicador ya se ve arriba */}
-        {isLoading && !(recarga.refreshing && maquinas.length > 0) ? (
+        {/* Al deslizar para recargar se mantiene la lista: el indicador ya se ve arriba. Con la flota
+            guardada en el teléfono se muestra esa mientras responde el Backend */}
+        {isLoading && !guardadoEn && !(recarga.refreshing && maquinas.length > 0) ? (
           <ActivityIndicator size="large" color={theme.warning} style={{ marginTop: 40 }} />
-        ) : error ? (
+        ) : error && !guardadoEn ? (
           <View style={{ alignItems: 'center', marginTop: 40, gap: 12 }}>
             <Text style={{ textAlign: 'center', color: theme.dangerText }}>{error.message}</Text>
             <TouchableOpacity onPress={refetch} style={{ backgroundColor: theme.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}>

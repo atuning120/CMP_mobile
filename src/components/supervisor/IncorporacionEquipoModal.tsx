@@ -13,6 +13,7 @@ import { SearchableSelect } from '../common/SearchableSelect';
 import { MOTIVOS_INCORPORACION } from '../../constants/motivosJefeTurno';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
+import { mensajeDeError } from '../../utils/errores';
 
 interface Props {
   visible: boolean;
@@ -117,7 +118,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
       onClose();
       mostrarAviso(equipos.length === 1 ? 'Equipo incorporado a planta' : '2 equipos incorporados a planta');
     } catch (err) {
-      const mensaje = err instanceof Error ? err.message : 'No se pudo incorporar el equipo.';
+      const mensaje = mensajeDeError(err, 'No se pudo incorporar el equipo.');
       if (creados === 1) {
         // El equipo #1 ya quedó registrado: se deja en el formulario solo el que falló
         setErrorEnvio(`${equipo1.codigo.trim().toUpperCase()} se incorporó, pero el equipo #2 no: ${mensaje}`);

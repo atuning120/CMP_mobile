@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AuthError, loginOffline, loginOnline, OFFLINE_MAX_DIAS } from '../services/authService';
 import { despertarBackend } from '../services/backendUrl';
+import { MENSAJE_SIN_CONEXION } from '../utils/errores';
 import { useAccionUnica } from '../hooks/useAccionUnica';
 
 import { LoginFooter } from '../components/LoginFooter';
@@ -93,7 +94,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             ? `Sin conexión: tu acceso offline venció (más de ${OFFLINE_MAX_DIAS} días sin validar). Conéctate para ingresar.`
             : motivoSinRed
               ? 'Sin conexión: para usar el modo offline primero debes ingresar una vez con conexión en este dispositivo.'
-              : 'No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.',
+              : MENSAJE_SIN_CONEXION,
       );
     };
 

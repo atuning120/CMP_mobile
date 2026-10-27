@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listarMarcasMaquina, listarTiposMaquina } from '../services/flotaService';
+import { mensajeDeError } from '../utils/errores';
 
 export interface OpcionesMaquina {
   marcas: string[];
@@ -30,7 +31,7 @@ export const useOpcionesMaquina = (habilitado: boolean): OpcionesMaquina => {
         setMarcas(marcasApi);
         setTipos(tiposApi);
       } catch (err) {
-        if (!cancelado) setError(err instanceof Error ? err.message : 'No se pudieron cargar las opciones.');
+        if (!cancelado) setError(mensajeDeError(err, 'No se pudieron cargar las opciones.'));
       } finally {
         if (!cancelado) setCargando(false);
       }
