@@ -35,6 +35,7 @@ import { useRangoFechas } from '../hooks/useRangoFechas';
 import { useAlertas } from '../hooks/useAlertas';
 import { useRecargaManual } from '../hooks/useRecargaManual';
 import { AvisoDatosGuardados } from '../components/supervisor/AvisoDatosGuardados';
+import { AvisoAccionesPendientes } from '../components/supervisor/AvisoAccionesPendientes';
 import type { Alerta, EstadoAtencion, FiltroAlertas } from '../services/alertasService';
 import { descartarAtencionPendiente, descartarCambiosPendientes } from '../services/accionesJefe';
 import { useConectado } from '../hooks/useConectado';
@@ -364,6 +365,9 @@ export const ShipSupervisorScreen = () => {
           }
         >
           <TurnoSummaryDropdown turno={null} onLogout={() => setIsLogoutModalVisible(true)} />
+
+          {/* Lo hecho sin señal que el servidor rechazó o que tiene más de 24 h: el jefe de turno decide */}
+          <AvisoAccionesPendientes />
 
           {renderTabs()}
 

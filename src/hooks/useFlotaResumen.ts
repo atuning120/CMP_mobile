@@ -37,8 +37,9 @@ export interface MaquinaFlota {
   // Versión en el Backend: se envía como versionBase al modificarla (null si vino de un Backend anterior)
   version: number | null;
   // Tiene acciones del jefe de turno hechas sin señal que aún no llegan al Backend (se muestra con ellas aplicadas).
-  // clave: la de sus operaciones en la cola; error: por qué el servidor rechazó la primera; nueva: incorporada sin señal
-  pendiente?: { clave: string; error: string | null; nueva: boolean } | null;
+  // clave: la de sus operaciones en la cola; error: por qué el servidor rechazó la primera; porConfirmar: alguna tiene más
+  // de 24 h y espera que el jefe de turno la confirme; nueva: incorporada sin señal
+  pendiente?: { clave: string; error: string | null; porConfirmar: boolean; nueva: boolean } | null;
 }
 
 export interface UseFlotaResumenResult {

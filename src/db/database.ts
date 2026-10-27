@@ -141,6 +141,24 @@ const MIGRACIONES: (string | MigracionCodigo)[] = [
   ALTER TABLE operacion_pendiente ADD COLUMN fecha_accion TEXT;   -- cuándo la hizo el usuario (ISO 8601)
   CREATE INDEX IF NOT EXISTS idx_operacion_usuario ON operacion_pendiente (usuario, estado, id);
   `,
+  `
+  -- Código con que el Backend rechazó la operación (p. ej. MAQUINA_MODIFICADA: otro jefe de turno cambió la máquina).
+  -- estado también puede ser REQUIERE_CONFIRMACION: acción del jefe de turno de más de 24 h que espera que la confirme
+  ALTER TABLE operacion_pendiente ADD COLUMN codigo_error TEXT;
+
+  -- Registro local de lo que le pasó a las acciones del jefe de turno hechas sin señal y que ya no están en la cola
+  CREATE TABLE IF NOT EXISTS registro_accion (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario       TEXT NOT NULL,
+    evento        TEXT NOT NULL,     -- VENCIDA | DESCARTADA | TURNO_YA_CERRADO
+    tipo          TEXT NOT NULL,     -- tipo de la operación
+    descripcion   TEXT NOT NULL,     -- p. ej. "Cambio de estado de CF-05 a En mantenimiento"
+    detalle       TEXT,              -- por qué (el mensaje del servidor, el error)
+    fecha_accion  TEXT,              -- cuándo la hizo el jefe de turno
+    registrado_en TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_registro_accion_usuario ON registro_accion (usuario, id);
+  `,
 ];
 
 export type Db = SQLite.SQLiteDatabase;

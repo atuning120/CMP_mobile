@@ -35,6 +35,8 @@ export const duenoDeSesion = (sesion: SesionGuardada | null): DuenoCola | null =
 const filtroDueno = (dueno: DuenoCola): [string, string | number] =>
   'usuario' in dueno ? ['usuario = ?', dueno.usuario] : ['id_operador = ?', dueno.idOperador];
 
+export type EstadoOperacion = 'PENDIENTE' | 'ERROR' | 'REQUIERE_CONFIRMACION';
+
 export interface OperacionPendiente {
   id: number;
   tipo: TipoOperacion;
@@ -44,9 +46,11 @@ export interface OperacionPendiente {
   claveBloqueo: string | null;
   fechaAccion: string | null;
   payload: Record<string, unknown>;
-  estado: 'PENDIENTE' | 'ERROR';
+  // REQUIERE_CONFIRMACION: acción del jefe de turno de más de 24 h que no se envía hasta que la confirme
+  estado: EstadoOperacion;
   intentos: number;
   ultimoError: string | null;
+  codigoError: string | null; // código del rechazo del Backend (p. ej. MAQUINA_MODIFICADA)
 }
 
 interface OperacionFila {
@@ -58,9 +62,10 @@ interface OperacionFila {
   clave_bloqueo: string | null;
   fecha_accion: string | null;
   payload: string;
-  estado: 'PENDIENTE' | 'ERROR';
+  estado: EstadoOperacion;
   intentos: number;
   ultimo_error: string | null;
+  codigo_error: string | null;
 }
 
 const mapOperacion = (fila: OperacionFila): OperacionPendiente => ({
@@ -75,6 +80,7 @@ const mapOperacion = (fila: OperacionFila): OperacionPendiente => ({
   estado: fila.estado,
   intentos: fila.intentos,
   ultimoError: fila.ultimo_error,
+  codigoError: fila.codigo_error ?? null,
 });
 
 export const encolar = async (
@@ -155,19 +161,35 @@ export const reprogramarOperacion = async (operacion: OperacionPendiente, error:
 };
 
 // Error permanente (el servidor rechazó los datos): queda para revisión, no bloquea la cola (solo a las de su misma clave)
-export const marcarOperacionConError = async (operacion: OperacionPendiente, error: string) => {
+export const marcarOperacionConError = async (operacion: OperacionPendiente, error: string, codigo: string | null = null) => {
   const db = await getDb();
-  await db.runAsync("UPDATE operacion_pendiente SET estado = 'ERROR', intentos = ?, ultimo_error = ? WHERE id = ?", [
+  await db.runAsync("UPDATE operacion_pendiente SET estado = 'ERROR', intentos = ?, ultimo_error = ?, codigo_error = ? WHERE id = ?", [
     operacion.intentos + 1,
     error,
+    codigo,
     operacion.id,
   ]);
+};
+
+// Acción del jefe de turno de más de 24 h: espera a que la confirme (y detiene las siguientes de su alerta o máquina)
+export const marcarRequiereConfirmacion = async (id: number) => {
+  const db = await getDb();
+  await db.runAsync("UPDATE operacion_pendiente SET estado = 'REQUIERE_CONFIRMACION' WHERE id = ?", [id]);
+};
+
+// El jefe de turno decidió enviarla (confirmada o ajustada): vuelve a la cola de inmediato con su payload actualizado
+export const reactivarOperacion = async (id: number, payload: Record<string, unknown>) => {
+  const db = await getDb();
+  await db.runAsync(
+    "UPDATE operacion_pendiente SET estado = 'PENDIENTE', payload = ?, proximo_intento = ?, ultimo_error = NULL, codigo_error = NULL WHERE id = ?",
+    [JSON.stringify(payload), new Date().toISOString(), id],
+  );
 };
 
 export const reintentarOperacionesConError = async (dueno: DuenoCola) => {
   const [condicion, valor] = filtroDueno(dueno);
   const db = await getDb();
-  await db.runAsync(`UPDATE operacion_pendiente SET estado = 'PENDIENTE', proximo_intento = ? WHERE ${condicion} AND estado = 'ERROR'`, [
+  await db.runAsync(`UPDATE operacion_pendiente SET estado = 'PENDIENTE', proximo_intento = ?, codigo_error = NULL WHERE ${condicion} AND estado = 'ERROR'`, [
     new Date().toISOString(),
     valor,
   ]);
@@ -183,15 +205,30 @@ export const adelantarReintentos = async (dueno: DuenoCola) => {
   ]);
 };
 
-export const contarOperaciones = async (dueno: DuenoCola): Promise<{ pendientes: number; errores: number }> => {
+export const contarOperaciones = async (dueno: DuenoCola): Promise<{ pendientes: number; errores: number; porConfirmar: number }> => {
   const [condicion, valor] = filtroDueno(dueno);
   const db = await getDb();
-  const fila = await db.getFirstAsync<{ pendientes: number; errores: number }>(
-    `SELECT COALESCE(SUM(estado = 'PENDIENTE'), 0) AS pendientes, COALESCE(SUM(estado = 'ERROR'), 0) AS errores
+  const fila = await db.getFirstAsync<{ pendientes: number; errores: number; porConfirmar: number }>(
+    `SELECT COALESCE(SUM(estado = 'PENDIENTE'), 0) AS pendientes, COALESCE(SUM(estado = 'ERROR'), 0) AS errores,
+            COALESCE(SUM(estado = 'REQUIERE_CONFIRMACION'), 0) AS porConfirmar
        FROM operacion_pendiente WHERE ${condicion}`,
     [valor],
   );
-  return { pendientes: fila?.pendientes ?? 0, errores: fila?.errores ?? 0 };
+  return { pendientes: fila?.pendientes ?? 0, errores: fila?.errores ?? 0, porConfirmar: fila?.porConfirmar ?? 0 };
+};
+
+// Todas las operaciones aún no enviadas del dueño, en orden
+export const listarTodasLasOperaciones = async (dueno: DuenoCola): Promise<OperacionPendiente[]> => {
+  const [condicion, valor] = filtroDueno(dueno);
+  const db = await getDb();
+  const filas = await db.getAllAsync<OperacionFila>(`SELECT * FROM operacion_pendiente WHERE ${condicion} ORDER BY id`, [valor]);
+  return filas.map(mapOperacion);
+};
+
+export const obtenerOperacion = async (id: number): Promise<OperacionPendiente | null> => {
+  const db = await getDb();
+  const fila = await db.getFirstAsync<OperacionFila>('SELECT * FROM operacion_pendiente WHERE id = ?', [id]);
+  return fila ? mapOperacion(fila) : null;
 };
 
 export const listarOperacionesConError = async (dueno: DuenoCola): Promise<OperacionPendiente[]> => {

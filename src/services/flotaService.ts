@@ -58,6 +58,7 @@ export interface CrearMaquinaApi {
   motivo: string;
   observacion: string | null;
   idCliente?: string; // UUID generado al incorporarla: un reintento devuelve la misma máquina
+  fechaAccion?: string; // ISO: cuándo se incorporó, si fue sin señal (pasadas 72 h el Backend no la aplica)
   valoresBase?: { maquinaOperador: number | null }; // la máquina en que se vio al operador asignado
 }
 
@@ -89,6 +90,7 @@ export interface EditarMaquinaApi extends Partial<FichaMaquinaApi> {
   // maquinaOperador: la máquina en que se vio al operador que se asigna (si otro lo movió, es conflicto)
   valoresBase?: Partial<FichaMaquinaApi> & { maquinaOperador?: number | null };
   idCliente?: string; // UUID de esta acción: un reintento de una edición ya guardada no la repite
+  fechaAccion?: string; // ISO: cuándo se hizo, si fue sin señal (pasadas 72 h el Backend no la aplica)
 }
 
 export const editarMaquina = (idMaquina: number, datos: EditarMaquinaApi) =>

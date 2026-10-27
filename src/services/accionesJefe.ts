@@ -1,15 +1,24 @@
 import * as Crypto from 'expo-crypto';
 import { getDb } from '../db/database';
 import {
+  actualizarPayload,
   completarOperacion,
   descartarOperacionesConClave,
   DuenoCola,
   duenoDeSesion,
   encolarAccionJefe,
+  EstadoOperacion,
   hayOperacionesConClave,
   listarOperaciones,
+  listarSiguientesConClave,
+  listarTodasLasOperaciones,
+  obtenerOperacion,
+  OperacionPendiente,
+  reactivarOperacion,
   TipoOperacion,
 } from '../sync/colaSync';
+import { listarRegistroAcciones, registrarAccion, type RegistroAccion } from '../db/registroAcciones';
+import { describirOperacion, tramoDe, type Tramo } from '../sync/vigenciaAcciones';
 import { emitirCambioDatos } from '../sync/eventos';
 import { refrescarContadores, solicitarSincronizacion } from '../sync/syncEngine';
 import { ErrorParaUsuario } from '../utils/errores';
@@ -20,6 +29,9 @@ import {
   cerrarTurnoDeMaquina,
   crearMaquina,
   editarMaquina,
+  listarFlota,
+  listarOperadoresAsignables,
+  MAQUINA_MODIFICADA,
   SIN_TURNO_EN_CURSO,
   TURNO_YA_CERRADO,
   type CerrarTurnoApi,
@@ -125,7 +137,13 @@ export const atenderAlertaJefe = async (alerta: Alerta, comentario: string, acci
       tipo: 'ATENDER_ALERTA',
       clave: claveAlerta(alerta.id),
       accion,
-      payload: { idAlerta: alerta.id, comentario, atencionesVistas, autor: await nombreAutor() },
+      payload: {
+        idAlerta: alerta.id,
+        comentario,
+        atencionesVistas,
+        autor: await nombreAutor(),
+        resumen: `${alerta.operador} en ${alerta.maquina.nombre}`,
+      },
     },
     () => atenderAlerta(alerta.id, comentario, accion.idCliente, atencionesVistas),
   );
@@ -146,7 +164,12 @@ export const editarMaquinaJefe = async (
   const conId = { ...datos, idCliente: accion.idCliente };
   return enviarOEncolar(
     dueno,
-    { tipo: 'EDITAR_MAQUINA', clave: claveMaquina(maquina.id), accion, payload: { idMaquina: maquina.id, datos, vista } },
+    {
+      tipo: 'EDITAR_MAQUINA',
+      clave: claveMaquina(maquina.id),
+      accion,
+      payload: { idMaquina: maquina.id, codigo: maquina.codigo, datos, vista },
+    },
     () => editarMaquina(maquina.id, conId),
   );
 };
@@ -173,7 +196,13 @@ export const cerrarTurnoJefe = async (
       clave: claveMaquina(maquina.id),
       idCliente: accion.idClienteCierre,
       accion,
-      payload: { idMaquina: maquina.id, codigo: maquina.codigo, datos, vista: { operadorEnTurno: null, idTurnoActual: null } },
+      payload: {
+        idMaquina: maquina.id,
+        codigo: maquina.codigo,
+        operador: maquina.operadorEnTurno,
+        datos,
+        vista: { operadorEnTurno: null, idTurnoActual: null },
+      },
     },
     async (): Promise<ResultadoCierre> => {
       try {
@@ -229,9 +258,8 @@ export const listarAtencionesPendientes = async (): Promise<AtencionPendiente[]>
 
 // El jefe de turno descarta una atención que el servidor rechazó (o que ya no quiere enviar)
 export const descartarAtencionPendiente = async (idOperacion: number) => {
-  await completarOperacion(idOperacion);
-  emitirCambioDatos();
-  await refrescarContadores();
+  const operacion = await obtenerOperacion(idOperacion);
+  if (operacion) await descartarConRegistro([operacion]);
   // Las que esperaban detrás de ella (misma alerta) ya pueden enviarse
   solicitarSincronizacion();
 };
@@ -258,26 +286,32 @@ export const listarCambiosPendientesFlota = async (): Promise<CambiosPendientesF
   const ediciones = [...cambios, ...cierres].sort((a, b) => a.id - b.id);
 
   // Varias acciones sobre la misma máquina se aplican en orden; la primera rechazada es la que se informa
-  const porMaquina = new Map<number, { vista: Partial<MaquinaFlota>; error: string | null; clave: string }>();
+  const porMaquina = new Map<number, { vista: Partial<MaquinaFlota>; error: string | null; porConfirmar: boolean; clave: string }>();
   for (const op of ediciones) {
     const p = op.payload as { idMaquina: number; vista: Partial<MaquinaFlota> };
     const previo = porMaquina.get(p.idMaquina);
     porMaquina.set(p.idMaquina, {
       vista: { ...previo?.vista, ...p.vista },
       error: previo?.error ?? (op.estado === 'ERROR' ? op.ultimoError : null),
+      porConfirmar: (previo?.porConfirmar ?? false) || op.estado === 'REQUIERE_CONFIRMACION',
       clave: op.claveBloqueo ?? claveMaquina(p.idMaquina),
     });
   }
   const existentes = new Map<number, (maquina: MaquinaFlota) => MaquinaFlota>();
-  porMaquina.forEach(({ vista, error, clave }, idMaquina) =>
-    existentes.set(idMaquina, (maquina) => ({ ...conCambios(maquina, vista), pendiente: { clave, error, nueva: false } })),
+  porMaquina.forEach(({ vista, error, porConfirmar, clave }, idMaquina) =>
+    existentes.set(idMaquina, (maquina) => ({ ...conCambios(maquina, vista), pendiente: { clave, error, porConfirmar, nueva: false } })),
   );
 
   const nuevas = creaciones.map((op) => {
     const p = op.payload as { datos: CrearMaquinaApi; operadorAsignado: string | null };
     return {
       ...vistaDeNueva(-op.id, p.datos, p.operadorAsignado),
-      pendiente: { clave: op.claveBloqueo ?? '', error: op.estado === 'ERROR' ? op.ultimoError : null, nueva: true },
+      pendiente: {
+        clave: op.claveBloqueo ?? '',
+        error: op.estado === 'ERROR' ? op.ultimoError : null,
+        porConfirmar: op.estado === 'REQUIERE_CONFIRMACION',
+        nueva: true,
+      },
     };
   });
   return { existentes, nuevas, ids: [...ediciones, ...creaciones].map((op) => op.id) };
@@ -286,7 +320,129 @@ export const listarCambiosPendientesFlota = async (): Promise<CambiosPendientesF
 // El jefe de turno descarta lo que no se ha enviado de una máquina (todas sus acciones en espera)
 export const descartarCambiosPendientes = async (clave: string) => {
   const dueno = await duenoActual();
+  const operaciones = (await listarTodasLasOperaciones(dueno)).filter((op) => op.claveBloqueo === clave);
+  await registrarDescartadas(dueno.usuario, operaciones);
   await descartarOperacionesConClave(dueno, clave);
   emitirCambioDatos();
   await refrescarContadores();
+};
+
+// Lo que el jefe de turno descartó queda en el registro local, con por qué estaba detenida
+const registrarDescartadas = async (usuario: string, operaciones: OperacionPendiente[]) => {
+  for (const op of operaciones) {
+    await registrarAccion(usuario, {
+      evento: 'DESCARTADA',
+      tipo: op.tipo,
+      descripcion: describirOperacion(op),
+      detalle: op.ultimoError ?? (op.estado === 'REQUIERE_CONFIRMACION' ? 'Esperaba confirmación' : 'Aún no se enviaba'),
+      fechaAccion: op.fechaAccion,
+    });
+  }
+};
+
+const descartarConRegistro = async (operaciones: OperacionPendiente[]) => {
+  const dueno = await duenoActual();
+  await registrarDescartadas(dueno.usuario, operaciones);
+  for (const op of operaciones) await completarOperacion(op.id);
+  emitirCambioDatos();
+  await refrescarContadores();
+};
+
+// Una acción de la bandeja "Acciones pendientes"
+export interface AccionEnBandeja {
+  id: number;
+  tipo: TipoOperacion;
+  descripcion: string;
+  fechaAccion: string | null;
+  estado: EstadoOperacion;
+  tramo: Tramo;
+  error: string | null;
+  // Otro jefe de turno cambió la máquina (o movió al operador): se puede aplicar sobre cómo quedó
+  esConflicto: boolean;
+  // Espera a otra de la misma máquina o alerta que está detenida
+  enEspera: boolean;
+}
+
+export const listarBandeja = async (): Promise<{ acciones: AccionEnBandeja[]; registro: RegistroAccion[] }> => {
+  const dueno = duenoDeSesion(await leerSesion());
+  if (!dueno || !('usuario' in dueno)) return { acciones: [], registro: [] };
+  const [operaciones, registro] = await Promise.all([listarTodasLasOperaciones(dueno), listarRegistroAcciones(dueno.usuario)]);
+  const detenidas = new Set<string>();
+  const acciones = operaciones.map((op) => {
+    const enEspera = !!op.claveBloqueo && detenidas.has(op.claveBloqueo);
+    if (op.claveBloqueo && op.estado !== 'PENDIENTE') detenidas.add(op.claveBloqueo);
+    return {
+      id: op.id,
+      tipo: op.tipo,
+      descripcion: describirOperacion(op),
+      fechaAccion: op.fechaAccion,
+      estado: op.estado,
+      tramo: tramoDe(op),
+      error: op.estado === 'ERROR' ? op.ultimoError : null,
+      esConflicto: op.estado === 'ERROR' && op.codigoError === MAQUINA_MODIFICADA,
+      enEspera,
+    };
+  });
+  return { acciones, registro };
+};
+
+const reactivar = async (operacion: OperacionPendiente, payload: Record<string, unknown>) => {
+  // Confirmada por el jefe de turno: no vuelve a quedar en confirmación aunque tenga más de 24 h
+  await reactivarOperacion(operacion.id, { ...payload, confirmada: true });
+  emitirCambioDatos();
+  await refrescarContadores();
+  solicitarSincronizacion();
+};
+
+const operacionDeBandeja = async (id: number) => {
+  const operacion = await obtenerOperacion(id);
+  if (!operacion) throw new ErrorParaUsuario('La acción ya no está pendiente.');
+  return operacion;
+};
+
+// "Enviar igual": una de más de 24 h que el jefe de turno confirma, o una rechazada que quiere reintentar tal cual
+export const enviarIgual = async (id: number) => {
+  const operacion = await operacionDeBandeja(id);
+  await reactivar(operacion, operacion.payload);
+};
+
+/**
+ * "Aplicar sobre el estado actual": otro jefe de turno cambió la máquina (o movió al operador) y este decide que su
+ * cambio igual va. Se parte de la versión actual de la máquina y de dónde está hoy el operador; las acciones que
+ * esperan detrás sobre la misma máquina también. Necesita conexión para leer cómo quedó.
+ */
+export const aplicarSobreEstadoActual = async (id: number) => {
+  const operacion = await operacionDeBandeja(id);
+  if (operacion.tipo !== 'EDITAR_MAQUINA') return reactivar(operacion, operacion.payload);
+  const { idMaquina, datos } = operacion.payload as { idMaquina: number; datos: EditarMaquinaApi };
+
+  const leer = async <T>(consulta: () => Promise<T>) => {
+    try {
+      return await consulta();
+    } catch (error) {
+      if (esFallaTransitoria(error)) throw new ErrorParaUsuario('Se necesita conexión para ver cómo quedó la máquina.');
+      throw error;
+    }
+  };
+  const actual = (await leer(() => listarFlota(''))).find((m) => m.idMaquina === idMaquina);
+  if (!actual) throw new ErrorParaUsuario('La máquina ya no está en la flota.');
+  const ajustada: EditarMaquinaApi = { ...datos, versionBase: actual.version ?? datos.versionBase };
+  if (datos.idOperador && datos.valoresBase && 'maquinaOperador' in datos.valoresBase) {
+    const operador = (await leer(listarOperadoresAsignables)).find((o) => o.idOperador === datos.idOperador);
+    ajustada.valoresBase = { ...datos.valoresBase, maquinaOperador: operador?.maquinaAsignada?.idMaquina ?? null };
+  }
+  // Las siguientes sobre la misma máquina se prepararon sobre la misma versión vieja
+  for (const siguiente of await listarSiguientesConClave(operacion)) {
+    const suyos = siguiente.payload.datos as EditarMaquinaApi | undefined;
+    if (siguiente.tipo === 'EDITAR_MAQUINA' && suyos?.versionBase === datos.versionBase) {
+      await actualizarPayload(siguiente.id, { ...siguiente.payload, datos: { ...suyos, versionBase: ajustada.versionBase } });
+    }
+  }
+  await reactivar(operacion, { ...operacion.payload, datos: ajustada });
+};
+
+export const descartarAccion = async (id: number) => {
+  const operacion = await operacionDeBandeja(id);
+  await descartarConRegistro([operacion]);
+  solicitarSincronizacion();
 };

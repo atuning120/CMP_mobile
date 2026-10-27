@@ -88,7 +88,9 @@ export const MachineFleetCard: React.FC<Props> = ({
           <Text style={[styles.alertText, { color: maquina.pendiente.error ? theme.dangerText : theme.warningText }]}>
             {maquina.pendiente.error
               ? `No se pudo enviar: ${maquina.pendiente.error}`
-              : maquina.pendiente.nueva
+              : maquina.pendiente.porConfirmar
+                ? 'Sin enviar · se hizo hace más de 24 h: confírmala en Acciones pendientes'
+                : maquina.pendiente.nueva
                 ? 'Sin enviar · se incorporará al recuperar la conexión'
                 : 'Cambios sin enviar · se envían al recuperar la conexión'}
             {!!maquina.pendiente.error && !!onDescartarPendiente && (
