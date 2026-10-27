@@ -20,6 +20,7 @@ export interface MaquinaFlotaApi {
   esContratista: boolean;
   operadorAsignado: { idOperador: number; nombre: string } | null; // a cargo de la máquina
   operadorActual: string | null; // con turno en curso
+  idTurnoActual?: number | null; // ese turno (ausente en un Backend anterior)
   // Si no está ACTIVA: el motivo del último cambio de estado (o del reemplazo)
   motivoEstado: { motivo: string; observacion: string | null; fecha: string; reemplazadaPor: string | null } | null;
   ubicacionActual: string | null;
@@ -120,9 +121,24 @@ export const devolverMaquina = (idMaquina: number, versionBase: number | undefin
   });
 
 // Cierra el turno en curso de la máquina en nombre del operador (para sacarla de operación). El horómetro final
-// lo obtiene el jefe de turno en terreno o por radio
-export const cerrarTurnoDeMaquina = (idMaquina: number, horometroFinal: number, motivo: string) =>
-  apiRequest<unknown>(`/turnos/maquina/${idMaquina}/cierre`, { method: 'POST', body: JSON.stringify({ horometroFinal, motivo }) });
+// lo obtiene el jefe de turno en terreno o por radio. idTurno: el que vio (sin señal, otro pudo empezar después);
+// idCliente y fechaAccion: el mismo en cada reintento y cuándo tomó el horómetro. Las pantallas lo hacen por accionesJefe
+export interface CerrarTurnoApi {
+  horometroFinal: number;
+  motivo: string;
+  idTurno?: number;
+  idCliente?: string;
+  fechaAccion?: string;
+}
+
+export const cerrarTurnoDeMaquina = (idMaquina: number, datos: CerrarTurnoApi) =>
+  apiRequest<unknown>(`/turnos/maquina/${idMaquina}/cierre`, { method: 'POST', body: JSON.stringify(datos) });
+
+// Gana el primer cierre que llega al servidor: si el operador, otro jefe o el sistema lo cerraron antes, responde 409
+// con este código y un mensaje con quién y a qué hora ("El turno ya fue cerrado por X a las HH:MM")
+export const TURNO_YA_CERRADO = 'TURNO_YA_CERRADO';
+// Un Backend anterior (o sin idTurno) responde este cuando la máquina ya no tiene turno en curso
+export const SIN_TURNO_EN_CURSO = 'SIN_TURNO_EN_CURSO';
 
 // Operador que se puede asignar a una máquina, con la que tiene hoy (al asignarlo a otra, se mueve)
 export interface OperadorAsignableApi {

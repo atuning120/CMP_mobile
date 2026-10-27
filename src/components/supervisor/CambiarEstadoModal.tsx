@@ -6,8 +6,7 @@ import { SearchableSelect } from '../common/SearchableSelect';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { conRegreso, ESTADOS_MAQUINA, EstadoMaquina, operaEnEstado, presentacionEstado } from '../../constants/estadosMaquina';
 import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
-import { cerrarTurnoDeMaquina } from '../../services/flotaService';
-import { type AccionPreparada, DETALLE_SIN_SENAL, editarMaquinaJefe, nuevaAccion } from '../../services/accionesJefe';
+import { type AccionPreparada, cerrarTurnoJefe, DETALLE_SIN_SENAL, editarMaquinaJefe, nuevaAccion } from '../../services/accionesJefe';
 import { CierreTurnoCampos, leerHorometro } from './CierreTurnoCampos';
 import { RegresoEstimadoChips, regresoDesdeAhora } from './RegresoEstimadoChips';
 import { styles } from './CambiarEstadoModal.styles';
@@ -80,18 +79,22 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
   const confirmar = () => ejecutarUnaVez(async () => {
     if (!maquina || !destino || !motivo) return;
     setError(null);
+    // El mismo UUID en cada reintento (cierre y cambio): el Backend no los aplica dos veces
+    const preparada = accion ?? nuevaAccion();
+    setAccion(preparada);
     let cerroTurno = false;
     try {
       if (pideCierre && horometro !== null) {
-        await cerrarTurnoDeMaquina(maquina.id, horometro, motivo);
+        // Sin señal queda en la cola antes del cambio, que lo espera
+        const cierre = await cerrarTurnoJefe(maquina, horometro, motivo, preparada);
         cerroTurno = true;
         setTurnoCerrado(true);
+        // Otro lo cerró antes (gana el primer cierre): se avisa quién y cuándo, y el cambio sigue
+        if (cierre.estado === 'ya-cerrado') mostrarAviso(cierre.mensaje, { tipo: 'info' });
       }
       // undefined no toca el regreso: se mantiene si sigue fuera de operación y el Backend lo borra si vuelve a operar
       const regreso = conRegreso(destino.valor) && horasRegreso !== null ? regresoDesdeAhora(horasRegreso).toISOString() : undefined;
       const obs = observacion.trim() || null;
-      const preparada = accion ?? nuevaAccion();
-      setAccion(preparada);
       const resultado = await editarMaquinaJefe(
         maquina,
         { estado: destino.valor, motivo, observacion: obs, regresoEstimado: regreso, versionBase },

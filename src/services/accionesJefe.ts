@@ -16,12 +16,22 @@ import { ErrorParaUsuario } from '../utils/errores';
 import { ApiError } from './apiClient';
 import { atenderAlerta, type Alerta, type AtencionAlerta } from './alertasService';
 import { leerOperadorCache, leerSesion } from './authStorage';
-import { crearMaquina, editarMaquina, type CrearMaquinaApi, type EditarMaquinaApi, type MaquinaFlotaApi } from './flotaService';
+import {
+  cerrarTurnoDeMaquina,
+  crearMaquina,
+  editarMaquina,
+  SIN_TURNO_EN_CURSO,
+  TURNO_YA_CERRADO,
+  type CerrarTurnoApi,
+  type CrearMaquinaApi,
+  type EditarMaquinaApi,
+  type MaquinaFlotaApi,
+} from './flotaService';
 import { conCambios, type MaquinaFlota, vistaDeNueva } from '../hooks/useFlotaResumen';
 
 /*
- * Acciones del jefe de turno que se pueden hacer sin señal: atender alertas, cambiar el estado, editar e incorporar
- * máquinas. Se intentan enviar al momento; si el Backend no responde, quedan en la cola (src/sync/colaSync.ts) y el
+ * Acciones del jefe de turno que se pueden hacer sin señal: atender alertas, cerrar el turno de un operador, cambiar el
+ * estado, editar e incorporar máquinas. Se intentan enviar al momento; si el Backend no responde, quedan en la cola (src/sync/colaSync.ts) y el
  * motor de sincronización las envía al volver la red, con la fecha en que se hicieron. Las de una misma alerta o
  * máquina van en orden: si una queda rechazada (p. ej. otro jefe cambió la máquina), las siguientes esperan.
  * Las pantallas llaman a estas funciones, nunca a la cola directamente. Reemplazo y devolución son solo en línea.
@@ -45,10 +55,20 @@ const duenoActual = async () => {
 export interface AccionPreparada {
   idCliente: string;
   fechaAccion: string; // ISO: cuándo la hizo el jefe de turno
+  // El cierre del turno que a veces la precede (sacar de operación una máquina en uso) es otra operación, con su UUID
+  idClienteCierre: string;
 }
 
 // Al confirmar por primera vez: los reintentos del mismo modal reutilizan la misma
-export const nuevaAccion = (): AccionPreparada => ({ idCliente: Crypto.randomUUID(), fechaAccion: new Date().toISOString() });
+export const nuevaAccion = (): AccionPreparada => ({
+  idCliente: Crypto.randomUUID(),
+  fechaAccion: new Date().toISOString(),
+  idClienteCierre: Crypto.randomUUID(),
+});
+
+// El turno que el jefe de turno quería cerrar ya lo cerró otro (gana el primer cierre): no es un error, se le avisa
+export const esTurnoYaCerrado = (error: unknown): error is ApiError =>
+  error instanceof ApiError && (error.code === TURNO_YA_CERRADO || error.code === SIN_TURNO_EN_CURSO);
 
 export type Resultado<T> = { enviada: true; respuesta: T } | { enviada: false };
 
@@ -61,7 +81,7 @@ export const DETALLE_SIN_SENAL = 'Sin señal: se envía automáticamente cuando 
  */
 const enviarOEncolar = async <T>(
   dueno: Extract<DuenoCola, { usuario: string }>,
-  operacion: { tipo: TipoOperacion; clave: string; accion: AccionPreparada; payload: Record<string, unknown> },
+  operacion: { tipo: TipoOperacion; clave: string; idCliente?: string; accion: AccionPreparada; payload: Record<string, unknown> },
   enviar: () => Promise<T>,
 ): Promise<Resultado<T>> => {
   if (!(await hayOperacionesConClave(dueno, operacion.clave))) {
@@ -73,7 +93,7 @@ const enviarOEncolar = async <T>(
   }
   await encolarAccionJefe(await getDb(), {
     tipo: operacion.tipo,
-    idEntidad: operacion.accion.idCliente,
+    idEntidad: operacion.idCliente ?? operacion.accion.idCliente,
     usuario: dueno.usuario,
     claveBloqueo: operacion.clave,
     fechaAccion: operacion.accion.fechaAccion,
@@ -129,6 +149,43 @@ export const editarMaquinaJefe = async (
     { tipo: 'EDITAR_MAQUINA', clave: claveMaquina(maquina.id), accion, payload: { idMaquina: maquina.id, datos, vista } },
     () => editarMaquina(maquina.id, conId),
   );
+};
+
+export type ResultadoCierre = { estado: 'cerrado' | 'en-cola' } | { estado: 'ya-cerrado'; mensaje: string };
+
+/**
+ * Cierra el turno en curso de la máquina (el que se ve en la tarjeta) con el horómetro final, para sacarla de operación.
+ * Gana el primer cierre que llega al servidor: si el operador, otro jefe o el sistema lo cerraron antes, no es un error
+ * y el cambio de estado que viene detrás sigue adelante; `mensaje` dice quién lo cerró y a qué hora.
+ */
+export const cerrarTurnoJefe = async (
+  maquina: MaquinaFlota,
+  horometroFinal: number,
+  motivo: string,
+  accion: AccionPreparada,
+): Promise<ResultadoCierre> => {
+  const dueno = await duenoActual();
+  const datos: CerrarTurnoApi = { horometroFinal, motivo, ...(maquina.idTurnoActual !== null ? { idTurno: maquina.idTurnoActual } : {}) };
+  const resultado = await enviarOEncolar(
+    dueno,
+    {
+      tipo: 'CERRAR_TURNO',
+      clave: claveMaquina(maquina.id),
+      idCliente: accion.idClienteCierre,
+      accion,
+      payload: { idMaquina: maquina.id, codigo: maquina.codigo, datos, vista: { operadorEnTurno: null, idTurnoActual: null } },
+    },
+    async (): Promise<ResultadoCierre> => {
+      try {
+        await cerrarTurnoDeMaquina(maquina.id, { ...datos, idCliente: accion.idClienteCierre, fechaAccion: accion.fechaAccion });
+        return { estado: 'cerrado' };
+      } catch (error) {
+        if (esTurnoYaCerrado(error)) return { estado: 'ya-cerrado', mensaje: error.message };
+        throw error;
+      }
+    },
+  );
+  return resultado.enviada ? resultado.respuesta : { estado: 'en-cola' };
 };
 
 /** Incorpora una máquina. operadorAsignado: el nombre del operador elegido, para mostrarla mientras no se envía. */
@@ -193,7 +250,12 @@ export const listarCambiosPendientesFlota = async (): Promise<CambiosPendientesF
   const vacio: CambiosPendientesFlota = { existentes: new Map(), nuevas: [], ids: [] };
   const dueno = duenoDeSesion(await leerSesion());
   if (!dueno || !('usuario' in dueno)) return vacio;
-  const [ediciones, creaciones] = await Promise.all([listarOperaciones(dueno, 'EDITAR_MAQUINA'), listarOperaciones(dueno, 'CREAR_MAQUINA')]);
+  const [cambios, cierres, creaciones] = await Promise.all([
+    listarOperaciones(dueno, 'EDITAR_MAQUINA'),
+    listarOperaciones(dueno, 'CERRAR_TURNO'),
+    listarOperaciones(dueno, 'CREAR_MAQUINA'),
+  ]);
+  const ediciones = [...cambios, ...cierres].sort((a, b) => a.id - b.id);
 
   // Varias acciones sobre la misma máquina se aplican en orden; la primera rechazada es la que se informa
   const porMaquina = new Map<number, { vista: Partial<MaquinaFlota>; error: string | null; clave: string }>();

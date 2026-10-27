@@ -25,6 +25,7 @@ export interface MaquinaFlota {
   idOperadorAsignado: number | null;
   operadorAsignado: string | null; // a cargo de la máquina
   operadorEnTurno: string | null; // con turno en curso (puede ser otro, p. ej. en un relevo)
+  idTurnoActual: number | null; // ese turno: es el que cierra el jefe de turno (null si vino de un Backend anterior)
   zonaActual: string | null;
   horometroActual: number;
   combustible: { porcentaje: number; tipo: string } | null;
@@ -98,6 +99,7 @@ export const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
   idOperadorAsignado: maquina.operadorAsignado?.idOperador ?? null,
   operadorAsignado: maquina.operadorAsignado?.nombre ?? null,
   operadorEnTurno: maquina.operadorActual,
+  idTurnoActual: maquina.idTurnoActual ?? null,
   zonaActual: maquina.ubicacionActual,
   horometroActual: maquina.horometroActual ?? 0,
   combustible: null,
@@ -137,6 +139,7 @@ export const vistaDeNueva = (id: number, datos: CrearMaquinaApi, operadorAsignad
   idOperadorAsignado: datos.idOperador,
   operadorAsignado,
   operadorEnTurno: null,
+  idTurnoActual: null,
   zonaActual: null,
   horometroActual: datos.horometroInicial,
   combustible: null,

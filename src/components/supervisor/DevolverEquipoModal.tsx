@@ -95,7 +95,8 @@ export const DevolverEquipoModal: React.FC<Props> = ({ maquina, onClose, onDevue
     let cerroTurno = false;
     try {
       if (pideCierre && horometro !== null) {
-        await cerrarTurnoDeMaquina(respaldo.id, horometro, motivo);
+        // Solo en línea; con el turno que se ve, para no cerrar otro que haya empezado después
+        await cerrarTurnoDeMaquina(respaldo.id, { horometroFinal: horometro, motivo, idTurno: respaldo.idTurnoActual ?? undefined });
         cerroTurno = true;
         setTurnoCerrado(true);
       }

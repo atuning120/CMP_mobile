@@ -18,6 +18,7 @@ export type TipoOperacion =
   | 'CREAR_REPORTE'
   | 'SUBIR_EVIDENCIA'
   | 'ATENDER_ALERTA'
+  | 'CERRAR_TURNO' // el jefe de turno cierra el turno de un operador
   | 'EDITAR_MAQUINA' // también el cambio de estado
   | 'CREAR_MAQUINA';
 

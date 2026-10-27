@@ -16,6 +16,7 @@ const ETIQUETAS: Record<string, string> = {
   CREAR_REPORTE: 'Reporte',
   SUBIR_EVIDENCIA: 'Foto de evidencia',
   ATENDER_ALERTA: 'Atención de alerta',
+  CERRAR_TURNO: 'Cierre de turno',
   EDITAR_MAQUINA: 'Cambio en una máquina',
   CREAR_MAQUINA: 'Incorporación de máquina',
 };

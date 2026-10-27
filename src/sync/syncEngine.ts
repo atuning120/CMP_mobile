@@ -16,7 +16,17 @@ import { mensajeDeError } from '../utils/errores';
 import { leerSesion } from '../services/authStorage';
 import * as api from '../services/turnoService';
 import { atenderAlerta } from '../services/alertasService';
-import { crearMaquina, editarMaquina, type CrearMaquinaApi, type EditarMaquinaApi } from '../services/flotaService';
+import {
+  cerrarTurnoDeMaquina,
+  crearMaquina,
+  editarMaquina,
+  SIN_TURNO_EN_CURSO,
+  TURNO_YA_CERRADO,
+  type CerrarTurnoApi,
+  type CrearMaquinaApi,
+  type EditarMaquinaApi,
+} from '../services/flotaService';
+import { mostrarAviso } from '../services/retroalimentacion';
 import {
   actualizarPayload,
   completarOperacion,
@@ -128,6 +138,18 @@ const enviarOperacion = async (operacion: OperacionPendiente): Promise<void> => 
       const { idAlerta, comentario, atencionesVistas } = p as { idAlerta: string; comentario: string; atencionesVistas: number };
       // Si la respuesta no llegó y se reenvía, el idCliente evita registrarla dos veces
       await atenderAlerta(idAlerta, comentario, operacion.idEntidad, atencionesVistas, operacion.fechaAccion ?? undefined);
+      return;
+    }
+    case 'CERRAR_TURNO': {
+      const { idMaquina, codigo, datos } = p as { idMaquina: number; codigo: string; datos: CerrarTurnoApi };
+      try {
+        await cerrarTurnoDeMaquina(idMaquina, { ...datos, idCliente: operacion.idEntidad, fechaAccion: operacion.fechaAccion ?? undefined });
+      } catch (error) {
+        // Gana el primer cierre: si el operador, otro jefe o el sistema lo cerraron antes, no es un error. Se avisa quién
+        // y cuándo, y el cambio de estado que espera detrás sigue
+        if (!(error instanceof ApiError && (error.code === TURNO_YA_CERRADO || error.code === SIN_TURNO_EN_CURSO))) throw error;
+        mostrarAviso(error.message, { detalle: `Cierre de turno de ${codigo} hecho sin señal`, tipo: 'info' });
+      }
       return;
     }
     case 'EDITAR_MAQUINA': {

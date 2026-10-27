@@ -166,7 +166,8 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
     let cerroTurno = false;
     try {
       if (pideCierre && horometro !== null) {
-        await cerrarTurnoDeMaquina(maquina.id, horometro, motivo);
+        // Solo en línea; con el turno que se ve, para no cerrar otro que haya empezado después
+        await cerrarTurnoDeMaquina(maquina.id, { horometroFinal: horometro, motivo, idTurno: maquina.idTurnoActual ?? undefined });
         cerroTurno = true;
         setTurnoCerrado(true);
       }

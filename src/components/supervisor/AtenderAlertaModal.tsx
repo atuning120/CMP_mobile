@@ -1,12 +1,11 @@
 import React, { useRef, useState } from 'react';
-import * as Crypto from 'expo-crypto';
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, useColorScheme } from 'react-native';
 import { CheckCircle, MessageSquarePlus } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { LARGO_MAXIMO_COMENTARIO, type Alerta, type AtencionAlerta } from '../../services/alertasService';
-import { type AccionPreparada, atenderAlertaJefe } from '../../services/accionesJefe';
+import { type AccionPreparada, atenderAlertaJefe, nuevaAccion } from '../../services/accionesJefe';
 import { styles } from './AtenderAlertaModal.styles';
 import { mensajeDeError } from '../../utils/errores';
 
@@ -51,7 +50,7 @@ export const AtenderAlertaModal: React.FC<Props> = ({ alerta, onClose, onAtendid
       }
       setError('');
       try {
-        atencion.current ??= { idCliente: Crypto.randomUUID(), fechaAccion: new Date().toISOString() };
+        atencion.current ??= nuevaAccion();
         const resultado = await atenderAlertaJefe(alerta, comentario.trim(), atencion.current);
         if (resultado.enviada) onAtendida(alerta.id, resultado.respuesta);
         setComentario('');

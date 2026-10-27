@@ -7,8 +7,8 @@ import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
 import { conRegreso, ESTADOS_MAQUINA, EstadoMaquina, operaEnEstado, presentacionEstado } from '../../constants/estadosMaquina';
 import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 import { useOperadoresAsignables } from '../../hooks/useOperadoresAsignables';
-import { cerrarTurnoDeMaquina, type FichaMaquinaApi } from '../../services/flotaService';
-import { type AccionPreparada, DETALLE_SIN_SENAL, editarMaquinaJefe, nuevaAccion } from '../../services/accionesJefe';
+import { type FichaMaquinaApi } from '../../services/flotaService';
+import { type AccionPreparada, cerrarTurnoJefe, DETALLE_SIN_SENAL, editarMaquinaJefe, nuevaAccion } from '../../services/accionesJefe';
 import { CierreTurnoCampos, leerHorometro } from './CierreTurnoCampos';
 import { RegresoEstimadoChips, regresoDesdeAhora } from './RegresoEstimadoChips';
 import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
@@ -157,12 +157,18 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
 
   const handleSave = () => ejecutarUnaVez(async () => {
     setErrorEnvio(null);
+    // El mismo UUID en cada reintento (cierre y cambio): el Backend no los aplica dos veces
+    const preparada = accion ?? nuevaAccion();
+    setAccion(preparada);
     let cerroTurno = false;
     try {
       if (pideCierre && horometro !== null) {
-        await cerrarTurnoDeMaquina(maquina.id, horometro, motivo);
+        // Sin señal queda en la cola antes del cambio, que lo espera
+        const cierre = await cerrarTurnoJefe(maquina, horometro, motivo, preparada);
         cerroTurno = true;
         setTurnoCerrado(true);
+        // Otro lo cerró antes (gana el primer cierre): se avisa quién y cuándo, y el cambio sigue
+        if (cierre.estado === 'ya-cerrado') mostrarAviso(cierre.mensaje, { tipo: 'info' });
       }
       const { cambios, valoresBase } = camposCambiados(aFicha(aFormulario(maquina)), aFicha(equipo));
       const regreso =
@@ -170,8 +176,6 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
       // El operador elegido estaba en otra máquina: si otro jefe lo movió mientras tanto, el Backend lo informa
       const operador = cambios.idOperador ? operadores.operadores.find((o) => o.idOperador === cambios.idOperador) : undefined;
       const obs = observaciones.trim() || null;
-      const preparada = accion ?? nuevaAccion();
-      setAccion(preparada);
       const resultado = await editarMaquinaJefe(
         maquina,
         {
