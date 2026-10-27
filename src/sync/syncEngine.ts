@@ -16,11 +16,14 @@ import { mensajeDeError } from '../utils/errores';
 import { leerSesion } from '../services/authStorage';
 import * as api from '../services/turnoService';
 import { atenderAlerta } from '../services/alertasService';
+import { crearMaquina, editarMaquina, type CrearMaquinaApi, type EditarMaquinaApi } from '../services/flotaService';
 import {
+  actualizarPayload,
   completarOperacion,
   contarOperaciones,
   DuenoCola,
   duenoDeSesion,
+  listarSiguientesConClave,
   marcarOperacionConError,
   OperacionPendiente,
   reprogramarOperacion,
@@ -63,6 +66,20 @@ const mensajeDe = (error: unknown) => mensajeDeError(error, 'Ocurrió un error i
 // Las operaciones referencian el turno por su UUID; los turnos que vinieron del servidor sin UUID usan "srv-<id>"
 const referenciaTurno = (idClienteTurno: string) =>
   idClienteTurno.startsWith('srv-') ? { idTurno: Number(idClienteTurno.slice(4)) } : { idClienteTurno };
+
+/**
+ * Las siguientes acciones sobre la misma máquina se prepararon viendo la máquina con esta ya aplicada, pero con su
+ * versión anterior. Si nadie más la cambió entremedio (subió exactamente una versión, la de esta), parten de la nueva;
+ * si otro jefe de turno la cambió, conservan la vieja y el Backend decide si hay conflicto.
+ */
+const encadenarVersion = async (operacion: OperacionPendiente, versionAnterior: number | undefined, versionNueva: number | undefined) => {
+  if (versionAnterior === undefined || versionNueva !== versionAnterior + 1) return;
+  for (const siguiente of await listarSiguientesConClave(operacion)) {
+    const datos = siguiente.payload.datos as EditarMaquinaApi | undefined;
+    if (siguiente.tipo !== 'EDITAR_MAQUINA' || datos?.versionBase !== versionAnterior) continue;
+    await actualizarPayload(siguiente.id, { ...siguiente.payload, datos: { ...datos, versionBase: versionNueva } });
+  }
+};
 
 const enviarOperacion = async (operacion: OperacionPendiente): Promise<void> => {
   const p = operacion.payload;
@@ -111,6 +128,18 @@ const enviarOperacion = async (operacion: OperacionPendiente): Promise<void> => 
       const { idAlerta, comentario, atencionesVistas } = p as { idAlerta: string; comentario: string; atencionesVistas: number };
       // Si la respuesta no llegó y se reenvía, el idCliente evita registrarla dos veces
       await atenderAlerta(idAlerta, comentario, operacion.idEntidad, atencionesVistas, operacion.fechaAccion ?? undefined);
+      return;
+    }
+    case 'EDITAR_MAQUINA': {
+      // También el cambio de estado. El idCliente evita aplicarla dos veces si la respuesta anterior no llegó
+      const { idMaquina, datos } = p as { idMaquina: number; datos: EditarMaquinaApi };
+      const respuesta = await editarMaquina(idMaquina, { ...datos, idCliente: operacion.idEntidad });
+      await encadenarVersion(operacion, datos.versionBase, respuesta.version);
+      return;
+    }
+    case 'CREAR_MAQUINA': {
+      const { datos } = p as { datos: CrearMaquinaApi };
+      await crearMaquina({ ...datos, idCliente: operacion.idEntidad });
       return;
     }
   }

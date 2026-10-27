@@ -12,7 +12,8 @@ import { CambiarEstadoModal } from '../components/supervisor/CambiarEstadoModal'
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
 import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
-import { useFlotaResumen, MaquinaFlota } from '../hooks/useFlotaResumen';
+import type { MaquinaFlota } from '../hooks/useFlotaResumen';
+import { useFlotaConPendientes } from '../hooks/useFlotaConPendientes';
 import { IncorporacionEquipoModal } from '../components/supervisor/IncorporacionEquipoModal';
 import { ReemplazoEquipoModal } from '../components/supervisor/ReemplazoEquipoModal';
 import { DevolverEquipoModal } from '../components/supervisor/DevolverEquipoModal';
@@ -35,7 +36,7 @@ import { useAlertas } from '../hooks/useAlertas';
 import { useRecargaManual } from '../hooks/useRecargaManual';
 import { AvisoDatosGuardados } from '../components/supervisor/AvisoDatosGuardados';
 import type { Alerta, EstadoAtencion, FiltroAlertas } from '../services/alertasService';
-import { descartarAtencionPendiente } from '../services/accionesJefe';
+import { descartarAtencionPendiente, descartarCambiosPendientes } from '../services/accionesJefe';
 import { useConectado } from '../hooks/useConectado';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
@@ -122,8 +123,8 @@ export const ShipSupervisorScreen = () => {
   const [maquinaAToggle, setMaquinaAToggle] = useState<MaquinaFlota | null>(null);
   const [maquinaADevolver, setMaquinaADevolver] = useState<MaquinaFlota | null>(null);
 
-  // La búsqueda la resuelve el Backend; el filtro por estado se aplica sobre el resultado
-  const { maquinas, contadorFlota, isLoading, error, guardadoEn, refetch, actualizarMaquina } = useFlotaResumen(searchQuery);
+  // La búsqueda la resuelve el Backend; el filtro por estado se aplica sobre el resultado. Incluye lo hecho sin señal
+  const { maquinas, contadorFlota, isLoading, error, guardadoEn, refetch, actualizarMaquina } = useFlotaConPendientes(searchQuery);
 
   const [filtroHistorial, setFiltroHistorial] = useState<FiltroHistorialUI>('Todo');
   const rangoHistorial = useRangoFechas();
@@ -136,6 +137,16 @@ export const ShipSupervisorScreen = () => {
   // Alerta que se está atendiendo (modal abierto); null = cerrado
   const [alertaAAtender, setAlertaAAtender] = useState<Alerta | null>(null);
   const conectado = useConectado();
+
+  const confirmarDescarteMaquina = (maquina: MaquinaFlota) =>
+    Alert.alert(
+      maquina.pendiente?.nueva ? 'Descartar incorporación' : 'Descartar cambios',
+      `El servidor no aceptó ${maquina.pendiente?.nueva ? 'la incorporación' : 'los cambios'} de ${maquina.codigo} hechos sin señal. Si los descartas, se borran de este teléfono y no se envían.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Descartar', style: 'destructive', onPress: () => maquina.pendiente && void descartarCambiosPendientes(maquina.pendiente.clave) },
+      ],
+    );
 
   const confirmarDescarte = (idOperacion: number) =>
     Alert.alert('Descartar atención', 'El servidor no la aceptó. Si la descartas, se borra de este teléfono y no se envía.', [
@@ -305,6 +316,7 @@ export const ShipSupervisorScreen = () => {
               onCambiarEstado={handleToggleEstado}
               onDevolver={setMaquinaADevolver}
               conectado={conectado}
+              onDescartarPendiente={confirmarDescarteMaquina}
             />
           ))
         )}

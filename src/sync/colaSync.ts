@@ -17,7 +17,9 @@ export type TipoOperacion =
   | 'CAMBIAR_UBICACION'
   | 'CREAR_REPORTE'
   | 'SUBIR_EVIDENCIA'
-  | 'ATENDER_ALERTA';
+  | 'ATENDER_ALERTA'
+  | 'EDITAR_MAQUINA' // también el cambio de estado
+  | 'CREAR_MAQUINA';
 
 // De quién es la cola: solo se envía con su sesión
 export type DuenoCola = { idOperador: number } | { usuario: string };
@@ -220,6 +222,29 @@ export const hayOperacionesConClave = async (dueno: DuenoCola, claveBloqueo: str
     [valor, claveBloqueo],
   );
   return (fila?.n ?? 0) > 0;
+};
+
+// Las que esperan detrás de esta con su misma clave (p. ej. las siguientes acciones sobre la misma máquina), en orden
+export const listarSiguientesConClave = async (operacion: OperacionPendiente): Promise<OperacionPendiente[]> => {
+  if (!operacion.claveBloqueo) return [];
+  const db = await getDb();
+  const filas = await db.getAllAsync<OperacionFila>(
+    'SELECT * FROM operacion_pendiente WHERE clave_bloqueo = ? AND usuario IS ? AND id_operador = ? AND id > ? ORDER BY id',
+    [operacion.claveBloqueo, operacion.usuario, operacion.idOperador, operacion.id],
+  );
+  return filas.map(mapOperacion);
+};
+
+export const actualizarPayload = async (id: number, payload: Record<string, unknown>) => {
+  const db = await getDb();
+  await db.runAsync('UPDATE operacion_pendiente SET payload = ? WHERE id = ?', [JSON.stringify(payload), id]);
+};
+
+// El jefe de turno descarta todo lo que no se ha enviado de una máquina (o de una alerta)
+export const descartarOperacionesConClave = async (dueno: DuenoCola, claveBloqueo: string) => {
+  const [condicion, valor] = filtroDueno(dueno);
+  const db = await getDb();
+  await db.runAsync(`DELETE FROM operacion_pendiente WHERE ${condicion} AND clave_bloqueo = ?`, [valor, claveBloqueo]);
 };
 
 // Quita una operación aún no enviada (p. ej. el operador elimina una foto antes de sincronizarla)

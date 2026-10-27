@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
-import { AlertTriangle, User, MapPin, Clock, RefreshCw, Edit2, Undo2, CalendarClock, Link2, WifiOff } from 'lucide-react-native';
+import { AlertTriangle, User, MapPin, Clock, RefreshCw, Edit2, Undo2, CalendarClock, Link2, WifiOff, CloudUpload, CloudOff } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { MaquinaFlota, regresoVencido } from '../../hooks/useFlotaResumen';
 import { presentacionEstado } from '../../constants/estadosMaquina';
@@ -14,11 +14,21 @@ interface Props {
   onDevolver: (maquina: MaquinaFlota) => void;
   // Reemplazar y devolver cambian dos máquinas a la vez: solo se hacen con conexión, nunca quedan en cola
   conectado: boolean;
+  // Descarta lo que el jefe de turno hizo sin señal en esta máquina y aún no llega al Backend
+  onDescartarPendiente?: (maquina: MaquinaFlota) => void;
 }
 
 const formatoRegreso = new Intl.DateTimeFormat('es-CL', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEditar, onCambiarEstado, onDevolver, conectado }) => {
+export const MachineFleetCard: React.FC<Props> = ({
+  maquina,
+  onSustituir,
+  onEditar,
+  onCambiarEstado,
+  onDevolver,
+  conectado,
+  onDescartarPendiente,
+}) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const estado = presentacionEstado(maquina.estado);
@@ -66,6 +76,29 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
       </View>
 
       <Text style={[styles.modelo, { color: theme.textSecondary }]}>{maquina.marcaModelo}</Text>
+
+      {/* Cambios hechos sin señal: se ven aplicados mientras se envían; si el servidor rechazó uno, los siguientes esperan */}
+      {maquina.pendiente && (
+        <View style={[styles.alertBlock, { backgroundColor: (maquina.pendiente.error ? theme.danger : theme.warning) + '15' }]}>
+          {maquina.pendiente.error ? (
+            <CloudOff size={16} color={theme.danger} style={{ marginTop: 1 }} />
+          ) : (
+            <CloudUpload size={16} color={theme.warning} style={{ marginTop: 1 }} />
+          )}
+          <Text style={[styles.alertText, { color: maquina.pendiente.error ? theme.dangerText : theme.warningText }]}>
+            {maquina.pendiente.error
+              ? `No se pudo enviar: ${maquina.pendiente.error}`
+              : maquina.pendiente.nueva
+                ? 'Sin enviar · se incorporará al recuperar la conexión'
+                : 'Cambios sin enviar · se envían al recuperar la conexión'}
+            {!!maquina.pendiente.error && !!onDescartarPendiente && (
+              <Text style={styles.descartar} onPress={() => onDescartarPendiente(maquina)}>
+                {'  '}Descartar
+              </Text>
+            )}
+          </Text>
+        </View>
+      )}
 
       {/* Alerta */}
       {maquina.estado !== 'ACTIVA' && maquina.motivoEstado && (
@@ -126,7 +159,8 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
         </View>
       </View>
 
-      {/* Actions */}
+      {/* Actions: una incorporada sin señal aún no existe en el Backend, no se puede modificar */}
+      {!maquina.pendiente?.nueva && (
       <View style={[styles.actionsRow, { borderTopColor: theme.glassSurfaceBorder }]}>
         {!conectado && (maquina.respaldo || puedeReemplazar) ? (
           <View style={[styles.btnAction, { backgroundColor: superficieSecundaria, opacity: 0.6 }]}>
@@ -170,6 +204,7 @@ export const MachineFleetCard: React.FC<Props> = ({ maquina, onSustituir, onEdit
           <Text style={styles.btnPillText}>Estado</Text>
         </TouchableOpacity>
       </View>
+      )}
     </View>
   );
 };

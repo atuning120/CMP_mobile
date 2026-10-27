@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { listarFlota, MaquinaFlotaApi } from '../services/flotaService';
+import { listarFlota, type CrearMaquinaApi, MaquinaFlotaApi } from '../services/flotaService';
 import { EstadoMaquina, presentacionEstado } from '../constants/estadosMaquina';
 import { guardarConsulta, leerConsulta } from '../db/consultaLocal';
 import { buscar } from '../utils/busqueda';
@@ -35,6 +35,9 @@ export interface MaquinaFlota {
   cubreA: { id: number; codigo: string } | null;
   // Versión en el Backend: se envía como versionBase al modificarla (null si vino de un Backend anterior)
   version: number | null;
+  // Tiene acciones del jefe de turno hechas sin señal que aún no llegan al Backend (se muestra con ellas aplicadas).
+  // clave: la de sus operaciones en la cola; error: por qué el servidor rechazó la primera; nueva: incorporada sin señal
+  pendiente?: { clave: string; error: string | null; nueva: boolean } | null;
 }
 
 export interface UseFlotaResumenResult {
@@ -65,12 +68,15 @@ const leerFlotaGuardada = async (busqueda: string) => {
   return { maquinas, guardadoEn: guardada.guardadoEn };
 };
 
+const componerMarcaModelo = (marca: string | null, modelo: string | null, tipoMaquina: string | null) =>
+  [[marca, modelo].filter(Boolean).join(' '), tipoMaquina].filter(Boolean).join(' · ');
+
 // TODO: el combustible aún no existe en la base de datos
 export const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
   id: maquina.idMaquina,
   codigo: maquina.nombre,
   patente: maquina.patente ?? '',
-  marcaModelo: [[maquina.marca, maquina.modelo].filter(Boolean).join(' '), maquina.tipoMaquina].filter(Boolean).join(' · '),
+  marcaModelo: componerMarcaModelo(maquina.marca, maquina.modelo, maquina.tipoMaquina),
   marca: maquina.marca ?? '',
   modelo: maquina.modelo ?? '',
   tipoMaquina: maquina.tipoMaquina ?? '',
@@ -101,6 +107,43 @@ export const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
     : null,
   cubreA: maquina.cubreA ? { id: maquina.cubreA.idMaquina, codigo: maquina.cubreA.nombre } : null,
   version: maquina.version ?? null,
+});
+
+// La máquina con los cambios de una acción aún no enviada (recalcula lo que se deriva de ellos)
+export const conCambios = (maquina: MaquinaFlota, vista: Partial<MaquinaFlota>): MaquinaFlota => {
+  const cambiada = { ...maquina, ...vista };
+  return {
+    ...cambiada,
+    marcaModelo: componerMarcaModelo(cambiada.marca, cambiada.modelo, cambiada.tipoMaquina),
+    sinOperador: !cambiada.operadorAsignado && !cambiada.operadorEnTurno,
+  };
+};
+
+// Cómo se ve una máquina incorporada sin señal mientras no llega al Backend (id: uno negativo que no choca con los reales)
+export const vistaDeNueva = (id: number, datos: CrearMaquinaApi, operadorAsignado: string | null): MaquinaFlota => ({
+  id,
+  codigo: datos.nombre.trim().toUpperCase(),
+  patente: (datos.patente ?? '').trim().toUpperCase(),
+  marcaModelo: componerMarcaModelo(datos.marca, datos.modelo, datos.tipoMaquina),
+  marca: datos.marca,
+  modelo: datos.modelo,
+  tipoMaquina: datos.tipoMaquina,
+  anio: datos.anio,
+  numeroChasis: datos.numeroChasis,
+  esContratista: datos.esContratista,
+  estado: 'ACTIVA',
+  motivoEstado: null,
+  sinOperador: datos.idOperador === null,
+  idOperadorAsignado: datos.idOperador,
+  operadorAsignado,
+  operadorEnTurno: null,
+  zonaActual: null,
+  horometroActual: datos.horometroInicial,
+  combustible: null,
+  regresoEstimado: null,
+  respaldo: null,
+  cubreA: null,
+  version: null,
 });
 
 // Pasó su regreso estimado y sigue sin volver a operar: el jefe de turno debe hacer seguimiento

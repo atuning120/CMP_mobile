@@ -2,8 +2,9 @@ import { apiRequest } from './apiClient';
 import type { EstadoMaquina } from '../constants/estadosMaquina';
 
 /*
- * Vista del jefe de turno: sus acciones van en línea contra el Backend (no pasan por la cola de
- * sincronización, que es solo del operador). Lo último consultado se guarda para verlo sin señal (src/db/consultaLocal.ts).
+ * API de la flota del jefe de turno. Las pantallas no llaman aquí para incorporar, editar o cambiar el estado: lo hacen
+ * por src/services/accionesJefe.ts, que deja la acción en la cola si no hay señal. Reemplazo y devolución son solo en
+ * línea. Lo último consultado se guarda para verlo sin señal (src/db/consultaLocal.ts).
  */
 
 export interface MaquinaFlotaApi {
@@ -55,13 +56,15 @@ export interface CrearMaquinaApi {
   idOperador: number | null;
   motivo: string;
   observacion: string | null;
+  idCliente?: string; // UUID generado al incorporarla: un reintento devuelve la misma máquina
+  valoresBase?: { maquinaOperador: number | null }; // la máquina en que se vio al operador asignado
 }
 
 export const crearMaquina = (datos: CrearMaquinaApi) =>
   apiRequest<MaquinaFlotaApi>('/maquinas', { method: 'POST', body: JSON.stringify(datos) });
 
-// Edición de la ficha: solo se envían los campos editables; el motivo queda en la bitácora
-export interface EditarMaquinaApi {
+// Campos de la ficha que se editan uno a uno
+export interface FichaMaquinaApi {
   nombre: string;
   marca: string;
   modelo: string;
@@ -71,31 +74,24 @@ export interface EditarMaquinaApi {
   numeroChasis: string | null;
   esContratista: boolean;
   idOperador: number | null; // null deja la máquina sin operador
+}
+
+// Edición de la ficha y cambio de estado (el mismo PATCH): se envían solo los campos que cambian, y en valoresBase lo
+// que se veía en cada uno. Si otro jefe de turno cambió la máquina mientras tanto, el Backend aplica igual los campos
+// de la ficha que nadie tocó; el estado no se combina. El motivo queda en la bitácora
+export interface EditarMaquinaApi extends Partial<FichaMaquinaApi> {
   estado?: EstadoMaquina; // solo si cambia
   regresoEstimado?: string | null; // ISO; solo en mantenimiento o fuera de servicio
   motivo: string;
   observacion: string | null;
   versionBase?: number;
+  // maquinaOperador: la máquina en que se vio al operador que se asigna (si otro lo movió, es conflicto)
+  valoresBase?: Partial<FichaMaquinaApi> & { maquinaOperador?: number | null };
+  idCliente?: string; // UUID de esta acción: un reintento de una edición ya guardada no la repite
 }
 
 export const editarMaquina = (idMaquina: number, datos: EditarMaquinaApi) =>
   apiRequest<MaquinaFlotaApi>(`/maquinas/${idMaquina}`, { method: 'PATCH', body: JSON.stringify(datos) });
-
-// Operador que se puede asignar a una máquina, con la que tiene hoy (al asignarlo a otra, se mueve)
-// Cambio de estado: el mismo PATCH, enviando solo el estado (lo demás no se toca)
-// regresoEstimado (ISO) solo en mantenimiento o fuera de servicio; undefined no lo toca
-export const cambiarEstadoMaquina = (
-  idMaquina: number,
-  versionBase: number | undefined,
-  estado: EstadoMaquina,
-  motivo: string,
-  observacion: string | null,
-  regresoEstimado?: string | null,
-) =>
-  apiRequest<MaquinaFlotaApi>(`/maquinas/${idMaquina}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ estado, motivo, observacion, regresoEstimado, versionBase }),
-  });
 
 // Reemplazo: la entrante es una de la flota o una nueva; sin idOperador, el de la saliente pasa a la entrante
 export interface ReemplazarMaquinaApi {
@@ -128,6 +124,7 @@ export const devolverMaquina = (idMaquina: number, versionBase: number | undefin
 export const cerrarTurnoDeMaquina = (idMaquina: number, horometroFinal: number, motivo: string) =>
   apiRequest<unknown>(`/turnos/maquina/${idMaquina}/cierre`, { method: 'POST', body: JSON.stringify({ horometroFinal, motivo }) });
 
+// Operador que se puede asignar a una máquina, con la que tiene hoy (al asignarlo a otra, se mueve)
 export interface OperadorAsignableApi {
   idOperador: number;
   nombre: string;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, useColorScheme, TextInput, ActivityIndicator } from 'react-native';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { PlusCircle, CheckCircle, Truck, ClipboardList, AlertTriangle } from 'lucide-react-native';
@@ -8,7 +8,7 @@ import { useModelosMaquina } from '../../hooks/useModelosMaquina';
 import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 import { useOperadoresAsignables } from '../../hooks/useOperadoresAsignables';
 import { styles } from './IncorporacionEquipoModal.styles';
-import { crearMaquina } from '../../services/flotaService';
+import { type AccionPreparada, crearMaquinaJefe, DETALLE_SIN_SENAL, nuevaAccion } from '../../services/accionesJefe';
 import { SearchableSelect } from '../common/SearchableSelect';
 import { MOTIVOS_INCORPORACION } from '../../constants/motivosJefeTurno';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
@@ -18,7 +18,8 @@ import { mensajeDeError } from '../../utils/errores';
 interface Props {
   visible: boolean;
   onClose: () => void;
-  // Se llama cada vez que el Backend registra una máquina, para refrescar la flota
+  // Se llama cada vez que el Backend registra una máquina, para refrescar la flota (sin señal queda en la cola y la
+  // flota la muestra pendiente)
   onCreated?: () => void;
 }
 
@@ -57,6 +58,8 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
   // Bloquea toques repetidos en el botón de confirmar mientras se guarda
   const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
+  // Un UUID por equipo, el mismo en cada reintento: el Backend no lo incorpora dos veces
+  const acciones = useRef<(AccionPreparada | null)[]>([null, null]);
 
   // Validaciones
   const isEquipoValid = (eq: EquipoFormState) => {
@@ -85,6 +88,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
     setMotivo('');
     setObservaciones('');
     setErrorEnvio(null);
+    acciones.current = [null, null];
   };
 
   const cerrar = () => {
@@ -107,16 +111,34 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
 
     setErrorEnvio(null);
     let creados = 0;
+    let enCola = false;
     try {
-      for (const equipo of equipos) {
+      for (const [i, equipo] of equipos.entries()) {
+        const datos = aCrearMaquina(equipo);
+        // El operador elegido estaba en otra máquina: si otro jefe lo movió mientras tanto, el Backend lo informa
+        const operador = datos.idOperador ? operadores.operadores.find((o) => o.idOperador === datos.idOperador) : undefined;
+        acciones.current[i] ??= nuevaAccion();
         // En una dupla ambos equipos quedan en la bitácora con el mismo motivo y observación
-        await crearMaquina({ ...aCrearMaquina(equipo), motivo, observacion: observaciones.trim() || null });
+        const resultado = await crearMaquinaJefe(
+          {
+            ...datos,
+            motivo,
+            observacion: observaciones.trim() || null,
+            ...(operador ? { valoresBase: { maquinaOperador: operador.maquinaAsignada?.idMaquina ?? null } } : {}),
+          },
+          operador?.nombre ?? null,
+          acciones.current[i]!,
+        );
         creados++;
-        onCreated?.();
+        if (resultado.enviada) onCreated?.();
+        else enCola = true;
       }
       reiniciar();
       onClose();
-      mostrarAviso(equipos.length === 1 ? 'Equipo incorporado a planta' : '2 equipos incorporados a planta');
+      mostrarAviso(
+        equipos.length === 1 ? 'Equipo incorporado a planta' : '2 equipos incorporados a planta',
+        enCola ? { detalle: DETALLE_SIN_SENAL, tipo: 'info' } : {},
+      );
     } catch (err) {
       const mensaje = mensajeDeError(err, 'No se pudo incorporar el equipo.');
       if (creados === 1) {
@@ -124,6 +146,7 @@ export const IncorporacionEquipoModal: React.FC<Props> = ({ visible, onClose, on
         setErrorEnvio(`${equipo1.codigo.trim().toUpperCase()} se incorporó, pero el equipo #2 no: ${mensaje}`);
         setEquipo1(equipo2);
         setEquipo2(EQUIPO_FORM_INICIAL);
+        acciones.current = [acciones.current[1], null];
         setNumEquipos(1);
         setActiveTabIdx(0);
       } else {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listarOperadoresAsignables, OperadorAsignableApi } from '../services/flotaService';
 import { mensajeDeError } from '../utils/errores';
+import { consultarConCopia } from '../db/consultaLocal';
 
 export interface OperadoresAsignables {
   operadores: OperadorAsignableApi[];
@@ -10,7 +11,7 @@ export interface OperadoresAsignables {
 }
 
 // Opciones del selector "Operador asignado". Se recargan cada vez que se abre el modal:
-// muestran a qué máquina está asignado hoy cada operador
+// muestran a qué máquina está asignado hoy cada operador. Sin señal, la última lista recibida
 export const useOperadoresAsignables = (habilitado: boolean): OperadoresAsignables => {
   const [operadores, setOperadores] = useState<OperadorAsignableApi[]>([]);
   const [cargando, setCargando] = useState(false);
@@ -24,7 +25,7 @@ export const useOperadoresAsignables = (habilitado: boolean): OperadoresAsignabl
       setCargando(true);
       setError(null);
       try {
-        const lista = await listarOperadoresAsignables();
+        const lista = await consultarConCopia('catalogo|operadores', listarOperadoresAsignables);
         if (!cancelado) setOperadores(lista);
       } catch (err) {
         if (!cancelado) setError(mensajeDeError(err, 'No se pudieron cargar los operadores.'));

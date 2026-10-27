@@ -6,7 +6,7 @@ import { darkTheme, lightTheme } from '../../constants/theme';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { LARGO_MAXIMO_COMENTARIO, type Alerta, type AtencionAlerta } from '../../services/alertasService';
-import { atenderAlertaJefe } from '../../services/accionesJefe';
+import { type AccionPreparada, atenderAlertaJefe } from '../../services/accionesJefe';
 import { styles } from './AtenderAlertaModal.styles';
 import { mensajeDeError } from '../../utils/errores';
 
@@ -32,7 +32,7 @@ export const AtenderAlertaModal: React.FC<Props> = ({ alerta, onClose, onAtendid
   const esNota = (alerta?.atenciones?.length ?? 0) > 0;
   // Identifica esta atención: si la respuesta no llega y se reintenta, el Backend no la registra dos veces.
   // La fecha es la del primer intento: es cuando el jefe de turno la atendió
-  const atencion = useRef<{ idCliente: string; fechaAccion: string } | null>(null);
+  const atencion = useRef<AccionPreparada | null>(null);
 
   const cerrar = () => {
     if (guardando) return;
@@ -52,9 +52,8 @@ export const AtenderAlertaModal: React.FC<Props> = ({ alerta, onClose, onAtendid
       setError('');
       try {
         atencion.current ??= { idCliente: Crypto.randomUUID(), fechaAccion: new Date().toISOString() };
-        const { idCliente, fechaAccion } = atencion.current;
-        const resultado = await atenderAlertaJefe(alerta, comentario.trim(), idCliente, fechaAccion);
-        if (resultado.enviada) onAtendida(alerta.id, resultado.atenciones);
+        const resultado = await atenderAlertaJefe(alerta, comentario.trim(), atencion.current);
+        if (resultado.enviada) onAtendida(alerta.id, resultado.respuesta);
         setComentario('');
         atencion.current = null;
         onClose();

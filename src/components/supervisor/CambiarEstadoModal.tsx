@@ -6,7 +6,8 @@ import { SearchableSelect } from '../common/SearchableSelect';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { conRegreso, ESTADOS_MAQUINA, EstadoMaquina, operaEnEstado, presentacionEstado } from '../../constants/estadosMaquina';
 import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
-import { cambiarEstadoMaquina, cerrarTurnoDeMaquina } from '../../services/flotaService';
+import { cerrarTurnoDeMaquina } from '../../services/flotaService';
+import { type AccionPreparada, DETALLE_SIN_SENAL, editarMaquinaJefe, nuevaAccion } from '../../services/accionesJefe';
 import { CierreTurnoCampos, leerHorometro } from './CierreTurnoCampos';
 import { RegresoEstimadoChips, regresoDesdeAhora } from './RegresoEstimadoChips';
 import { styles } from './CambiarEstadoModal.styles';
@@ -18,7 +19,7 @@ interface Props {
   // Máquina a la que se cambia el estado; null = modal cerrado
   maquina: MaquinaFlota | null;
   onClose: () => void;
-  // Recibe la máquina tal como quedó en el Backend
+  // Recibe la máquina tal como quedó en el Backend (sin señal el cambio queda en la cola y la flota lo muestra pendiente)
   onCambiado: (maquina: MaquinaFlota) => void;
 }
 
@@ -26,7 +27,7 @@ interface Props {
 const comoTexto = (valor: string) => valor;
 
 // Botón Estado de la tarjeta: se elige el nuevo estado y un motivo, que queda en la bitácora
-// y se muestra en la tarjeta mientras la máquina siga en ese estado
+// y se muestra en la tarjeta mientras la máquina siga en ese estado. Funciona sin señal, salvo cerrar el turno en curso
 export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambiado }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
@@ -41,6 +42,8 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
   const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [error, setError] = useState<string | null>(null);
   const { versionBase, explicarError } = useVersionBase(maquina);
+  // El mismo UUID en cada reintento de esta apertura: el Backend no aplica el cambio dos veces
+  const [accion, setAccion] = useState<AccionPreparada | null>(null);
 
   // Cada apertura parte en blanco
   const [abiertaPara, setAbiertaPara] = useState<MaquinaFlota | null>(null);
@@ -53,6 +56,7 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
     setHorometroCierre('');
     setTurnoCerrado(false);
     setError(null);
+    setAccion(null);
   }
 
   const destino = nuevoEstado ? presentacionEstado(nuevoEstado) : null;
@@ -83,11 +87,25 @@ export const CambiarEstadoModal: React.FC<Props> = ({ maquina, onClose, onCambia
         cerroTurno = true;
         setTurnoCerrado(true);
       }
+      // undefined no toca el regreso: se mantiene si sigue fuera de operación y el Backend lo borra si vuelve a operar
       const regreso = conRegreso(destino.valor) && horasRegreso !== null ? regresoDesdeAhora(horasRegreso).toISOString() : undefined;
-      const actualizada = await cambiarEstadoMaquina(maquina.id, versionBase, destino.valor, motivo, observacion.trim() || null, regreso);
-      onCambiado(mapMaquinaFlota(actualizada));
+      const obs = observacion.trim() || null;
+      const preparada = accion ?? nuevaAccion();
+      setAccion(preparada);
+      const resultado = await editarMaquinaJefe(
+        maquina,
+        { estado: destino.valor, motivo, observacion: obs, regresoEstimado: regreso, versionBase },
+        {
+          estado: destino.valor,
+          // La tarjeta lo muestra si no queda activa, como el motivo que entrega el Backend
+          motivoEstado: [motivo, obs].filter(Boolean).join(': '),
+          regresoEstimado: conRegreso(destino.valor) ? (regreso ?? maquina.regresoEstimado) : null,
+        },
+        preparada,
+      );
+      if (resultado.enviada) onCambiado(mapMaquinaFlota(resultado.respuesta));
       onClose();
-      mostrarAviso(`Equipo ${destino.etiqueta.toLowerCase()}`);
+      mostrarAviso(`Equipo ${destino.etiqueta.toLowerCase()}`, resultado.enviada ? {} : { detalle: DETALLE_SIN_SENAL, tipo: 'info' });
     } catch (err) {
       const mensaje = await explicarError(err, 'No se pudo cambiar el estado del equipo.');
       // El turno pudo quedar cerrado aunque el cambio fallara: al reintentar ya no se pide el horómetro
