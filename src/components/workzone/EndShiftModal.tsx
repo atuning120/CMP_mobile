@@ -71,13 +71,14 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
 
   const numericHorometro = parseFloat(horometro);
   const revision = turno
-    ? revisarHorometroFinal(horometro, turno.horometroInicial, turno.fechaInicio, ahora)
+    ? revisarHorometroFinal(horometro, turno.horometroInicial, turno.fechaInicio, ahora, (desglose?.efectivasMs ?? 0) / 3_600_000)
     : ({ tipo: 'vacio' } as const);
   const isHorometroValid = revision.tipo === 'ok';
   // El mensaje dice cuál es el mínimo, para que el operador no tenga que buscarlo arriba
   const horometroError =
     revision.tipo === 'menor' ? `No puede ser menor que el inicial (${formatearHorometro(revision.minimo)} hrs).` : '';
   const horometroExcesivo = revision.tipo === 'ok' && revision.excesivo;
+  const horometroBajo = revision.tipo === 'ok' && revision.bajo;
 
   const canSubmit = isHorometroValid && horometro !== '' && !isSubmitting;
 
@@ -132,7 +133,12 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
   const footerConfirmacion = revision.tipo === 'ok' && turno && (
     <View style={styles.confirmacion}>
       <Text style={[styles.confirmacionTitulo, { color: theme.text }]}>¿Confirmas el cierre del turno?</Text>
-      <View style={[styles.resumen, { backgroundColor: theme.cardAlt, borderColor: horometroExcesivo ? theme.danger : theme.border }]}>
+      <View
+        style={[
+          styles.resumen,
+          { backgroundColor: theme.cardAlt, borderColor: horometroExcesivo ? theme.danger : horometroBajo ? theme.warning : theme.border },
+        ]}
+      >
         <View style={styles.resumenFila}>
           <Text style={[styles.resumenEtiqueta, { color: theme.textSecondary }]}>Máquina</Text>
           <Text style={[styles.resumenValor, { color: theme.text }]}>{turno.maquina.codigoCorto}</Text>
@@ -145,7 +151,9 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
         </View>
         <View style={styles.resumenFila}>
           <Text style={[styles.resumenEtiqueta, { color: theme.textSecondary }]}>Horas de uso</Text>
-          <Text style={[styles.resumenValor, { color: horometroExcesivo ? theme.dangerText : theme.text }]}>
+          <Text
+            style={[styles.resumenValor, { color: horometroExcesivo ? theme.dangerText : horometroBajo ? theme.warningText : theme.text }]}
+          >
             {formatearHorometro(revision.horasUso)} hrs
           </Text>
         </View>
@@ -153,11 +161,23 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
           <Text style={[styles.resumenEtiqueta, { color: theme.textSecondary }]}>Duración del turno</Text>
           <Text style={[styles.resumenValor, { color: theme.text }]}>{formatearHorometro(revision.horasTurno)} hrs</Text>
         </View>
+        <View style={styles.resumenFila}>
+          <Text style={[styles.resumenEtiqueta, { color: theme.textSecondary }]}>Horas efectivas (según estados)</Text>
+          <Text style={[styles.resumenValor, { color: theme.text }]}>{formatearHorometro(revision.horasEfectivas)} hrs</Text>
+        </View>
         {horometroExcesivo && (
           <View style={styles.resumenAviso}>
             <AlertTriangle size={14} color={theme.danger} />
             <Text style={[styles.resumenAvisoTexto, { color: theme.dangerText }]}>
               Las horas de uso superan la duración del turno. Revisa el horómetro antes de confirmar.
+            </Text>
+          </View>
+        )}
+        {horometroBajo && (
+          <View style={styles.resumenAviso}>
+            <AlertTriangle size={14} color={theme.warning} />
+            <Text style={[styles.resumenAvisoTexto, { color: theme.warningText }]}>
+              Las horas de uso son menos que las horas efectivas del turno. Revisa el horómetro y que los estados estén al día.
             </Text>
           </View>
         )}
@@ -245,6 +265,12 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
           <Text style={[styles.errorText, { color: theme.warningText, textAlign: 'center' }]}>
             Equivale a {formatearHorometro(revision.horasUso)} hrs de uso, pero el turno lleva{' '}
             {formatearHorometro(revision.horasTurno)} hrs. Revisa que esté bien escrito.
+          </Text>
+        )}
+        {horometroBajo && revision.tipo === 'ok' && (
+          <Text style={[styles.errorText, { color: theme.warningText, textAlign: 'center' }]}>
+            Equivale a {formatearHorometro(revision.horasUso)} hrs de uso, pero la máquina estuvo operando{' '}
+            {formatearHorometro(revision.horasEfectivas)} hrs según los estados del turno. Revisa que esté bien escrito.
           </Text>
         )}
       </View>
