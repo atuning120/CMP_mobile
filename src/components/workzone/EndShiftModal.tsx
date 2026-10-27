@@ -303,8 +303,7 @@ export const EndShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm, tu
           <FotoEvidenciaField
             foto={foto}
             onChange={setFoto}
-            titulo="Adjuntar Foto"
-            subtitulo="Respaldo de la zona o el horometro, etc..."
+            ayuda="Respaldo de la zona, el horómetro u otro detalle del cierre."
             disabled={isSubmitting}
           />
         </>

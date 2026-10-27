@@ -14,7 +14,7 @@ interface Props {
 }
 
 /**
- * Describe la foto recién tomada antes de guardarla como novedad del turno. Se guarda en el
+ * Describe la foto recién tomada o elegida de la galería antes de guardarla como novedad del turno. Se guarda en el
  * teléfono y se sube en segundo plano.
  */
 export const NovedadModal: React.FC<Props> = ({ foto, onClose, onGuardar }) => {

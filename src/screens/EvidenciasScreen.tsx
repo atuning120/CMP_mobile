@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, useColorScheme, useWindowDimensions, Alert, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Camera, ChevronLeft, AlertCircle, RefreshCw } from 'lucide-react-native';
+import { Camera, ChevronLeft, AlertCircle, RefreshCw, ImagePlus } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../constants/theme';
 import { useEvidenciasHistorial } from '../hooks/useEvidenciasHistorial';
 import { EvidenceCard } from '../components/evidencias/EvidenceCard';
 import { NovedadModal } from '../components/evidencias/NovedadModal';
-import { useCapturaFoto } from '../hooks/useCapturaFoto';
+import { OrigenFoto, useCapturaFoto } from '../hooks/useCapturaFoto';
 import { eliminarEvidenciaPendiente, registrarNovedad } from '../services/operacionesTurno';
 import { FotoCapturada } from '../types/turno';
 import { LoginHeader } from '../components/LoginHeader';
@@ -30,8 +30,8 @@ export default function EvidenciasScreen() {
   const [fotoNueva, setFotoNueva] = useState<FotoCapturada | null>(null);
 
   // La evidencia se guarda en el teléfono y se sube en segundo plano cuando hay conexión
-  const handleCapturePress = async () => {
-    const foto = await capturarFoto();
+  const handleCapturePress = async (origen: OrigenFoto) => {
+    const foto = await capturarFoto(origen);
     if (foto) setFotoNueva(foto);
   };
 
@@ -94,14 +94,24 @@ export default function EvidenciasScreen() {
         Registro visual georreferenciado con horómetro para conciliación CMP.
       </Text>
 
-      {/* Capture Button */}
-      <TouchableOpacity 
-        style={[styles.captureBtn, { backgroundColor: theme.primary }]}
-        onPress={handleCapturePress}
-      >
-        <Camera size={20} color="#FFFFFF" style={{ marginRight: 10 }} />
-        <Text style={styles.captureBtnText}>Capturar / Subir Nueva Evidencia</Text>
-      </TouchableOpacity>
+      {/* Nueva evidencia: desde la cámara o desde la galería */}
+      <Text style={[styles.captureLabel, { color: theme.textTertiary }]}>NUEVA EVIDENCIA</Text>
+      <View style={styles.captureRow}>
+        <TouchableOpacity
+          style={[styles.captureBtn, { backgroundColor: theme.primary, borderColor: theme.primary }]}
+          onPress={() => handleCapturePress('camara')}
+        >
+          <Camera size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={[styles.captureBtnText, { color: '#FFFFFF' }]}>Tomar foto</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.captureBtn, { backgroundColor: theme.card, borderColor: theme.primary }]}
+          onPress={() => handleCapturePress('galeria')}
+        >
+          <ImagePlus size={20} color={theme.primary} style={{ marginRight: 8 }} />
+          <Text style={[styles.captureBtnText, { color: theme.primaryText }]}>Subir imagen</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -226,12 +236,25 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     lineHeight: 20,
   },
+  captureLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  captureRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   captureBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
+    paddingHorizontal: 8,
     borderRadius: 16,
+    borderWidth: 1.5,
     elevation: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -239,8 +262,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   captureBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.3,
   },

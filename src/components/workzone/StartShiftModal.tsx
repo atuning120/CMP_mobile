@@ -322,8 +322,7 @@ export const StartShiftModal: React.FC<Props> = ({ visible, onClose, onConfirm }
           <FotoEvidenciaField
             foto={foto}
             onChange={setFoto}
-            titulo="Adjuntar Foto de Evidencia"
-            subtitulo="Toca aquí para abrir la cámara (Opcional)"
+            ayuda="Respaldo del estado de la máquina antes de operar."
             disabled={isSubmitting}
           />
         </View>
