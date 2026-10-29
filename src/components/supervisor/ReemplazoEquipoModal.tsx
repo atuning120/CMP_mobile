@@ -5,7 +5,7 @@ import { SearchableSelect } from '../common/SearchableSelect';
 import { AlertCircle, AlertTriangle, Ban, CheckCircle, ClipboardList, Gauge, ListChecks, PlusCircle, RefreshCw, Truck, User, Wrench } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { MOTIVOS_REEMPLAZO } from '../../constants/motivosJefeTurno';
-import { presentacionEstado } from '../../constants/estadosMaquina';
+import { conRegreso, presentacionEstado } from '../../constants/estadosMaquina';
 import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
 import { OperadorSelect } from './OperadorSelect';
 import { SegmentedControl } from './SegmentedControl';
@@ -93,6 +93,8 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
   const [observaciones, setObservaciones] = useState('');
   const [queda, setQueda] = useState<QuedaSaliente>('En mantenimiento');
   const [horasRegreso, setHorasRegreso] = useState<number | null>(null);
+  // Solo una saliente en mantenimiento lleva regreso estimado; fuera de servicio no tiene fecha conocida
+  const pideRegreso = conRegreso(ESTADO_API[queda]);
   const [horometroCierre, setHorometroCierre] = useState('');
   // Si el reemplazo falla después de cerrar el turno, al reintentar no se vuelve a cerrar
   const [turnoCerrado, setTurnoCerrado] = useState(false);
@@ -190,7 +192,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
             }),
         idOperador: operadorId ? Number(operadorId) : null,
         estadoSaliente: ESTADO_API[queda],
-        regresoEstimado: horasRegreso === null ? null : regresoDesdeAhora(horasRegreso).toISOString(),
+        regresoEstimado: !pideRegreso || horasRegreso === null ? null : regresoDesdeAhora(horasRegreso).toISOString(),
         motivo,
         observacion: observaciones.trim() || null,
       });
@@ -266,7 +268,9 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
           <Text style={[styles.label, { color: theme.textSecondary }]}>CÓMO QUEDA {maquina.codigo}</Text>
           <SegmentedControl opciones={ESTADOS_SALIENTE} activo={queda} onChange={setQueda} />
         </View>
-        <RegresoEstimadoChips horas={horasRegreso} onChange={setHorasRegreso} codigo={maquina.codigo} disabled={guardando} />
+        {pideRegreso && (
+          <RegresoEstimadoChips horas={horasRegreso} onChange={setHorasRegreso} codigo={maquina.codigo} disabled={guardando} />
+        )}
         {pideCierre && (
           <CierreTurnoCampos maquina={maquina} horometro={horometroCierre} onChange={setHorometroCierre} disabled={guardando} />
         )}

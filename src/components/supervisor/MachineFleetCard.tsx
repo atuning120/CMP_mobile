@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
 import { AlertTriangle, User, MapPin, Clock, RefreshCw, Edit2, Undo2, CalendarClock, Link2, WifiOff, CloudUpload, CloudOff } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { MaquinaFlota, regresoVencido } from '../../hooks/useFlotaResumen';
-import { presentacionEstado } from '../../constants/estadosMaquina';
+import { conRegreso, presentacionEstado } from '../../constants/estadosMaquina';
 import { styles } from './MachineFleetCard.styles';
 
 interface Props {
@@ -37,7 +37,7 @@ export const MachineFleetCard: React.FC<Props> = ({
   // Con un respaldo ya puesto, lo que corresponde es devolverla
   const puedeReemplazar = maquina.estado !== 'EN_RESERVA' && !maquina.respaldo && !maquina.cubreA;
   const vencido = regresoVencido(maquina);
-  const conRegreso = !!maquina.regresoEstimado && (maquina.estado === 'EN_MANTENIMIENTO' || maquina.estado === 'BAJA');
+  const muestraRegreso = !!maquina.regresoEstimado && conRegreso(maquina.estado);
   const isDark = colorScheme === 'dark';
   // En modo oscuro los controles secundarios son translúcidos sobre la tarjeta, sin sombras
   const superficieSecundaria = isDark ? 'rgba(255,255,255,0.06)' : theme.cardAlt;
@@ -111,7 +111,7 @@ export const MachineFleetCard: React.FC<Props> = ({
       )}
 
       {/* Regreso estimado: en rojo si ya pasó y la máquina sigue sin volver */}
-      {conRegreso && (
+      {muestraRegreso && (
         <View style={[styles.alertBlock, { backgroundColor: (vencido ? theme.danger : theme.primary) + '15' }]}>
           <CalendarClock size={16} color={vencido ? theme.danger : theme.primary} style={{ marginTop: 1 }} />
           <Text style={[styles.alertText, { color: vencido ? theme.dangerText : theme.primaryText }]}>

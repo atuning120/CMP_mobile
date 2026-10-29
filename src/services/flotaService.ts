@@ -83,7 +83,7 @@ export interface FichaMaquinaApi {
 // de la ficha que nadie tocó; el estado no se combina. El motivo queda en la bitácora
 export interface EditarMaquinaApi extends Partial<FichaMaquinaApi> {
   estado?: EstadoMaquina; // solo si cambia
-  regresoEstimado?: string | null; // ISO; solo en mantenimiento o fuera de servicio
+  regresoEstimado?: string | null; // ISO; solo en mantenimiento
   motivo: string;
   observacion: string | null;
   versionBase?: number;
@@ -101,7 +101,7 @@ export interface ReemplazarMaquinaApi {
   idMaquinaEntrante?: number;
   maquinaNueva?: Omit<CrearMaquinaApi, 'motivo' | 'observacion' | 'idOperador'>;
   idOperador: number | null;
-  // Cómo queda la saliente y cuándo se espera que vuelva (ISO)
+  // Cómo queda la saliente y cuándo se espera que vuelva (ISO; solo en mantenimiento)
   estadoSaliente: 'EN_MANTENIMIENTO' | 'BAJA';
   regresoEstimado: string | null;
   motivo: string;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { listarFlota, type CrearMaquinaApi, MaquinaFlotaApi } from '../services/flotaService';
-import { EstadoMaquina, presentacionEstado } from '../constants/estadosMaquina';
+import { conRegreso, EstadoMaquina, presentacionEstado } from '../constants/estadosMaquina';
 import { guardarConsulta, leerConsulta } from '../db/consultaLocal';
 import { buscar } from '../utils/busqueda';
 import { mensajeDeError } from '../utils/errores';
@@ -153,7 +153,7 @@ export const vistaDeNueva = (id: number, datos: CrearMaquinaApi, operadorAsignad
 // Pasó su regreso estimado y sigue sin volver a operar: el jefe de turno debe hacer seguimiento
 export const regresoVencido = (maquina: MaquinaFlota, ahora: number = Date.now()) =>
   !!maquina.regresoEstimado &&
-  (maquina.estado === 'EN_MANTENIMIENTO' || maquina.estado === 'BAJA') &&
+  conRegreso(maquina.estado) &&
   new Date(maquina.regresoEstimado).getTime() <= ahora;
 
 export const useFlotaResumen = (busqueda: string): UseFlotaResumenResult => {
