@@ -83,24 +83,6 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  salienteCodigo: {
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  salienteDetalle: {
-    fontSize: 13,
-  },
-  salienteFila: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginTop: 8,
-  },
-  salienteDato: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
   errorBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',

@@ -48,5 +48,5 @@ export const presentacionEstado = (estado: string | null): PresentacionEstado =>
 const ESTADOS_SIN_OPERAR: EstadoMaquina[] = ['EN_MANTENIMIENTO', 'EN_RESERVA', 'BAJA'];
 export const operaEnEstado = (estado: EstadoMaquina) => !ESTADOS_SIN_OPERAR.includes(estado);
 
-// Estados con fecha estimada de regreso: solo una reparación. Fuera de servicio no tiene fecha conocida
-export const conRegreso = (estado: EstadoMaquina) => estado === 'EN_MANTENIMIENTO';
+// Estados con fecha estimada de regreso (una reparación, una falla mayor)
+export const conRegreso = (estado: EstadoMaquina) => estado === 'EN_MANTENIMIENTO' || estado === 'BAJA';

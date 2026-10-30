@@ -33,9 +33,13 @@ export const MachineFleetCard: React.FC<Props> = ({
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const estado = presentacionEstado(maquina.estado);
   const colorEstado = estado.color(theme);
-  // Se reemplaza una máquina que opera o que salió de operación por una falla; una en reserva no tiene a quién cubrir.
-  // Con un respaldo ya puesto, lo que corresponde es devolverla
-  const puedeReemplazar = maquina.estado !== 'EN_RESERVA' && !maquina.respaldo && !maquina.cubreA;
+  // Se reemplaza una máquina que ya salió de operación (con Estado: ahí se fija el regreso y se cierra el turno);
+  // una en reserva no tiene a quién cubrir. Con un respaldo ya puesto, lo que corresponde es devolverla.
+  // Con su cambio de estado aún en la cola, el Backend todavía la ve operando: se espera a que se sincronice
+  const fueraDeOperacion = maquina.estado === 'EN_MANTENIMIENTO' || maquina.estado === 'BAJA';
+  const puedeReemplazar = fueraDeOperacion && !maquina.pendiente && !maquina.respaldo && !maquina.cubreA;
+  // Opera todavía: el botón queda deshabilitado e indica que primero se cambia el estado
+  const pideEstadoAntes = maquina.estado !== 'EN_RESERVA' && !fueraDeOperacion && !maquina.respaldo && !maquina.cubreA;
   const vencido = regresoVencido(maquina);
   const muestraRegreso = !!maquina.regresoEstimado && conRegreso(maquina.estado);
   const isDark = colorScheme === 'dark';
@@ -191,7 +195,9 @@ export const MachineFleetCard: React.FC<Props> = ({
           activeOpacity={0.7}
         >
           <RefreshCw size={16} color={puedeReemplazar ? "#1A1A1A" : theme.textSecondary} />
-          <Text style={[styles.btnActionText, { color: puedeReemplazar ? "#1A1A1A" : theme.textSecondary }]}>Sustituir / Reemplazo</Text>
+          <Text style={[styles.btnActionText, { color: puedeReemplazar ? "#1A1A1A" : theme.textSecondary }]}>
+            {pideEstadoAntes ? 'Reemplazo · Primero cambia el estado' : 'Sustituir / Reemplazo'}
+          </Text>
         </TouchableOpacity>
         )}
 

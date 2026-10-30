@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, useColorScheme, TextInput, ActivityIndicator } from 'react-native';
 import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { SearchableSelect } from '../common/SearchableSelect';
-import { AlertCircle, AlertTriangle, Ban, CheckCircle, ClipboardList, Gauge, ListChecks, PlusCircle, RefreshCw, Truck, User, Wrench } from 'lucide-react-native';
+import { AlertTriangle, CheckCircle, ClipboardList, ListChecks, PlusCircle, RefreshCw, Truck } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { MOTIVOS_REEMPLAZO } from '../../constants/motivosJefeTurno';
-import { conRegreso, presentacionEstado } from '../../constants/estadosMaquina';
+import { presentacionEstado } from '../../constants/estadosMaquina';
 import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
 import { OperadorSelect } from './OperadorSelect';
 import { SegmentedControl } from './SegmentedControl';
@@ -13,9 +13,7 @@ import { useModelosMaquina } from '../../hooks/useModelosMaquina';
 import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 import { useOperadoresAsignables } from '../../hooks/useOperadoresAsignables';
 import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
-import { cerrarTurnoDeMaquina, listarFlota, reemplazarMaquina } from '../../services/flotaService';
-import { CierreTurnoCampos, leerHorometro } from './CierreTurnoCampos';
-import { RegresoEstimadoChips, regresoDesdeAhora } from './RegresoEstimadoChips';
+import { listarFlota, reemplazarMaquina } from '../../services/flotaService';
 import { styles } from './ReemplazoEquipoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
@@ -23,7 +21,8 @@ import { mensajeDeError } from '../../utils/errores';
 import { useVersionBase } from '../../hooks/useVersionBase';
 
 interface Props {
-  // Máquina que sale (la de la tarjeta); null = modal cerrado
+  // Máquina que sale (la de la tarjeta), ya en mantenimiento o fuera de servicio: conserva su estado,
+  // su regreso estimado y su turno ya cerrado, que se fijan con Estado. null = modal cerrado
   maquina: MaquinaFlota | null;
   onClose: () => void;
   // El Backend registró el reemplazo: hay que refrescar la flota y el historial
@@ -35,17 +34,6 @@ const ORIGENES = [
   { valor: 'De la flota', icono: ListChecks },
   { valor: 'Nueva', icono: PlusCircle },
 ] as const satisfies readonly { valor: Origen; icono: unknown }[];
-
-// Cómo queda la saliente: en mantenimiento (vuelve tras la reparación) o fuera de servicio
-type QuedaSaliente = 'En mantenimiento' | 'Fuera de servicio';
-const ESTADOS_SALIENTE = [
-  { valor: 'En mantenimiento', icono: Wrench },
-  { valor: 'Fuera de servicio', icono: Ban },
-] as const satisfies readonly { valor: QuedaSaliente; icono: unknown }[];
-const ESTADO_API: Record<QuedaSaliente, 'EN_MANTENIMIENTO' | 'BAJA'> = {
-  'En mantenimiento': 'EN_MANTENIMIENTO',
-  'Fuera de servicio': 'BAJA',
-};
 
 // Accesores estables para SearchableSelect (evitan recalcular la búsqueda en cada render)
 const comoTexto = (valor: string) => valor;
@@ -91,13 +79,6 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
   const [operadorId, setOperadorId] = useState('');
   const [motivo, setMotivo] = useState('');
   const [observaciones, setObservaciones] = useState('');
-  const [queda, setQueda] = useState<QuedaSaliente>('En mantenimiento');
-  const [horasRegreso, setHorasRegreso] = useState<number | null>(null);
-  // Solo una saliente en mantenimiento lleva regreso estimado; fuera de servicio no tiene fecha conocida
-  const pideRegreso = conRegreso(ESTADO_API[queda]);
-  const [horometroCierre, setHorometroCierre] = useState('');
-  // Si el reemplazo falla después de cerrar el turno, al reintentar no se vuelve a cerrar
-  const [turnoCerrado, setTurnoCerrado] = useState(false);
   // Bloquea toques repetidos en el botón de confirmar mientras se guarda
   const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
@@ -141,11 +122,6 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
     setOperadorId(maquina?.idOperadorAsignado === null || !maquina ? '' : String(maquina.idOperadorAsignado));
     setMotivo('');
     setObservaciones('');
-    // Si ya estaba fuera de servicio lo conserva; si no, lo normal es que vaya a mantenimiento
-    setQueda(maquina?.estado === 'BAJA' ? 'Fuera de servicio' : 'En mantenimiento');
-    setHorasRegreso(null);
-    setHorometroCierre('');
-    setTurnoCerrado(false);
     setErrorEnvio(null);
   }
 
@@ -153,11 +129,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
 
   const candidatas = flota.filter((m) => m.id !== maquina.id && puedeEntrar(m));
   const entranteLista = origen === 'De la flota' ? entrante !== null : equipoValido(nueva);
-  // Con un operador trabajando en la saliente, primero se cierra su turno con el horómetro final
-  const pideCierre = !!maquina.operadorEnTurno && !turnoCerrado;
-  const horometro = leerHorometro(horometroCierre);
-  const cierreListo = !pideCierre || (horometro !== null && horometro >= maquina.horometroActual);
-  const isFormValid = entranteLista && motivo !== '' && cierreListo && !guardando;
+  const isFormValid = entranteLista && motivo !== '' && !guardando;
 
   const cerrar = () => {
     if (!guardando) onClose();
@@ -165,14 +137,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
 
   const handleSubmit = () => ejecutarUnaVez(async () => {
     setErrorEnvio(null);
-    let cerroTurno = false;
     try {
-      if (pideCierre && horometro !== null) {
-        // Solo en línea; con el turno que se ve, para no cerrar otro que haya empezado después
-        await cerrarTurnoDeMaquina(maquina.id, { horometroFinal: horometro, motivo, idTurno: maquina.idTurnoActual ?? undefined });
-        cerroTurno = true;
-        setTurnoCerrado(true);
-      }
       await reemplazarMaquina(maquina.id, {
         versionBase,
         ...(origen === 'De la flota'
@@ -191,8 +156,6 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
               },
             }),
         idOperador: operadorId ? Number(operadorId) : null,
-        estadoSaliente: ESTADO_API[queda],
-        regresoEstimado: !pideRegreso || horasRegreso === null ? null : regresoDesdeAhora(horasRegreso).toISOString(),
         motivo,
         observacion: observaciones.trim() || null,
       });
@@ -200,8 +163,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
       onClose();
       mostrarAviso('Reemplazo registrado');
     } catch (err) {
-      const mensaje = await explicarError(err, 'No se pudo registrar el reemplazo.');
-      setErrorEnvio(cerroTurno ? `El turno de ${maquina.operadorEnTurno} quedó cerrado, pero: ${mensaje}` : mensaje);
+      setErrorEnvio(await explicarError(err, 'No se pudo registrar el reemplazo.'));
     }
   });
 
@@ -224,7 +186,7 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
       >
         {guardando ? <ActivityIndicator color="#FFF" /> : <CheckCircle size={18} color="#FFF" />}
         <Text style={styles.btnPrimarioText}>
-          {guardando ? 'Reemplazando...' : pideCierre ? 'Cerrar turno y reemplazar' : 'Confirmar Reemplazo'}
+          {guardando ? 'Reemplazando...' : 'Confirmar Reemplazo'}
         </Text>
       </TouchableOpacity>
     </>
@@ -235,53 +197,19 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
       visible={visible}
       onClose={cerrar}
       title="Reemplazo de Equipo"
-      subtitle={`${maquina.codigo} sale de operación y otro equipo toma su lugar hasta que vuelva`}
+      subtitle={`${maquina.codigo} está ${presentacionEstado(maquina.estado).etiqueta.toLowerCase()}: otro equipo toma su lugar hasta que vuelva`}
       icon={<RefreshCw size={22} color={theme.warning} />}
       iconBadgeColor={theme.warning + '15'}
       headerTop={headerTop}
       footer={renderFooter()}
       modalStyle={{ width: '95%', maxWidth: 700, maxHeight: '92%' }}
     >
-      {/* 1. Saliente: la máquina de la tarjeta */}
-      <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.danger + '08', borderColor: theme.danger + '60', borderWidth: 1.5 }]}>
-        <View style={styles.sectionHeaderRow}>
-          <View style={styles.sectionTitleRow}>
-            <AlertCircle size={18} color={theme.danger} />
-            <Text style={[styles.sectionTitle, { color: theme.dangerText, marginBottom: 0 }]}>1. EQUIPO SALIENTE</Text>
-          </View>
-        </View>
-        <Text style={[styles.salienteCodigo, { color: theme.text }]}>{maquina.codigo}</Text>
-        <Text style={[styles.salienteDetalle, { color: theme.textSecondary }]}>{maquina.marcaModelo}</Text>
-        <View style={styles.salienteFila}>
-          <View style={styles.salienteDato}>
-            <Gauge size={14} color={theme.textSecondary} />
-            <Text style={[styles.salienteDetalle, { color: theme.textSecondary }]}>
-              {maquina.horometroActual.toLocaleString('es-CL', { minimumFractionDigits: 1 })} hrs
-            </Text>
-          </View>
-          <View style={styles.salienteDato}>
-            <User size={14} color={theme.textSecondary} />
-            <Text style={[styles.salienteDetalle, { color: theme.textSecondary }]}>{maquina.operadorAsignado ?? 'Sin operador asignado'}</Text>
-          </View>
-        </View>
-        <View style={styles.fieldFull}>
-          <Text style={[styles.label, { color: theme.textSecondary }]}>CÓMO QUEDA {maquina.codigo}</Text>
-          <SegmentedControl opciones={ESTADOS_SALIENTE} activo={queda} onChange={setQueda} />
-        </View>
-        {pideRegreso && (
-          <RegresoEstimadoChips horas={horasRegreso} onChange={setHorasRegreso} codigo={maquina.codigo} disabled={guardando} />
-        )}
-        {pideCierre && (
-          <CierreTurnoCampos maquina={maquina} horometro={horometroCierre} onChange={setHorometroCierre} disabled={guardando} />
-        )}
-      </View>
-
-      {/* 2. Entrante: de la flota o nueva */}
+      {/* 1. Entrante: de la flota o nueva */}
       <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
             <Truck size={16} color={successColor} />
-            <Text style={[styles.sectionTitle, { color: successColor, marginBottom: 0 }]}>2. EQUIPO ENTRANTE</Text>
+            <Text style={[styles.sectionTitle, { color: successColor, marginBottom: 0 }]}>1. EQUIPO ENTRANTE</Text>
           </View>
         </View>
         <SegmentedControl opciones={ORIGENES} activo={origen} onChange={setOrigen} />
@@ -331,12 +259,12 @@ export const ReemplazoEquipoModal: React.FC<Props> = ({ maquina, onClose, onReem
         </View>
       </View>
 
-      {/* 3. Justificación */}
+      {/* 2. Justificación */}
       <View style={[styles.section, styles.capsuleSection, { backgroundColor: theme.cardAlt, borderColor: theme.border }]}>
         <View style={styles.sectionHeaderRow}>
           <View style={styles.sectionTitleRow}>
             <ClipboardList size={16} color={theme.warning} />
-            <Text style={[styles.sectionTitle, { color: theme.textSecondary, marginBottom: 0 }]}>3. JUSTIFICACIÓN DEL JEFE DE TURNO</Text>
+            <Text style={[styles.sectionTitle, { color: theme.textSecondary, marginBottom: 0 }]}>2. JUSTIFICACIÓN DEL JEFE DE TURNO</Text>
           </View>
         </View>
 
