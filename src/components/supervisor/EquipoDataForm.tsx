@@ -151,10 +151,13 @@ export const EquipoDataForm: React.FC<Props> = ({
         <View style={[styles.sourceDataContainer, { backgroundColor: theme.cardAlt, borderWidth: 1, borderColor: theme.border }]}>
           <View style={styles.plantillaHeaderRow}>
             <View style={styles.plantillaHeaderTitleRow}>
-              <Copy size={16} color={theme.primary} />
-              <Text style={[styles.sourceTitle, { color: theme.textSecondary, marginBottom: 0 }]}>
-                Modelos registrados (1 toque para rellenar marca, modelo y tipo):
-              </Text>
+              <Copy size={16} color={theme.primary} style={styles.plantillaHeaderIcono} />
+              <View style={styles.plantillaHeaderTextos}>
+                <Text style={[styles.sourceTitle, { color: theme.textSecondary, marginBottom: 0 }]}>Modelos registrados</Text>
+                <Text style={[styles.plantillaHeaderAyuda, { color: theme.textTertiary }]}>
+                  Un toque rellena marca, modelo y tipo
+                </Text>
+              </View>
             </View>
           </View>
 

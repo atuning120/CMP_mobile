@@ -40,10 +40,22 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  // Ocupa el ancho disponible: sin esto el texto no se ajusta y se sale de la cápsula
   plantillaHeaderTitleRow: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  plantillaHeaderIcono: {
+    marginTop: 1,
+  },
+  plantillaHeaderTextos: {
+    flex: 1,
+  },
+  plantillaHeaderAyuda: {
+    fontSize: 11,
+    marginTop: 2,
   },
   restaurarText: {
     fontSize: 12,

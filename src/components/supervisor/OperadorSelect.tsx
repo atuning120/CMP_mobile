@@ -28,7 +28,7 @@ export const OperadorSelect: React.FC<Props> = ({ operadores, valor, onChange, i
   return (
     <SearchableSelect
       label={label}
-      placeholder="Buscar operador por nombre o RUT..."
+      placeholder="Buscar por nombre o RUT..."
       options={operadores.operadores}
       value={elegido}
       onChange={(operador) => onChange(operador ? String(operador.idOperador) : '')}

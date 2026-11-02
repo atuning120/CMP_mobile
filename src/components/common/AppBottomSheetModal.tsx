@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, useColorScheme, Platform, KeyboardAvoidingView, StyleProp, ViewStyle, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, useColorScheme, Platform, KeyboardAvoidingView, StyleProp, ViewStyle, BackHandler } from 'react-native';
 import { X } from 'lucide-react-native';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CapaDesplegable } from './CapaDesplegable';
 
 interface AppBottomSheetModalProps {
   visible: boolean;
@@ -107,7 +108,8 @@ export const AppBottomSheetModal: React.FC<AppBottomSheetModalProps> = ({
           </View>
 
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flexShrink: 1 }}>
-            <ScrollView
+            {/* ScrollView donde las listas de los selectores se dibujan sobre los campos */}
+            <CapaDesplegable
               style={styles.scrollView}
               contentContainerStyle={[styles.scrollContent, scrollContentStyle]}
               showsVerticalScrollIndicator={true}
@@ -117,7 +119,7 @@ export const AppBottomSheetModal: React.FC<AppBottomSheetModalProps> = ({
               {children}
               {/* Espacio final */}
               <View style={{ height: 40 }} />
-            </ScrollView>
+            </CapaDesplegable>
           </KeyboardAvoidingView>
 
           {/* Footer */}
