@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { Keyboard, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { SearchableSelect } from '../common/SearchableSelect';
 import { styles } from './SelectorConCreacion.styles';
@@ -89,6 +89,9 @@ export const SelectorConCreacion: React.FC<Props> = ({
         <Text style={[styles.label, { color: theme.textSecondary }]}>{labelNuevo}</Text>
         <TouchableOpacity
           onPress={() => {
+            // Sin esto Android pasa el foco del campo que desaparece a otro (Código) y abre el teclado ahí
+            inputRef.current?.blur();
+            Keyboard.dismiss();
             onCreandoChange(false);
             onChange(existente ?? '');
           }}
