@@ -10,6 +10,7 @@ import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { vibrar } from '../../services/retroalimentacion';
 import { Area, TurnoActual, ZonaTrabajo } from '../../types/turno';
 import { styles } from './ChangeLocationModal.styles';
+import { mensajeDeError } from '../../utils/errores';
 
 interface Props {
   visible: boolean;
@@ -65,7 +66,7 @@ export const ChangeLocationModal: React.FC<Props> = ({ visible, onClose, turno, 
     try {
       await onConfirm(areaSeleccionada, zonaSeleccionada);
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : 'No se pudo cambiar la ubicación.');
+      setSubmitError(mensajeDeError(e, 'No se pudo cambiar la ubicación.'));
       vibrar('error');
     }
   });

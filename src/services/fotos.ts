@@ -1,4 +1,5 @@
 import { Directory, File, Paths } from 'expo-file-system';
+import { ErrorParaUsuario } from '../utils/errores';
 
 // Las fotos se copian a documentos (no a caché) para que el sistema no las borre antes de sincronizarlas
 const directorioEvidencias = () => new Directory(Paths.document, 'evidencias');
@@ -44,9 +45,9 @@ export const adjuntarFoto = async (form: FormData, campo: string, uri: string, _
   form.append(campo, archivo as unknown as Blob, nombre);
 };
 
-// La copia local de la foto ya no existe (p. ej. se borraron los datos de la app)
-export class FotoNoEncontradaError extends Error {
-  constructor(uri: string) {
-    super(`La foto ya no existe en el teléfono (${uri})`);
+// La copia local de la foto ya no existe (p. ej. se borraron los datos de la app). La ruta queda solo para el log
+export class FotoNoEncontradaError extends ErrorParaUsuario {
+  constructor(public readonly uri: string) {
+    super('La foto ya no está guardada en el teléfono.');
   }
 }

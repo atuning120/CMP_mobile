@@ -1,8 +1,10 @@
 import { getStoredToken } from './authStorage';
 import { sincronizarSesion } from './authService';
 import { fetchBackend } from './backendUrl';
+import { ErrorParaUsuario, MENSAJE_SIN_CONEXION, mensajeDeRespuesta } from '../utils/errores';
 
-export class ApiError extends Error {
+// Su mensaje ya está traducido para el usuario (ver mensajeDeRespuesta)
+export class ApiError extends ErrorParaUsuario {
   constructor(
     message: string,
     public readonly status: number,
@@ -21,7 +23,7 @@ const enviar = async (path: string, init: RequestInit, timeoutMs?: number): Prom
       timeoutMs,
     );
   } catch {
-    throw new ApiError('No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.', 0);
+    throw new ApiError(MENSAJE_SIN_CONEXION, 0);
   }
 };
 
@@ -37,7 +39,7 @@ export const apiRequest = async <T>(path: string, init: RequestInit = {}, timeou
     if (resultado === 'ok') {
       response = await enviar(path, init, timeoutMs);
     } else if (resultado === 'sin-conexion') {
-      throw new ApiError('No se pudo conectar con el servidor. Revisa tu conexión e intenta nuevamente.', 0);
+      throw new ApiError(MENSAJE_SIN_CONEXION, 0);
     }
   }
 
@@ -46,7 +48,7 @@ export const apiRequest = async <T>(path: string, init: RequestInit = {}, timeou
     if (response.status === 401) {
       throw new ApiError('Tu sesión expiró. Vuelve a iniciar sesión.', 401, errorData?.code);
     }
-    throw new ApiError(errorData?.message ?? 'Ocurrió un error inesperado.', response.status, errorData?.code);
+    throw new ApiError(mensajeDeRespuesta(response.status, errorData), response.status, errorData?.code);
   }
 
   return response.json() as Promise<T>;

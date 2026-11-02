@@ -14,6 +14,7 @@ export const getBackendBaseUrl = () => {
 };
 
 const TIMEOUT_MS = 15000;
+
 // Las fotos pueden tardar más en subir con mala señal
 export const TIMEOUT_SUBIDA_MS = 60000;
 

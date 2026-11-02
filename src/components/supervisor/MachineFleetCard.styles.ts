@@ -84,6 +84,10 @@ export const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 16,
   },
+  descartar: {
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
   metaRow: {
     flexDirection: 'row',
     marginBottom: 8,

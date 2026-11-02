@@ -11,5 +11,5 @@ export const useHistorial = (filtro: FiltroHistorial, rango: RangoHistorial) => 
     },
     [filtro],
   );
-  return useListaPaginada<EventoHistorial, PaginaLista<EventoHistorial>>(cargar, filtro, rango);
+  return useListaPaginada<EventoHistorial, PaginaLista<EventoHistorial>>(cargar, filtro, rango, 'historial');
 };

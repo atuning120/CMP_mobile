@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listarMarcasMaquina, listarTiposMaquina } from '../services/flotaService';
+import { mensajeDeError } from '../utils/errores';
+import { consultarConCopia } from '../db/consultaLocal';
 
 export interface OpcionesMaquina {
   marcas: string[];
@@ -10,7 +12,7 @@ export interface OpcionesMaquina {
 }
 
 // Opciones de los selectores "Marca" y "Tipo de máquina". Se recargan cada vez que se abre el modal:
-// al incorporar una máquina con una marca o tipo nuevo, aparecen la próxima vez.
+// al incorporar una máquina con una marca o tipo nuevo, aparecen la próxima vez. Sin señal, las últimas recibidas.
 export const useOpcionesMaquina = (habilitado: boolean): OpcionesMaquina => {
   const [marcas, setMarcas] = useState<string[]>([]);
   const [tipos, setTipos] = useState<string[]>([]);
@@ -25,12 +27,15 @@ export const useOpcionesMaquina = (habilitado: boolean): OpcionesMaquina => {
       setCargando(true);
       setError(null);
       try {
-        const [marcasApi, tiposApi] = await Promise.all([listarMarcasMaquina(), listarTiposMaquina()]);
+        const [marcasApi, tiposApi] = await Promise.all([
+          consultarConCopia('catalogo|marcas', listarMarcasMaquina),
+          consultarConCopia('catalogo|tipos', listarTiposMaquina),
+        ]);
         if (cancelado) return;
         setMarcas(marcasApi);
         setTipos(tiposApi);
       } catch (err) {
-        if (!cancelado) setError(err instanceof Error ? err.message : 'No se pudieron cargar las opciones.');
+        if (!cancelado) setError(mensajeDeError(err, 'No se pudieron cargar las opciones.'));
       } finally {
         if (!cancelado) setCargando(false);
       }

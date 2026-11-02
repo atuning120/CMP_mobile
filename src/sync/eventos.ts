@@ -8,6 +8,8 @@ export interface EstadoSincronizacion {
   sincronizando: boolean;
   pendientes: number;
   errores: number;
+  // Acciones del jefe de turno de más de 24 h que esperan su confirmación
+  porConfirmar: number;
   ultimaSincronizacion: string | null; // ISO 8601
   ultimoError: string | null;
 }
@@ -21,6 +23,7 @@ let estadoActual: EstadoSincronizacion = {
   sincronizando: false,
   pendientes: 0,
   errores: 0,
+  porConfirmar: 0,
   ultimaSincronizacion: null,
   ultimoError: null,
 };

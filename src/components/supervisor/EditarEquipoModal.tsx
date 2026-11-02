@@ -7,7 +7,8 @@ import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
 import { conRegreso, ESTADOS_MAQUINA, EstadoMaquina, operaEnEstado, presentacionEstado } from '../../constants/estadosMaquina';
 import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 import { useOperadoresAsignables } from '../../hooks/useOperadoresAsignables';
-import { cerrarTurnoDeMaquina, editarMaquina } from '../../services/flotaService';
+import { type FichaMaquinaApi } from '../../services/flotaService';
+import { type AccionPreparada, cerrarTurnoJefe, DETALLE_SIN_SENAL, editarMaquinaJefe, nuevaAccion } from '../../services/accionesJefe';
 import { CierreTurnoCampos, leerHorometro } from './CierreTurnoCampos';
 import { RegresoEstimadoChips, regresoDesdeAhora } from './RegresoEstimadoChips';
 import { EQUIPO_FORM_INICIAL, EquipoDataForm, EquipoFormState } from './EquipoDataForm';
@@ -16,12 +17,13 @@ import { MOTIVOS_EDICION } from '../../constants/motivosJefeTurno';
 import { styles } from './EditarEquipoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
+import { useVersionBase } from '../../hooks/useVersionBase';
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   maquina: MaquinaFlota | null;
-  // Recibe la máquina tal como quedó en el Backend
+  // Recibe la máquina tal como quedó en el Backend (sin señal el cambio queda en la cola y la flota lo muestra pendiente)
   onSave?: (maquinaActualizada: MaquinaFlota) => void;
 }
 
@@ -54,6 +56,33 @@ const huella = (eq: EquipoFormState, estado: EstadoMaquina) =>
     estado,
   ]);
 
+// La ficha como la recibe el Backend
+const aFicha = (eq: EquipoFormState): FichaMaquinaApi => ({
+  nombre: eq.codigo.trim(),
+  marca: eq.marca.trim(),
+  modelo: eq.modelo.trim(),
+  tipoMaquina: eq.tipoMaquina.trim(),
+  anio: eq.anio ? Number(eq.anio) : null,
+  patente: eq.patente.trim() || null,
+  numeroChasis: eq.chasis.trim() || null,
+  esContratista: eq.contratista,
+  idOperador: eq.operadorId ? Number(eq.operadorId) : null,
+});
+
+const comparable = (valor: unknown) => (typeof valor === 'string' ? valor.toUpperCase() : valor);
+
+/**
+ * Solo los campos que el jefe de turno cambió, y lo que veía en cada uno (valoresBase): si otro jefe cambió la
+ * máquina mientras tanto, el Backend aplica igual los campos que el otro no tocó
+ */
+const camposCambiados = (antes: FichaMaquinaApi, despues: FichaMaquinaApi) => {
+  const campos = (Object.keys(despues) as (keyof FichaMaquinaApi)[]).filter((c) => comparable(despues[c]) !== comparable(antes[c]));
+  return {
+    cambios: Object.fromEntries(campos.map((c) => [c, despues[c]])) as Partial<FichaMaquinaApi>,
+    valoresBase: Object.fromEntries(campos.map((c) => [c, antes[c]])) as Partial<FichaMaquinaApi>,
+  };
+};
+
 // Accesor estable para SearchableSelect (evita recalcular la búsqueda en cada render)
 const comoTexto = (valor: string) => valor;
 
@@ -75,6 +104,9 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
   // Bloquea toques repetidos en el botón de confirmar mientras se guarda
   const [guardando, ejecutarUnaVez] = useAccionUnica();
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
+  const { versionBase, explicarError } = useVersionBase(maquina);
+  // El mismo UUID en cada reintento de esta apertura: el Backend no aplica el cambio dos veces
+  const [accion, setAccion] = useState<AccionPreparada | null>(null);
 
   // Al abrir (o cambiar de máquina) el formulario parte desde los datos guardados
   const [cargadaDe, setCargadaDe] = useState<MaquinaFlota | null>(null);
@@ -89,6 +121,7 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
     setHorometroCierre('');
     setTurnoCerrado(false);
     setErrorEnvio(null);
+    setAccion(null);
   }
   if (!visible && cargadaDe) setCargadaDe(null);
 
@@ -124,35 +157,61 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
 
   const handleSave = () => ejecutarUnaVez(async () => {
     setErrorEnvio(null);
+    // El mismo UUID en cada reintento (cierre y cambio): el Backend no los aplica dos veces
+    const preparada = accion ?? nuevaAccion();
+    setAccion(preparada);
     let cerroTurno = false;
     try {
       if (pideCierre && horometro !== null) {
-        await cerrarTurnoDeMaquina(maquina.id, horometro, motivo);
+        // Sin señal queda en la cola antes del cambio, que lo espera
+        const cierre = await cerrarTurnoJefe(maquina, horometro, motivo, preparada);
         cerroTurno = true;
         setTurnoCerrado(true);
+        // Otro lo cerró antes (gana el primer cierre): se avisa quién y cuándo, y el cambio sigue
+        if (cierre.estado === 'ya-cerrado') mostrarAviso(cierre.mensaje, { tipo: 'info' });
       }
-      const actualizada = await editarMaquina(maquina.id, {
-        nombre: equipo.codigo.trim(),
-        marca: equipo.marca.trim(),
-        modelo: equipo.modelo.trim(),
-        tipoMaquina: equipo.tipoMaquina.trim(),
-        anio: equipo.anio ? Number(equipo.anio) : null,
-        patente: equipo.patente.trim() || null,
-        numeroChasis: equipo.chasis.trim() || null,
-        esContratista: equipo.contratista,
-        idOperador: equipo.operadorId ? Number(equipo.operadorId) : null,
-        ...(cambiaEstado ? { estado: estadoOperativo } : {}),
-        ...(cambiaEstado && conRegreso(estadoOperativo) && horasRegreso !== null
-          ? { regresoEstimado: regresoDesdeAhora(horasRegreso).toISOString() }
-          : {}),
-        motivo,
-        observacion: observaciones.trim() || null,
-      });
-      onSave?.(mapMaquinaFlota(actualizada));
+      const { cambios, valoresBase } = camposCambiados(aFicha(aFormulario(maquina)), aFicha(equipo));
+      const regreso =
+        cambiaEstado && conRegreso(estadoOperativo) && horasRegreso !== null ? regresoDesdeAhora(horasRegreso).toISOString() : undefined;
+      // El operador elegido estaba en otra máquina: si otro jefe lo movió mientras tanto, el Backend lo informa
+      const operador = cambios.idOperador ? operadores.operadores.find((o) => o.idOperador === cambios.idOperador) : undefined;
+      const obs = observaciones.trim() || null;
+      const resultado = await editarMaquinaJefe(
+        maquina,
+        {
+          ...cambios,
+          ...(cambiaEstado ? { estado: estadoOperativo } : {}),
+          ...(regreso ? { regresoEstimado: regreso } : {}),
+          motivo,
+          observacion: obs,
+          versionBase,
+          valoresBase: { ...valoresBase, ...(operador ? { maquinaOperador: operador.maquinaAsignada?.idMaquina ?? null } : {}) },
+        },
+        {
+          ...(cambios.nombre !== undefined ? { codigo: cambios.nombre.toUpperCase() } : {}),
+          ...(cambios.patente !== undefined ? { patente: (cambios.patente ?? '').toUpperCase() } : {}),
+          ...(cambios.marca !== undefined ? { marca: cambios.marca } : {}),
+          ...(cambios.modelo !== undefined ? { modelo: cambios.modelo } : {}),
+          ...(cambios.tipoMaquina !== undefined ? { tipoMaquina: cambios.tipoMaquina } : {}),
+          ...(cambios.anio !== undefined ? { anio: cambios.anio } : {}),
+          ...(cambios.numeroChasis !== undefined ? { numeroChasis: cambios.numeroChasis } : {}),
+          ...(cambios.esContratista !== undefined ? { esContratista: cambios.esContratista } : {}),
+          ...(cambios.idOperador !== undefined ? { idOperadorAsignado: cambios.idOperador, operadorAsignado: operador?.nombre ?? null } : {}),
+          ...(cambiaEstado
+            ? {
+                estado: estadoOperativo,
+                motivoEstado: [motivo, obs].filter(Boolean).join(': '),
+                regresoEstimado: conRegreso(estadoOperativo) ? (regreso ?? maquina.regresoEstimado) : null,
+              }
+            : {}),
+        },
+        preparada,
+      );
+      if (resultado.enviada) onSave?.(mapMaquinaFlota(resultado.respuesta));
       onClose();
-      mostrarAviso('Cambios guardados');
+      mostrarAviso('Cambios guardados', resultado.enviada ? {} : { detalle: DETALLE_SIN_SENAL, tipo: 'info' });
     } catch (err) {
-      const mensaje = err instanceof Error ? err.message : 'No se pudieron guardar los cambios.';
+      const mensaje = await explicarError(err, 'No se pudieron guardar los cambios.');
       setErrorEnvio(cerroTurno ? `El turno de ${maquina.operadorEnTurno} quedó cerrado, pero: ${mensaje}` : mensaje);
     }
   });

@@ -5,6 +5,7 @@ import {
   AlarmClockOff,
   ArrowLeftRight,
   Ban,
+  Camera,
   CheckCircle,
   Clock,
   Edit2,
@@ -18,7 +19,8 @@ import {
   LucideIcon,
 } from 'lucide-react-native';
 import { darkTheme, lightTheme, ThemeColors } from '../../constants/theme';
-import type { EventoHistorial, TipoEventoHistorial } from '../../services/historialService';
+import type { EvidenciaHistorial, EventoHistorial, TipoEventoHistorial } from '../../services/historialService';
+import { EvidenciasReporte } from './EvidenciasReporte';
 import { styles } from './HistorialEventoCard.styles';
 import { formatearFecha } from '../../utils/historialFechas';
 import { presentacionEstado } from '../../constants/estadosMaquina';
@@ -31,6 +33,7 @@ const PRESENTACION: Record<TipoEventoHistorial, { icono: LucideIcon; verbo: stri
   INICIO_TURNO: { icono: Play, verbo: 'inició turno en', color: (t) => t.success },
   FIN_TURNO: { icono: Square, verbo: 'cerró turno en', color: (t) => t.danger },
   CAMBIO_UBICACION: { icono: ArrowLeftRight, verbo: 'trasladó', color: (t) => t.primary },
+  NOVEDAD: { icono: Camera, verbo: 'reportó una novedad en', color: (t) => t.warning },
   INCORPORAR: { icono: PlusCircle, verbo: 'incorporó', color: (t) => t.primary },
   EDITAR: { icono: Edit2, verbo: 'editó', color: (t) => t.warning },
   HABILITAR: { icono: CheckCircle, verbo: 'habilitó', color: (t) => t.success },
@@ -47,6 +50,30 @@ const numero = (valor: unknown) => {
   if (valor === null || valor === undefined || valor === '') return null;
   const n = Number(valor);
   return Number.isFinite(n) ? n : null;
+};
+
+// Cómo se llama el texto que el operador escribió en cada reporte (igual que en el panel web)
+const ETIQUETA_REPORTE: Partial<Record<TipoEventoHistorial, string>> = { INICIO_TURNO: 'Instrucciones', FIN_TURNO: 'Novedades del cierre' };
+
+const evidenciasDe = (lista: unknown): EvidenciaHistorial[] =>
+  Array.isArray(lista) ? lista.filter((e): e is EvidenciaHistorial => typeof e?.id === 'string' && typeof e?.fecha === 'string') : [];
+
+/**
+ * Lo que el operador reportó con el evento, o null si no hay nada. Inicio y cierre de turno lo traen en
+ * detalle.reporte; una novedad trae su texto en observacion (se muestra como cualquier observación) y sus
+ * fotos en detalle.evidencias.
+ */
+const reporteDe = (evento: EventoHistorial) => {
+  if (evento.tipo === 'NOVEDAD') {
+    const evidencias = evidenciasDe(evento.detalle?.evidencias);
+    return evidencias.length ? { etiqueta: null, descripcion: null, evidencias } : null;
+  }
+  const etiqueta = ETIQUETA_REPORTE[evento.tipo];
+  const reporte = evento.detalle?.reporte as { descripcion?: unknown; evidencias?: unknown } | null | undefined;
+  if (!etiqueta || !reporte) return null;
+  const descripcion = texto(reporte.descripcion);
+  const evidencias = evidenciasDe(reporte.evidencias);
+  return descripcion || evidencias.length ? { etiqueta, descripcion, evidencias } : null;
 };
 
 export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
@@ -93,6 +120,7 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
     ? [texto(evento.detalle?.areaAnterior), texto(evento.detalle?.zonaAnterior)].filter(Boolean).join(' · ')
     : '';
   const traslado = esCambioUbicacion ? [ubicacionAnterior, ubicacion].filter(Boolean).join(' → ') : '';
+  const reporte = reporteDe(evento);
 
   return (
     <View
@@ -186,6 +214,21 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
               <Text style={[styles.metaTexto, { color: theme.textSecondary }]} numberOfLines={2}>{traslado}</Text>
             </View>
           </View>
+        )}
+
+        {!!reporte?.descripcion && (
+          <View style={[styles.reporte, { backgroundColor: theme.cardAlt, borderLeftColor: acento + '73' }]}>
+            <Text style={[styles.reporteEtiqueta, { color: theme.textTertiary }]}>{reporte.etiqueta}</Text>
+            <Text style={[styles.reporteTexto, { color: theme.text }]}>{reporte.descripcion}</Text>
+          </View>
+        )}
+
+        {!!reporte && reporte.evidencias.length > 0 && (
+          <EvidenciasReporte
+            evidencias={reporte.evidencias}
+            titulo={`${evento.actor} · ${evento.maquina.nombre}`}
+            descripcion={reporte.descripcion ?? evento.observacion}
+          />
         )}
 
         <Text style={[styles.fecha, { color: theme.textTertiary }]}>{formatearFecha(evento.fecha)}</Text>

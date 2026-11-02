@@ -12,6 +12,8 @@ import { CierreTurnoCampos, leerHorometro } from './CierreTurnoCampos';
 import { styles } from './CambiarEstadoModal.styles';
 import { useAccionUnica } from '../../hooks/useAccionUnica';
 import { mostrarAviso } from '../../services/retroalimentacion';
+import { mensajeDeError } from '../../utils/errores';
+import { useVersionBase } from '../../hooks/useVersionBase';
 
 interface Props {
   // Máquina original que vuelve de la reparación; null = modal cerrado
@@ -40,6 +42,7 @@ export const DevolverEquipoModal: React.FC<Props> = ({ maquina, onClose, onDevue
 
   // El respaldo con sus datos al día (quién lo opera ahora); puede no estar en la lista filtrada de la pantalla
   const [respaldo, setRespaldo] = useState<MaquinaFlota | null>(null);
+  const { versionBase, explicarError } = useVersionBase(maquina);
   const [cargando, setCargando] = useState(false);
   useEffect(() => {
     if (!maquina?.respaldo) return;
@@ -51,7 +54,7 @@ export const DevolverEquipoModal: React.FC<Props> = ({ maquina, onClose, onDevue
         const encontrada = (await listarFlota('')).find((m) => m.idMaquina === idRespaldo);
         if (!cancelado) setRespaldo(encontrada ? mapMaquinaFlota(encontrada) : null);
       } catch (err) {
-        if (!cancelado) setError(err instanceof Error ? err.message : 'No se pudo cargar el respaldo.');
+        if (!cancelado) setError(mensajeDeError(err, 'No se pudo cargar el respaldo.'));
       } finally {
         if (!cancelado) setCargando(false);
       }
@@ -92,16 +95,17 @@ export const DevolverEquipoModal: React.FC<Props> = ({ maquina, onClose, onDevue
     let cerroTurno = false;
     try {
       if (pideCierre && horometro !== null) {
-        await cerrarTurnoDeMaquina(respaldo.id, horometro, motivo);
+        // Solo en línea; con el turno que se ve, para no cerrar otro que haya empezado después
+        await cerrarTurnoDeMaquina(respaldo.id, { horometroFinal: horometro, motivo, idTurno: respaldo.idTurnoActual ?? undefined });
         cerroTurno = true;
         setTurnoCerrado(true);
       }
-      await devolverMaquina(maquina.id, motivo, observacion.trim() || null);
+      await devolverMaquina(maquina.id, versionBase, motivo, observacion.trim() || null);
       onDevuelto();
       onClose();
       mostrarAviso(`${maquina.codigo} volvió a operar`);
     } catch (err) {
-      const mensaje = err instanceof Error ? err.message : 'No se pudo registrar la devolución.';
+      const mensaje = await explicarError(err, 'No se pudo registrar la devolución.');
       setError(cerroTurno ? `El turno de ${respaldo.operadorEnTurno} quedó cerrado, pero: ${mensaje}` : mensaje);
     }
   });

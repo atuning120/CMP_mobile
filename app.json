@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "CMP Operaciones",
+    "name": "GeoPlanta",
     "slug": "Front-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,7 +8,6 @@
     "scheme": "frontmobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.atuning120.Frontmobile",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -16,13 +15,13 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.atuning120.Frontmobile"
+      "package": "com.atuning120.Frontmobile",
+      "permissions": ["android.permission.RECEIVE_BOOT_COMPLETED"]
     },
     "web": {
       "output": "static",
@@ -33,13 +32,23 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#FFFFFF",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 200
         }
       ],
       "expo-secure-store",
       "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "GeoPlanta usa tu ubicación para mostrar dónde está la máquina de tu turno en el mapa.",
+          "locationAlwaysAndWhenInUsePermission": "GeoPlanta envía la ubicación de la máquina de tu turno cada 30 segundos, también con la pantalla apagada.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
       [
         "expo-image-picker",
         {

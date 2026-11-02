@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { View, Text, Image, NativeScrollEvent, NativeSyntheticEvent, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { Alert, View, Text, Image, NativeScrollEvent, NativeSyntheticEvent, useColorScheme, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { BlurTargetView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -7,12 +7,13 @@ import { darkTheme, lightTheme } from '../constants/theme';
 import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
-import { Truck, History, ShieldAlert, AlertTriangle, LayoutList, UserRound, AlarmClockOff } from 'lucide-react-native';
+import { Truck, History, ShieldAlert, AlertTriangle, LayoutList, UserRound, AlarmClockOff, CheckCircle, CircleDashed, Layers, Wrench } from 'lucide-react-native';
 import { CambiarEstadoModal } from '../components/supervisor/CambiarEstadoModal';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
 import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
-import { useFlotaResumen, MaquinaFlota } from '../hooks/useFlotaResumen';
+import type { MaquinaFlota } from '../hooks/useFlotaResumen';
+import { useFlotaConPendientes } from '../hooks/useFlotaConPendientes';
 import { IncorporacionEquipoModal } from '../components/supervisor/IncorporacionEquipoModal';
 import { ReemplazoEquipoModal } from '../components/supervisor/ReemplazoEquipoModal';
 import { DevolverEquipoModal } from '../components/supervisor/DevolverEquipoModal';
@@ -29,10 +30,15 @@ import { SegmentedControl } from '../components/supervisor/SegmentedControl';
 import { RangoFechasFiltro } from '../components/supervisor/RangoFechasFiltro';
 import { ListaPorDia } from '../components/supervisor/ListaPorDia';
 import { AlertaCard } from '../components/supervisor/AlertaCard';
+import { AtenderAlertaModal } from '../components/supervisor/AtenderAlertaModal';
 import { useRangoFechas } from '../hooks/useRangoFechas';
 import { useAlertas } from '../hooks/useAlertas';
 import { useRecargaManual } from '../hooks/useRecargaManual';
-import type { FiltroAlertas } from '../services/alertasService';
+import { AvisoDatosGuardados } from '../components/supervisor/AvisoDatosGuardados';
+import { AvisoAccionesPendientes } from '../components/supervisor/AvisoAccionesPendientes';
+import type { Alerta, EstadoAtencion, FiltroAlertas } from '../services/alertasService';
+import { descartarAtencionPendiente, descartarCambiosPendientes } from '../services/accionesJefe';
+import { useConectado } from '../hooks/useConectado';
 
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
@@ -55,16 +61,30 @@ const FILTROS_HISTORIAL = [
 ] as const satisfies readonly { valor: FiltroHistorialUI; icono: unknown }[];
 const FILTRO_HISTORIAL_API: Record<FiltroHistorialUI, FiltroHistorial> = { Todo: 'TODO', Turnos: 'TURNOS', Flota: 'FLOTA' };
 
-type FiltroAlertasUI = 'Todas' | '+10 horas' | 'Cierre auto';
+type FiltroAlertasUI = 'Todas' | '+10 horas' | 'Cierre auto' | 'Mantención';
 const FILTROS_ALERTAS = [
   { valor: 'Todas', icono: ShieldAlert },
   { valor: '+10 horas', icono: AlertTriangle },
   { valor: 'Cierre auto', icono: AlarmClockOff },
+  { valor: 'Mantención', icono: Wrench },
 ] as const satisfies readonly { valor: FiltroAlertasUI; icono: unknown }[];
 const FILTRO_ALERTAS_API: Record<FiltroAlertasUI, FiltroAlertas> = {
   Todas: 'TODO',
   '+10 horas': 'EXTENDIDOS',
   'Cierre auto': 'CIERRES_AUTOMATICOS',
+  Mantención: 'MANTENCIONES',
+};
+// Si alguien ya atendió la alerta
+type EstadoAtencionUI = 'Cualquiera' | 'Pendientes' | 'Atendidas';
+const ESTADOS_ATENCION = [
+  { valor: 'Cualquiera', icono: Layers },
+  { valor: 'Pendientes', icono: CircleDashed },
+  { valor: 'Atendidas', icono: CheckCircle },
+] as const satisfies readonly { valor: EstadoAtencionUI; icono: unknown }[];
+const ESTADO_ATENCION_API: Record<EstadoAtencionUI, EstadoAtencion> = {
+  Cualquiera: 'TODAS',
+  Pendientes: 'PENDIENTES',
+  Atendidas: 'ATENDIDAS',
 };
 // Distancia al final (px) desde la que se pide la siguiente página del historial o de las alertas
 const DISTANCIA_CARGA_MAS = 600;
@@ -104,8 +124,8 @@ export const ShipSupervisorScreen = () => {
   const [maquinaAToggle, setMaquinaAToggle] = useState<MaquinaFlota | null>(null);
   const [maquinaADevolver, setMaquinaADevolver] = useState<MaquinaFlota | null>(null);
 
-  // La búsqueda la resuelve el Backend; el filtro por estado se aplica sobre el resultado
-  const { maquinas, contadorFlota, isLoading, error, refetch, actualizarMaquina } = useFlotaResumen(searchQuery);
+  // La búsqueda la resuelve el Backend; el filtro por estado se aplica sobre el resultado. Incluye lo hecho sin señal
+  const { maquinas, contadorFlota, isLoading, error, guardadoEn, refetch, actualizarMaquina } = useFlotaConPendientes(searchQuery);
 
   const [filtroHistorial, setFiltroHistorial] = useState<FiltroHistorialUI>('Todo');
   const rangoHistorial = useRangoFechas();
@@ -113,7 +133,27 @@ export const ShipSupervisorScreen = () => {
 
   const [filtroAlertas, setFiltroAlertas] = useState<FiltroAlertasUI>('Todas');
   const rangoAlertas = useRangoFechas();
-  const alertas = useAlertas(FILTRO_ALERTAS_API[filtroAlertas], rangoAlertas.rango);
+  const [estadoAlertas, setEstadoAlertas] = useState<EstadoAtencionUI>('Cualquiera');
+  const alertas = useAlertas(FILTRO_ALERTAS_API[filtroAlertas], ESTADO_ATENCION_API[estadoAlertas], rangoAlertas.rango);
+  // Alerta que se está atendiendo (modal abierto); null = cerrado
+  const [alertaAAtender, setAlertaAAtender] = useState<Alerta | null>(null);
+  const conectado = useConectado();
+
+  const confirmarDescarteMaquina = (maquina: MaquinaFlota) =>
+    Alert.alert(
+      maquina.pendiente?.nueva ? 'Descartar incorporación' : 'Descartar cambios',
+      `El servidor no aceptó ${maquina.pendiente?.nueva ? 'la incorporación' : 'los cambios'} de ${maquina.codigo} hechos sin señal. Si los descartas, se borran de este teléfono y no se envían.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Descartar', style: 'destructive', onPress: () => maquina.pendiente && void descartarCambiosPendientes(maquina.pendiente.clave) },
+      ],
+    );
+
+  const confirmarDescarte = (idOperacion: number) =>
+    Alert.alert('Descartar atención', 'El servidor no la aceptó. Si la descartas, se borra de este teléfono y no se envía.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Descartar', style: 'destructive', onPress: () => void descartarAtencionPendiente(idOperacion) },
+    ]);
 
   // Deslizar hacia abajo recarga la pestaña visible (en Flota también el contador de alertas)
   const { refetch: refetchHistorial } = historial;
@@ -212,7 +252,7 @@ export const ShipSupervisorScreen = () => {
           </Text>
         </View>
         <Text style={[styles.tabCounter, { color: activeTab === 'ALERTAS' ? theme.textSecondary : theme.textTertiary }]}>
-          {alertas.activas === null ? 'Cargando...' : alertas.activas === 1 ? '1 activa' : `${alertas.activas} activas`}
+          {alertas.activas === null ? (alertas.isLoading ? 'Cargando...' : 'Sin datos') : alertas.activas === 1 ? '1 activa' : `${alertas.activas} activas`}
         </Text>
       </TouchableOpacity>
     </View>
@@ -223,6 +263,7 @@ export const ShipSupervisorScreen = () => {
       {/* Qué se ve (segmentos) va separado de cuándo (chips de rango) */}
       <SegmentedControl opciones={FILTROS_HISTORIAL} activo={filtroHistorial} onChange={setFiltroHistorial} />
       <RangoFechasFiltro estado={rangoHistorial} />
+      <AvisoDatosGuardados guardadoEn={historial.isLoading ? null : historial.guardadoEn} onReintentar={historial.refetch} />
       <ListaPorDia lista={historial} nombre="eventos" recargando={recarga.refreshing} renderItem={(evento) => <HistorialEventoCard evento={evento} />} />
     </GlassCapsule>
   );
@@ -230,8 +271,15 @@ export const ShipSupervisorScreen = () => {
   const renderAlertas = () => (
     <GlassCapsule blurTarget={fondoRef}>
       <SegmentedControl opciones={FILTROS_ALERTAS} activo={filtroAlertas} onChange={setFiltroAlertas} />
+      <SegmentedControl opciones={ESTADOS_ATENCION} activo={estadoAlertas} onChange={setEstadoAlertas} />
       <RangoFechasFiltro estado={rangoAlertas} />
-      <ListaPorDia lista={alertas} nombre="alertas" recargando={recarga.refreshing} renderItem={(alerta) => <AlertaCard alerta={alerta} />} />
+      <AvisoDatosGuardados guardadoEn={alertas.isLoading ? null : alertas.guardadoEn} onReintentar={alertas.refetch} />
+      <ListaPorDia
+        lista={alertas}
+        nombre="alertas"
+        recargando={recarga.refreshing}
+        renderItem={(alerta) => <AlertaCard alerta={alerta} onAtender={setAlertaAAtender} onDescartarPendiente={confirmarDescarte} />}
+      />
     </GlassCapsule>
   );
 
@@ -243,11 +291,14 @@ export const ShipSupervisorScreen = () => {
       <GlassCapsule blurTarget={fondoRef}>
         <FleetSearchBar value={searchQuery} onChangeText={setSearchQuery} />
         <FleetFilterChips activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+        {/* Sin respuesta del Backend: la flota guardada en el teléfono, con su antigüedad */}
+        <AvisoDatosGuardados guardadoEn={isLoading ? null : guardadoEn} onReintentar={refetch} />
 
-        {/* Al deslizar para recargar se mantiene la lista: el indicador ya se ve arriba */}
-        {isLoading && !(recarga.refreshing && maquinas.length > 0) ? (
+        {/* Al deslizar para recargar se mantiene la lista: el indicador ya se ve arriba. Con la flota
+            guardada en el teléfono se muestra esa mientras responde el Backend */}
+        {isLoading && !guardadoEn && !(recarga.refreshing && maquinas.length > 0) ? (
           <ActivityIndicator size="large" color={theme.warning} style={{ marginTop: 40 }} />
-        ) : error ? (
+        ) : error && !guardadoEn ? (
           <View style={{ alignItems: 'center', marginTop: 40, gap: 12 }}>
             <Text style={{ textAlign: 'center', color: theme.dangerText }}>{error.message}</Text>
             <TouchableOpacity onPress={refetch} style={{ backgroundColor: theme.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}>
@@ -265,6 +316,8 @@ export const ShipSupervisorScreen = () => {
               onEditar={handleEditar}
               onCambiarEstado={handleToggleEstado}
               onDevolver={setMaquinaADevolver}
+              conectado={conectado}
+              onDescartarPendiente={confirmarDescarteMaquina}
             />
           ))
         )}
@@ -274,7 +327,8 @@ export const ShipSupervisorScreen = () => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
-      <LoginHeader showConnectionStatus />
+      {/* Lo que el jefe de turno hizo sin señal también queda por sincronizar */}
+      <LoginHeader showConnectionStatus showSyncStatus />
 
       <View
         style={styles.mainContent}
@@ -311,6 +365,9 @@ export const ShipSupervisorScreen = () => {
           }
         >
           <TurnoSummaryDropdown turno={null} onLogout={() => setIsLogoutModalVisible(true)} />
+
+          {/* Lo hecho sin señal que el servidor rechazó o que tiene más de 24 h: el jefe de turno decide */}
+          <AvisoAccionesPendientes />
 
           {renderTabs()}
 
@@ -374,6 +431,12 @@ export const ShipSupervisorScreen = () => {
           refetch();
           historial.refetch();
         }}
+      />
+      <AtenderAlertaModal
+        alerta={alertaAAtender}
+        onClose={() => setAlertaAAtender(null)}
+        // Se actualiza la tarjeta aunque ya no calce con el filtro, para que no desaparezca mientras se mira
+        onAtendida={(idAlerta, atenciones) => alertas.actualizar(idAlerta, (a) => ({ ...a, atenciones }))}
       />
       <CambiarEstadoModal
         maquina={maquinaAToggle}

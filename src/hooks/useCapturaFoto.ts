@@ -23,14 +23,30 @@ const comprimir = async (foto: ImagePicker.ImagePickerAsset): Promise<FotoCaptur
   return { uri: resultado.uri, mimeType: 'image/jpeg' };
 };
 
-// Pide el permiso, abre la cámara y comprime la foto
-const capturar = async (): Promise<FotoCapturada | null> => {
-  const permiso = await ImagePicker.requestCameraPermissionsAsync();
-  if (!permiso.granted) {
-    Alert.alert('Permiso de cámara', 'Activa el permiso de cámara en los ajustes del teléfono para adjuntar evidencias.');
-    return null;
+// La evidencia sale de la cámara o de la galería, nunca de ambas
+export type OrigenFoto = 'camara' | 'galeria';
+
+// Abre la cámara (pidiendo el permiso) o la galería del sistema, que no lo necesita, y comprime la imagen
+const capturar = async (origen: OrigenFoto): Promise<FotoCapturada | null> => {
+  const opciones: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, exif: false };
+  let resultado: ImagePicker.ImagePickerResult;
+  if (origen === 'camara') {
+    const permiso = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permiso.granted) {
+      Alert.alert('Permiso de cámara', 'Activa el permiso de cámara en los ajustes del teléfono para adjuntar evidencias.');
+      return null;
+    }
+    resultado = await ImagePicker.launchCameraAsync(opciones);
+  } else {
+    try {
+      resultado = await ImagePicker.launchImageLibraryAsync({ ...opciones, allowsMultipleSelection: false });
+    } catch (error) {
+      // Una foto que solo está en la nube (p. ej. Google Fotos) no se puede leer sin conexión
+      console.warn('No se pudo abrir la imagen de la galería', error);
+      Alert.alert('No se pudo cargar la imagen', 'Elige una foto guardada en el teléfono o toma una con la cámara.');
+      return null;
+    }
   }
-  const resultado = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, exif: false });
   if (resultado.canceled || resultado.assets.length === 0) return null;
   try {
     return await comprimir(resultado.assets[0]);
@@ -43,16 +59,16 @@ const capturar = async (): Promise<FotoCapturada | null> => {
 };
 
 /**
- * Abre la cámara y devuelve la foto tomada, ya comprimida (o null si el operador cancela).
+ * Abre la cámara o la galería y devuelve la imagen elegida, ya comprimida (o null si el operador cancela).
  */
 export const useCapturaFoto = () => {
-  // Un toque doble mientras la cámara se abre la lanzaría dos veces: el segundo toque se ignora
+  // Un toque doble mientras la cámara o la galería se abre la lanzaría dos veces: el segundo toque se ignora
   const abierta = useRef(false);
-  return useCallback(async (): Promise<FotoCapturada | null> => {
+  return useCallback(async (origen: OrigenFoto): Promise<FotoCapturada | null> => {
     if (abierta.current) return null;
     abierta.current = true;
     try {
-      return await capturar();
+      return await capturar(origen);
     } finally {
       abierta.current = false;
     }

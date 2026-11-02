@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { EvidenciaLocal } from '../db/turnoLocal';
 import { listarEvidenciasLocales } from '../services/operacionesTurno';
 import { suscribirCambioDatos } from '../sync/eventos';
+import { mensajeDeError } from '../utils/errores';
 
 export interface EvidenciaHistorial {
   id: string;                    // idCliente de la evidencia
@@ -46,7 +47,7 @@ export const useEvidenciasHistorial = (): UseEvidenciasHistorialResult => {
       );
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e : new Error('Error al cargar las evidencias'));
+      setError(new Error(mensajeDeError(e, 'No se pudieron cargar las evidencias.')));
     } finally {
       setIsLoading(false);
     }

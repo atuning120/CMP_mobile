@@ -24,8 +24,6 @@ export const styles = StyleSheet.create({
 
   label: { fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
 
-  quickSelectSection: { marginBottom: 20 },
-  quickSelectGrid: { flexDirection: 'row', gap: 8 },
   quickOpButton: {
     flex: 1,
     flexDirection: 'row',

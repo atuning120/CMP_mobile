@@ -12,12 +12,33 @@ import {
 import { ApiError } from '../services/apiClient';
 import { FotoNoEncontradaError } from '../services/fotos';
 import { FOTOS_HABILITADAS } from '../constants/features';
+import { mensajeDeError } from '../utils/errores';
 import { leerSesion } from '../services/authStorage';
 import * as api from '../services/turnoService';
+import { atenderAlerta } from '../services/alertasService';
 import {
+  cerrarTurnoDeMaquina,
+  crearMaquina,
+  editarMaquina,
+  SIN_TURNO_EN_CURSO,
+  TURNO_YA_CERRADO,
+  type CerrarTurnoApi,
+  type CrearMaquinaApi,
+  type EditarMaquinaApi,
+} from '../services/flotaService';
+import { mostrarAviso } from '../services/retroalimentacion';
+import { registrarAccion } from '../db/registroAcciones';
+import { describirOperacion, HORAS_VENCIMIENTO, tramoDe } from './vigenciaAcciones';
+import {
+  actualizarPayload,
   completarOperacion,
   contarOperaciones,
+  DuenoCola,
+  duenoDeSesion,
+  listarSiguientesConClave,
+  listarTodasLasOperaciones,
   marcarOperacionConError,
+  marcarRequiereConfirmacion,
   OperacionPendiente,
   reprogramarOperacion,
   siguienteOperacion,
@@ -31,6 +52,9 @@ import { actualizarEstadoSincronizacion, emitirCambioDatos } from './eventos';
  *    teléfono, por lo que reintentarla nunca duplica datos en el servidor.
  * 2. Con la cola vacía, trae del servidor lo que pudo cambiar fuera del teléfono (turno cerrado
  *    automáticamente o por el jefe de turno) y refresca los catálogos.
+ *
+ * Con la sesión de un jefe de turno solo envía su cola (lo que hizo sin señal, p. ej. atender una alerta), según su
+ * vigencia (src/sync/vigenciaAcciones.ts): las de más de 24 h esperan su confirmación y las de más de 72 h se descartan.
  *
  * Nunca bloquea la UI: todo corre en promesas, una sola ejecución a la vez, y la UI se entera de
  * los cambios por eventos (src/sync/eventos.ts).
@@ -51,11 +75,50 @@ type ResultadoEnvio = 'ok' | 'sin-conexion' | 'sin-sesion' | 'reintentar' | 'rec
 let ejecucionEnCurso: Promise<void> | null = null;
 let solicitudPendiente = false;
 
-const mensajeDe = (error: unknown) => (error instanceof Error ? error.message : String(error));
+// Queda en la operación y el operador lo ve al tocar los registros no sincronizados: nunca el texto técnico
+const mensajeDe = (error: unknown) => mensajeDeError(error, 'Ocurrió un error inesperado al sincronizar.');
 
 // Las operaciones referencian el turno por su UUID; los turnos que vinieron del servidor sin UUID usan "srv-<id>"
 const referenciaTurno = (idClienteTurno: string) =>
   idClienteTurno.startsWith('srv-') ? { idTurno: Number(idClienteTurno.slice(4)) } : { idClienteTurno };
+
+/**
+ * Las siguientes acciones sobre la misma máquina se prepararon viendo la máquina con esta ya aplicada, pero con su
+ * versión anterior. Si nadie más la cambió entremedio (subió exactamente una versión, la de esta), parten de la nueva;
+ * si otro jefe de turno la cambió, conservan la vieja y el Backend decide si hay conflicto.
+ */
+const encadenarVersion = async (operacion: OperacionPendiente, versionAnterior: number | undefined, versionNueva: number | undefined) => {
+  if (versionAnterior === undefined || versionNueva !== versionAnterior + 1) return;
+  for (const siguiente of await listarSiguientesConClave(operacion)) {
+    const datos = siguiente.payload.datos as EditarMaquinaApi | undefined;
+    if (siguiente.tipo !== 'EDITAR_MAQUINA' || datos?.versionBase !== versionAnterior) continue;
+    await actualizarPayload(siguiente.id, { ...siguiente.payload, datos: { ...datos, versionBase: versionNueva } });
+  }
+};
+
+// Acción del jefe de turno que pasó las 72 h: sale de la cola, se avisa y queda en el registro local
+const descartarVencida = async (operacion: OperacionPendiente, detalle: string | null) => {
+  const descripcion = describirOperacion(operacion);
+  await completarOperacion(operacion.id);
+  if (operacion.usuario) {
+    await registrarAccion(operacion.usuario, {
+      evento: 'VENCIDA',
+      tipo: operacion.tipo,
+      descripcion,
+      detalle: detalle ?? `Se hizo hace más de ${HORAS_VENCIMIENTO} h sin conexión y se descartó sin enviarla.`,
+      fechaAccion: operacion.fechaAccion,
+    });
+  }
+  mostrarAviso(`Se descartó una acción de hace más de ${HORAS_VENCIMIENTO} h`, { detalle: descripcion, tipo: 'error' });
+  emitirCambioDatos();
+};
+
+// Las vencidas no esperan a llegar a su turno en la cola: también las que esperan confirmación o quedaron rechazadas
+const descartarVencidas = async (dueno: DuenoCola) => {
+  for (const operacion of await listarTodasLasOperaciones(dueno)) {
+    if (tramoDe(operacion) === 'VENCIDA') await descartarVencida(operacion, null);
+  }
+};
 
 const enviarOperacion = async (operacion: OperacionPendiente): Promise<void> => {
   const p = operacion.payload;
@@ -100,13 +163,65 @@ const enviarOperacion = async (operacion: OperacionPendiente): Promise<void> => 
       await actualizarEstadoEvidencia(operacion.idEntidad, 'SINCRONIZADO');
       return;
     }
+    case 'ATENDER_ALERTA': {
+      const { idAlerta, comentario, atencionesVistas } = p as { idAlerta: string; comentario: string; atencionesVistas: number };
+      // Si la respuesta no llegó y se reenvía, el idCliente evita registrarla dos veces
+      await atenderAlerta(idAlerta, comentario, operacion.idEntidad, atencionesVistas, operacion.fechaAccion ?? undefined);
+      return;
+    }
+    case 'CERRAR_TURNO': {
+      const { idMaquina, codigo, datos } = p as { idMaquina: number; codigo: string; datos: CerrarTurnoApi };
+      try {
+        await cerrarTurnoDeMaquina(idMaquina, { ...datos, idCliente: operacion.idEntidad, fechaAccion: operacion.fechaAccion ?? undefined });
+      } catch (error) {
+        // Gana el primer cierre: si el operador, otro jefe o el sistema lo cerraron antes, no es un error. Se avisa quién
+        // y cuándo, y el cambio de estado que espera detrás sigue
+        if (!(error instanceof ApiError && (error.code === TURNO_YA_CERRADO || error.code === SIN_TURNO_EN_CURSO))) throw error;
+        mostrarAviso(error.message, { detalle: `Cierre de turno de ${codigo} hecho sin señal`, tipo: 'info' });
+        // Queda en el registro: el aviso se pierde si el jefe de turno no lo vio
+        if (operacion.usuario) {
+          await registrarAccion(operacion.usuario, {
+            evento: 'TURNO_YA_CERRADO',
+            tipo: operacion.tipo,
+            descripcion: describirOperacion(operacion),
+            detalle: error.message,
+            fechaAccion: operacion.fechaAccion,
+          });
+        }
+      }
+      return;
+    }
+    case 'EDITAR_MAQUINA': {
+      // También el cambio de estado. El idCliente evita aplicarla dos veces si la respuesta anterior no llegó
+      const { idMaquina, datos } = p as { idMaquina: number; datos: EditarMaquinaApi };
+      const respuesta = await editarMaquina(idMaquina, { ...datos, idCliente: operacion.idEntidad, fechaAccion: operacion.fechaAccion ?? undefined });
+      await encadenarVersion(operacion, datos.versionBase, respuesta.version);
+      return;
+    }
+    case 'CREAR_MAQUINA': {
+      const { datos } = p as { datos: CrearMaquinaApi };
+      await crearMaquina({ ...datos, idCliente: operacion.idEntidad, fechaAccion: operacion.fechaAccion ?? undefined });
+      return;
+    }
   }
 };
 
-const procesarCola = async (idOperador: number): Promise<ResultadoEnvio> => {
+const procesarCola = async (dueno: DuenoCola): Promise<ResultadoEnvio> => {
   for (;;) {
-    const operacion = await siguienteOperacion(idOperador);
+    const operacion = await siguienteOperacion(dueno);
     if (!operacion) return 'ok';
+
+    // Acciones del jefe de turno hechas sin señal hace mucho: no se envían sin más
+    const tramo = tramoDe(operacion);
+    if (tramo === 'VENCIDA') {
+      await descartarVencida(operacion, null);
+      continue;
+    }
+    if (tramo === 'POR_CONFIRMAR') {
+      await marcarRequiereConfirmacion(operacion.id);
+      emitirCambioDatos();
+      continue;
+    }
 
     // Fotos desactivadas: una subida que quedó en cola se descarta (la foto sigue en el teléfono)
     if (operacion.tipo === 'SUBIR_EVIDENCIA' && !FOTOS_HABILITADAS) {
@@ -135,9 +250,14 @@ const procesarCola = async (idOperador: number): Promise<ResultadoEnvio> => {
       if (error instanceof ApiError) {
         if (error.status === 0) return 'sin-conexion';
         if (error.status === 401) return 'sin-sesion';
+        // Respaldo del Backend: pasó las 72 h según su hora (p. ej. el reloj del teléfono atrasado)
+        if (error.code === 'ACCION_VENCIDA') {
+          await descartarVencida(operacion, error.message);
+          continue;
+        }
         // 4xx: el servidor rechazó los datos y reenviarlos no cambiará el resultado
         if (error.status >= 400 && error.status < 500 && error.status !== 408 && error.status !== 429) {
-          await marcarOperacionConError(operacion, `${error.code ?? error.status}: ${error.message}`);
+          await marcarOperacionConError(operacion, error.message, error.code ?? null);
           if (operacion.tipo === 'SUBIR_EVIDENCIA') await actualizarEstadoEvidencia(operacion.idEntidad, 'ERROR_SINCRONIZACION');
           emitirCambioDatos();
           continue;
@@ -276,28 +396,28 @@ export const sincronizarCatalogos = async (forzar = false, tipos?: TipoCatalogo[
   if (cambios) emitirCambioDatos();
 };
 
-const actualizarContadores = async (idOperador: number) => {
-  const { pendientes, errores } = await contarOperaciones(idOperador);
-  actualizarEstadoSincronizacion({ pendientes, errores });
+const actualizarContadores = async (dueno: DuenoCola) => {
+  const { pendientes, errores, porConfirmar } = await contarOperaciones(dueno);
+  actualizarEstadoSincronizacion({ pendientes, errores, porConfirmar });
 };
 
 const ejecutar = async () => {
-  const sesion = await leerSesion();
-  const idOperador = sesion?.idOperador;
-  if (!idOperador) return;
+  const dueno = duenoDeSesion(await leerSesion());
+  if (!dueno) return;
 
   actualizarEstadoSincronizacion({ sincronizando: true });
   try {
-    const resultado = await procesarCola(idOperador);
-    await actualizarContadores(idOperador);
+    if ('usuario' in dueno) await descartarVencidas(dueno);
+    const resultado = await procesarCola(dueno);
+    await actualizarContadores(dueno);
     if (resultado !== 'ok') {
       if (resultado === 'reintentar') actualizarEstadoSincronizacion({ ultimoError: 'El servidor no respondió; se reintentará.' });
       return;
     }
 
-    const { pendientes } = await contarOperaciones(idOperador);
-    if (pendientes === 0) {
-      await conciliarTurno(idOperador);
+    const { pendientes } = await contarOperaciones(dueno);
+    if (pendientes === 0 && 'idOperador' in dueno) {
+      await conciliarTurno(dueno.idOperador);
       await sincronizarCatalogos();
     }
     actualizarEstadoSincronizacion({ ultimaSincronizacion: new Date().toISOString(), ultimoError: null });
@@ -341,6 +461,6 @@ export const solicitarSincronizacion = () => {
 export const sincronizacionEnCurso = (): Promise<void> | null => ejecucionEnCurso;
 
 export const refrescarContadores = async () => {
-  const sesion = await leerSesion();
-  if (sesion?.idOperador) await actualizarContadores(sesion.idOperador);
+  const dueno = duenoDeSesion(await leerSesion());
+  if (dueno) await actualizarContadores(dueno);
 };

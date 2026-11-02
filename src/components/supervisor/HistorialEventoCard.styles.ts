@@ -73,6 +73,25 @@ export const styles = StyleSheet.create({
   metaTexto: {
     fontSize: 12,
   },
+  // Instrucciones o novedades que el operador escribió al iniciar o cerrar el turno
+  reporte: {
+    gap: 2,
+    borderLeftWidth: 3,
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  reporteEtiqueta: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  reporteTexto: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
   fecha: {
     fontSize: 11,
   },
