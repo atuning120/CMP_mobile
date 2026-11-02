@@ -3,7 +3,6 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { styles } from './HomeScreen.styles';
 import { LoginScreen } from './LoginScreen';
-import { INITIAL_OPERADORES } from '../data/initialData';
 import { Operador } from '../types/mining';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { solicitarSincronizacion } from '../sync/syncEngine';
@@ -25,7 +24,6 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <LoginScreen
         onLoginSuccess={handleLoginSuccess}
-        operadoresDisponibles={INITIAL_OPERADORES}
         networkState={networkState}
       />
     </View>

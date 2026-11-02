@@ -18,11 +18,10 @@ import { useAccionUnica } from '../hooks/useAccionUnica';
 import { LoginFooter } from '../components/LoginFooter';
 import { LoginForm } from '../components/LoginForm';
 import { LoginHeader } from '../components/LoginHeader';
-import { ProfileChip } from '../components/ProfileChip';
 import { styles } from './LoginScreen.styles';
 
 import { darkTheme, lightTheme } from '../constants/theme';
-import { NetworkState, Operador, PerfilPrueba } from '../types/mining';
+import { NetworkState, Operador } from '../types/mining';
 import { vibrar } from '../services/retroalimentacion';
 
 // Mensajes que se muestran al usuario según el error del login. Nunca se muestra el texto crudo
@@ -34,9 +33,6 @@ const LOGIN_ERROR_MESSAGES: Record<string, string> = {
   SIN_ACCESO_APP: 'Tu usuario no tiene acceso a la aplicación móvil.',
 };
 
-// Perfil de prueba sin su contraseña, para guardarlo en el teléfono como respaldo
-const sinPassword = ({ password: _password, ...perfil }: PerfilPrueba): Operador => perfil;
-
 const getLoginErrorMessage = (status: number, code?: string): string => {
   if (code && LOGIN_ERROR_MESSAGES[code]) return LOGIN_ERROR_MESSAGES[code];
   if (status === 400) return LOGIN_ERROR_MESSAGES.DATOS_INCOMPLETOS;
@@ -47,20 +43,16 @@ const getLoginErrorMessage = (status: number, code?: string): string => {
 
 interface LoginScreenProps {
   onLoginSuccess: (operador: Operador, rol: string) => void;
-  operadoresDisponibles: PerfilPrueba[];
   networkState: NetworkState;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onLoginSuccess,
-  operadoresDisponibles,
   networkState,
 }) => {
-  //credenciales precargadas desde el acceso rápido. ESTO ES SOLO PARA PRUEBAS
-  const [email, setEmail] = useState<string>(operadoresDisponibles[0].email);
-  const [password, setPassword] = useState<string>(operadoresDisponibles[0].password);
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [selectedQuickOp, setSelectedQuickOp] = useState<PerfilPrueba>(operadoresDisponibles[0]);
 
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
@@ -104,16 +96,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       return;
     }
 
-    // El perfil real viene del Backend. Si un Backend anterior no lo envía, se usa el perfil de prueba
-    // que coincida (sin su contraseña, que no debe quedar guardada en el teléfono)
-    const perfilPrueba = operadoresDisponibles.find(
-      (op) => op.email.toLowerCase() === email.trim().toLowerCase()
-    );
-    const respaldo = perfilPrueba ? sinPassword(perfilPrueba) : undefined;
-
     try {
       // El backend responde con el rol (OPERADOR o JEFE_TURNO) para decidir la pantalla
-      const { rol, operador } = await loginOnline(email, password, respaldo);
+      const { rol, operador } = await loginOnline(email, password);
       onLoginSuccess(operador, rol);
     } catch (error) {
       if (error instanceof AuthError && error.status > 0) {
@@ -129,14 +114,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   };
 
   const handleStandardLogin = () => ejecutarUnaVez(iniciarSesion);
-
-  const handleQuickSelect = (op: PerfilPrueba) => {
-    if (ingresando) return;
-    setSelectedQuickOp(op);
-    setEmail(op.email);
-    setPassword(op.password);
-    setErrorMsg(null);
-  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
@@ -157,29 +134,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             {/* Card Title */}
             <View style={styles.titleContainer}>
               <Text style={[styles.title, { color: theme.text }]}>Inicio de Sesión</Text>
-            </View>
-
-            {/* Quick Operator Selection */}
-            <View style={styles.quickSelectSection}>
-              <Text style={[styles.label, { color: theme.textSecondary }]}>
-                Operador en Turno (Acceso Rápido):
-              </Text>
-              <View style={styles.quickSelectGrid}>
-                {operadoresDisponibles.slice(0, 2).map((op) => {
-                  const isSelected = selectedQuickOp?.id_operador === op.id_operador;
-                  return (
-                    <ProfileChip
-                      key={op.id_operador}
-                      nombre={op.nombre}
-                      apellido={op.apellido}
-                      rut={op.rut}
-                      isSelected={isSelected}
-                      onPress={() => handleQuickSelect(op)}
-                      style={{ flex: 1, padding: 10 }}
-                    />
-                  );
-                })}
-              </View>
             </View>
 
             {/* Extracted Form Component */}

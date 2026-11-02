@@ -49,7 +49,7 @@ interface SesionMovilApi {
 
 /**
  * Perfil que la app muestra y guarda para el modo offline, con los datos reales que entrega el Backend.
- * Un Backend anterior no envía `perfil`: se usa el respaldo (perfil de prueba) o, como mínimo, el
+ * Un Backend anterior no envía `perfil`: se usa el respaldo (el perfil ya guardado) o, como mínimo, el
  * identificador con el que se ingresó, nunca datos inventados.
  */
 const operadorDeSesion = (data: SesionMovilApi, identificador: string, respaldo?: Operador): Operador => {
