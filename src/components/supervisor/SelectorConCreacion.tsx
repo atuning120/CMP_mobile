@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { SearchableSelect } from '../common/SearchableSelect';
@@ -51,6 +51,8 @@ export const SelectorConCreacion: React.FC<Props> = ({
   maxLength = 50,
 }) => {
   const theme = useColorScheme() === 'dark' ? darkTheme : lightTheme;
+  const inputRef = useRef<TextInput>(null);
+  const enfocado = useRef(false);
 
   if (!creando) {
     return (
@@ -70,6 +72,7 @@ export const SelectorConCreacion: React.FC<Props> = ({
           label: textoCrear,
           // Lo que se estaba buscando se usa como punto de partida del valor nuevo
           onPress: (consulta) => {
+            enfocado.current = false;
             onChange(consulta);
             onCreandoChange(true);
           },
@@ -95,13 +98,20 @@ export const SelectorConCreacion: React.FC<Props> = ({
         </TouchableOpacity>
       </View>
       <TextInput
+        ref={inputRef}
         style={[styles.input, { backgroundColor: theme.cardAlt, color: theme.text, borderColor: theme.primary }]}
         value={valor}
         onChangeText={onChange}
         placeholder={placeholderNuevo}
         placeholderTextColor={theme.textTertiary}
         maxLength={maxLength}
-        autoFocus
+        // Se enfoca cuando ya tiene su posición final, no con autoFocus: Android desplaza el formulario hacia el
+        // campo enfocado y, recién montado, lo calcula con una posición que aún no es la definitiva
+        onLayout={() => {
+          if (enfocado.current) return;
+          enfocado.current = true;
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }}
       />
       <Text style={[styles.hint, { color: theme.textTertiary }]}>
         {existente ? `Ya existe: se usará «${existente}».` : hintNuevo}
