@@ -7,8 +7,10 @@ import {
   borrarSesion,
   guardarOperadorCache,
   guardarSesion,
+  leerCuentaRecordada,
   leerOperadorCache,
   leerSesion,
+  marcarSesionCerrada,
   normalizarIdentificador,
   TokensSesion,
 } from './authStorage';
@@ -162,6 +164,19 @@ export const loginOffline = async (identificador: string, password: string): Pro
   return { ok: true, operador, rol: sesion.rol };
 };
 
+/**
+ * Al abrir la app: si el usuario marcó "Recordar cuenta" y no cerró sesión, entra solo con la cuenta
+ * guardada. Usa el login offline (instantáneo, sin esperar al servidor y con el mismo límite de
+ * OFFLINE_MAX_DIAS); la sesión con el Backend se renueva después en segundo plano. null = mostrar el login.
+ */
+export const restaurarSesionRecordada = async (): Promise<{ operador: Operador; rol: string } | null> => {
+  const cuenta = await leerCuentaRecordada();
+  // Sin contraseña = venció el plazo de RECORDAR_CUENTA_DIAS
+  if (!cuenta?.sesionAbierta || !cuenta.contrasena) return null;
+  const resultado = await loginOffline(cuenta.correo, cuenta.contrasena);
+  return resultado.ok ? { operador: resultado.operador, rol: resultado.rol } : null;
+};
+
 const refrescar = async (refreshToken: string): Promise<ResultadoSincronizacion> => {
   let response: Response;
   try {
@@ -238,6 +253,7 @@ export const sincronizarSesion = (): Promise<ResultadoSincronizacion> => {
  */
 export const cerrarSesion = async () => {
   credencialesPendientes = null;
+  await marcarSesionCerrada().catch(() => undefined);
   const sesion = await leerSesion();
   if (!sesion?.tokens) return;
 

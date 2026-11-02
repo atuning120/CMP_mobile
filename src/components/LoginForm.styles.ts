@@ -24,6 +24,8 @@ export const styles = StyleSheet.create({
     paddingRight: 40,
     fontSize: 14,
   },
+  recordarRow: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
+  recordarText: { fontSize: 13 },
   submitButton: {
     height: 56,
     borderRadius: 12,
