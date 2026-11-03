@@ -171,7 +171,7 @@ export const MachineFleetCard: React.FC<Props> = ({
         {!conectado && (maquina.respaldo || puedeReemplazar) ? (
           <View style={[styles.btnAction, { backgroundColor: superficieSecundaria, opacity: 0.6 }]}>
             <WifiOff size={16} color={theme.textSecondary} />
-            <Text style={[styles.btnActionText, { color: theme.textSecondary }]}>
+            <Text style={[styles.btnActionText, { color: theme.textSecondary }]} numberOfLines={1}>
               {maquina.respaldo ? 'Devolver' : 'Reemplazo'} · Requiere conexión
             </Text>
           </View>
@@ -195,8 +195,8 @@ export const MachineFleetCard: React.FC<Props> = ({
           activeOpacity={0.7}
         >
           <RefreshCw size={16} color={puedeReemplazar ? "#1A1A1A" : theme.textSecondary} />
-          <Text style={[styles.btnActionText, { color: puedeReemplazar ? "#1A1A1A" : theme.textSecondary }]}>
-            {pideEstadoAntes ? 'Reemplazo · Primero cambia el estado' : 'Sustituir / Reemplazo'}
+          <Text style={[styles.btnActionText, { color: puedeReemplazar ? "#1A1A1A" : theme.textSecondary }]} numberOfLines={1}>
+            {pideEstadoAntes ? 'Reemplazar: cambia estado' : 'Sustituir / Reemplazo'}
           </Text>
         </TouchableOpacity>
         )}

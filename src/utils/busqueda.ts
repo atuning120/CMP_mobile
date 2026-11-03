@@ -15,12 +15,47 @@ const SEPARADORES = String.raw`\s\-–—_/().,:;`;
 
 const escaparRegExp = (texto: string) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// Sin acentos ni otros caracteres fuera de ASCII basta con pasar a minúsculas (no cambia los índices)
+const SOLO_ASCII = /^[\x00-\x7F]*$/;
+
 // Normaliza carácter a carácter para conservar los índices del texto original (necesario para resaltar)
 export const normalizar = (texto: string) =>
-  texto
-    .split('')
-    .map((caracter) => caracter.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().charAt(0) || caracter)
-    .join('');
+  SOLO_ASCII.test(texto)
+    ? texto.toLowerCase()
+    : texto
+        .split('')
+        .map((caracter) => caracter.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().charAt(0) || caracter)
+        .join('');
+
+const PALABRAS = new RegExp(`[^${SEPARADORES}]+`, 'g');
+
+// Lo que depende solo de la consulta se arma una vez por búsqueda, no una vez por cada opción
+interface Consulta {
+  frase: string;
+  tokens: string[];
+  inicioPalabra: RegExp;
+  tokensRegExp: RegExp[];
+  compacta: string;
+  letrasEnOrden: RegExp | null;
+}
+
+const prepararConsulta = (consulta: string): Consulta | null => {
+  const frase = normalizar(consulta).trim().replace(/\s+/g, ' ');
+  if (!frase) return null;
+  const tokens = frase.split(' ');
+  const compacta = tokens.join('');
+  return {
+    frase,
+    tokens,
+    inicioPalabra: new RegExp(`(^|[${SEPARADORES}])(${escaparRegExp(frase)})`),
+    tokensRegExp: tokens.length > 1 ? tokens.map((token) => new RegExp(`(^|[${SEPARADORES}])?(${escaparRegExp(token)})`)) : [],
+    compacta,
+    letrasEnOrden:
+      compacta.length >= 2
+        ? new RegExp(compacta.split('').map((caracter) => `(${escaparRegExp(caracter)})`).join('.*?'))
+        : null,
+  };
+};
 
 const distanciaEdicion = (a: string, b: string, maximo: number): number => {
   if (Math.abs(a.length - b.length) > maximo) return maximo + 1;
@@ -53,23 +88,23 @@ const unirRangos = (rangos: RangoCoincidencia[]): RangoCoincidencia[] => {
   return unidos;
 };
 
-const evaluar = (texto: string, frase: string, tokens: string[]): Omit<ResultadoBusqueda<never>, 'item'> | null => {
-  const fraseRegExp = escaparRegExp(frase);
+const evaluar = (texto: string, consulta: Consulta): Omit<ResultadoBusqueda<never>, 'item'> | null => {
+  const { frase, tokens, compacta } = consulta;
 
   // 1. El texto comienza con la búsqueda
-  if (new RegExp(`^${fraseRegExp}`).test(texto)) {
+  if (texto.startsWith(frase)) {
     return { puntaje: 100, rangos: [[0, frase.length]] };
   }
 
   // 2. Alguna palabra del texto comienza con la búsqueda
-  const inicioPalabra = new RegExp(`(^|[${SEPARADORES}])(${fraseRegExp})`).exec(texto);
+  const inicioPalabra = consulta.inicioPalabra.exec(texto);
   if (inicioPalabra) {
     const inicio = inicioPalabra.index + inicioPalabra[1].length;
     return { puntaje: 80 - inicio / 100, rangos: [[inicio, inicio + frase.length]] };
   }
 
   // 3. La búsqueda aparece en cualquier parte del texto
-  const contenida = texto.search(new RegExp(fraseRegExp));
+  const contenida = texto.indexOf(frase);
   if (contenida >= 0) {
     return { puntaje: 60 - contenida / 100, rangos: [[contenida, contenida + frase.length]] };
   }
@@ -78,8 +113,8 @@ const evaluar = (texto: string, frase: string, tokens: string[]): Omit<Resultado
   if (tokens.length > 1) {
     const rangos: RangoCoincidencia[] = [];
     let alInicioDePalabra = 0;
-    const todas = tokens.every((token) => {
-      const match = new RegExp(`(^|[${SEPARADORES}])?(${escaparRegExp(token)})`).exec(texto);
+    const todas = tokens.every((token, i) => {
+      const match = consulta.tokensRegExp[i].exec(texto);
       if (!match) return false;
       const inicio = match.index + (match[1]?.length ?? 0);
       if (match[1] !== undefined) alInicioDePalabra++;
@@ -92,10 +127,8 @@ const evaluar = (texto: string, frase: string, tokens: string[]): Omit<Resultado
   }
 
   // 5. Letras en orden con saltos ("chcdor" → "chancador"); se penalizan los saltos largos
-  const compacta = tokens.join('');
-  if (compacta.length >= 2) {
-    const patron = compacta.split('').map((caracter) => `(${escaparRegExp(caracter)})`).join('.*?');
-    const match = new RegExp(patron).exec(texto);
+  if (consulta.letrasEnOrden) {
+    const match = consulta.letrasEnOrden.exec(texto);
     if (match) {
       const rangos: RangoCoincidencia[] = [];
       let cursor = match.index;
@@ -114,7 +147,7 @@ const evaluar = (texto: string, frase: string, tokens: string[]): Omit<Resultado
   }
 
   // 6. Errores de tipeo: cada palabra buscada se parece a alguna palabra del texto
-  const palabras = [...texto.matchAll(new RegExp(`[^${SEPARADORES}]+`, 'g'))];
+  const palabras = [...texto.matchAll(PALABRAS)];
   const rangos: RangoCoincidencia[] = [];
   const parecidas = tokens.every((token) => {
     if (token.length < 4) return false;
@@ -139,22 +172,39 @@ const evaluar = (texto: string, frase: string, tokens: string[]): Omit<Resultado
   return null;
 };
 
+// Textos ya normalizados de una lista de opciones: se calculan una vez por lista y no en cada tecla
+export interface IndiceBusqueda<T> {
+  items: T[];
+  textos: string[];
+}
+
+export const crearIndiceBusqueda = <T>(items: T[], obtenerTexto: (item: T) => string): IndiceBusqueda<T> => ({
+  items,
+  textos: items.map((item) => normalizar(obtenerTexto(item))),
+});
+
 /**
- * Filtra y ordena `items` por similitud con `consulta`. Con consulta vacía devuelve todo en el orden original.
+ * Filtra y ordena las opciones de `indice` por similitud con `consulta`. Con consulta vacía devuelve todo en el
+ * orden original.
  */
-export const buscar = <T>(items: T[], consulta: string, obtenerTexto: (item: T) => string): ResultadoBusqueda<T>[] => {
-  const frase = normalizar(consulta).trim().replace(/\s+/g, ' ');
-  if (!frase) {
+export const buscarEnIndice = <T>({ items, textos }: IndiceBusqueda<T>, consulta: string): ResultadoBusqueda<T>[] => {
+  const preparada = prepararConsulta(consulta);
+  if (!preparada) {
     return items.map((item) => ({ item, puntaje: 0, rangos: [] }));
   }
-  const tokens = frase.split(' ');
 
-  return items
-    .map((item, indice) => {
-      const resultado = evaluar(normalizar(obtenerTexto(item)), frase, tokens);
-      return resultado ? { item, indice, ...resultado } : null;
-    })
-    .filter((resultado): resultado is ResultadoBusqueda<T> & { indice: number } => resultado !== null)
+  const resultados: (ResultadoBusqueda<T> & { indice: number })[] = [];
+  for (let indice = 0; indice < items.length; indice++) {
+    const resultado = evaluar(textos[indice], preparada);
+    if (resultado) resultados.push({ item: items[indice], indice, ...resultado });
+  }
+  return resultados
     .sort((a, b) => b.puntaje - a.puntaje || a.indice - b.indice)
     .map(({ item, puntaje, rangos }) => ({ item, puntaje, rangos }));
 };
+
+/**
+ * Filtra y ordena `items` por similitud con `consulta`. Con consulta vacía devuelve todo en el orden original.
+ */
+export const buscar = <T>(items: T[], consulta: string, obtenerTexto: (item: T) => string): ResultadoBusqueda<T>[] =>
+  buscarEnIndice(crearIndiceBusqueda(items, obtenerTexto), consulta);

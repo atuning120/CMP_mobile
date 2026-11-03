@@ -117,12 +117,14 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
+    paddingHorizontal: 8,
     borderRadius: 10,
     gap: 6,
   },
   btnActionText: {
     fontSize: 12,
     fontWeight: 'bold',
+    flexShrink: 1,
   },
   btnIcon: {
     width: 36,

@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowRight, Lock, User, Eye, EyeOff } from 'lucide-react-native';
+import { AlertCircle, ArrowRight, Lock, User, Eye, EyeOff, Square, SquareCheck } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { darkTheme, lightTheme } from '../constants/theme';
@@ -11,6 +11,8 @@ interface LoginFormProps {
   setPassword: (password: string) => void;
   errorMsg: string | null;
   onSubmit: () => void;
+  recordarCuenta: boolean;
+  setRecordarCuenta: (recordar: boolean) => void;
   // Mientras se valida el ingreso el botón queda deshabilitado y muestra el indicador de carga
   cargando?: boolean;
 }
@@ -22,6 +24,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   setPassword,
   errorMsg,
   onSubmit,
+  recordarCuenta,
+  setRecordarCuenta,
   cargando = false,
 }) => {
   const colorScheme = useColorScheme();
@@ -93,6 +97,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Recordar cuenta: guarda solo el correo para el próximo ingreso */}
+      <TouchableOpacity
+        style={styles.recordarRow}
+        onPress={() => setRecordarCuenta(!recordarCuenta)}
+        activeOpacity={0.7}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: recordarCuenta }}
+        hitSlop={8}
+      >
+        {recordarCuenta ? (
+          <SquareCheck size={20} color={theme.primary} />
+        ) : (
+          <Square size={20} color={theme.textTertiary} />
+        )}
+        <Text style={[styles.recordarText, { color: theme.textSecondary }]}>Recordar cuenta</Text>
+      </TouchableOpacity>
 
       {/* Primary Action Button */}
       <TouchableOpacity

@@ -29,12 +29,22 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 6,
   },
-  // La lista se despliega en línea (no absoluta): en Android los toques fuera de los límites del padre se pierden
+  // Fuera de un modal la lista se despliega en línea (no absoluta): en Android los toques fuera de los límites
+  // del padre se pierden. Dentro de uno flota justo bajo el campo, en el contenido desplazable (CapaDesplegable)
   dropdown: {
     borderWidth: 1,
     borderRadius: 8,
     marginTop: 4,
     overflow: 'hidden',
+  },
+  dropdownFlotante: {
+    position: 'absolute',
+    marginTop: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
   },
   dropdownHeader: {
     flexDirection: 'row',

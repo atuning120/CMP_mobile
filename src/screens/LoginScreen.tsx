@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 import { AuthError, loginOffline, loginOnline, OFFLINE_MAX_DIAS } from '../services/authService';
+import { leerCuentaRecordada, recordarCuenta as guardarCuentaRecordada } from '../services/authStorage';
 import { despertarBackend } from '../services/backendUrl';
 import { MENSAJE_SIN_CONEXION } from '../utils/errores';
 import { useAccionUnica } from '../hooks/useAccionUnica';
@@ -53,9 +54,31 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [recordarCuenta, setRecordarCuenta] = useState(false);
 
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+
+  // Si en un ingreso anterior se marcó "Recordar cuenta", se rellenan correo y contraseña y queda marcado.
+  // Solo se rellena si el usuario no empezó a escribir antes de que cargara.
+  useEffect(() => {
+    leerCuentaRecordada().then((cuenta) => {
+      if (!cuenta) return;
+      setEmail((actual) => actual || cuenta.correo);
+      setPassword((actual) => actual || cuenta.contrasena || '');
+      setRecordarCuenta(true);
+    });
+  }, []);
+
+  // Solo tras un ingreso correcto se guarda (o se olvida) la cuenta, para no recordar datos mal escritos
+  const ingresoCorrecto = (operador: Operador, rol: string) => {
+    guardarCuentaRecordada(
+      recordarCuenta
+        ? { correo: email, contrasena: password, sesionAbierta: true, guardadaEn: new Date().toISOString() }
+        : null,
+    ).catch(() => undefined);
+    onLoginSuccess(operador, rol);
+  };
 
   // Al abrir el login (o al recuperar la red) se despierta el servidor para que el ingreso no espere su arranque
   useEffect(() => {
@@ -76,7 +99,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     const intentarOffline = async (motivoSinRed: boolean) => {
       const resultado = await loginOffline(email, password);
       if (resultado.ok) {
-        onLoginSuccess(resultado.operador, resultado.rol);
+        ingresoCorrecto(resultado.operador, resultado.rol);
         return;
       }
       setErrorMsg(
@@ -99,7 +122,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     try {
       // El backend responde con el rol (OPERADOR o JEFE_TURNO) para decidir la pantalla
       const { rol, operador } = await loginOnline(email, password);
-      onLoginSuccess(operador, rol);
+      ingresoCorrecto(operador, rol);
     } catch (error) {
       if (error instanceof AuthError && error.status > 0) {
         // Errores ya traducidos desde la respuesta del backend
@@ -144,6 +167,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               setPassword={setPassword}
               errorMsg={errorMsg}
               onSubmit={handleStandardLogin}
+              recordarCuenta={recordarCuenta}
+              setRecordarCuenta={setRecordarCuenta}
               cargando={ingresando}
             />
 
