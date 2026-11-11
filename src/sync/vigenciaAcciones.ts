@@ -45,6 +45,8 @@ export const describirOperacion = (operacion: OperacionPendiente): string => {
   switch (operacion.tipo) {
     case 'ATENDER_ALERTA':
       return p.resumen ? `Atención de la alerta de ${p.resumen}` : 'Atención de una alerta';
+    case 'REGULARIZAR_HOROMETRO':
+      return `Regularización del horómetro${p.resumen ? ` de ${p.resumen}` : ''}: ${p.horometroFinal} h`;
     case 'CERRAR_TURNO':
       return `Cierre del turno${p.operador ? ` de ${p.operador}` : ''} en ${maquina}`;
     case 'EDITAR_MAQUINA': {

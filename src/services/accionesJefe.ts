@@ -23,7 +23,7 @@ import { emitirCambioDatos } from '../sync/eventos';
 import { refrescarContadores, solicitarSincronizacion } from '../sync/syncEngine';
 import { ErrorParaUsuario } from '../utils/errores';
 import { ApiError } from './apiClient';
-import { atenderAlerta, type Alerta, type AtencionAlerta } from './alertasService';
+import { atenderAlerta, regularizarHorometro, type Alerta, type AtencionAlerta } from './alertasService';
 import { leerOperadorCache, leerSesion } from './authStorage';
 import {
   cerrarTurnoDeMaquina,
@@ -150,6 +150,34 @@ export const atenderAlertaJefe = async (alerta: Alerta, comentario: string, acci
   return resultado.enviada ? { enviada: true, respuesta: resultado.respuesta.atenciones } : resultado;
 };
 
+// Lo que queda como atención de la alerta (el Backend escribe lo mismo al regularizar)
+const comentarioRegularizacion = (horometroFinal: number, comentario: string) =>
+  `Horómetro final regularizado: ${horometroFinal} h${comentario ? `. ${comentario}` : ''}`;
+
+/**
+ * Informa el horómetro final de un turno que el sistema cerró sin él. Con conexión devuelve cómo quedó la alerta; sin
+ * conexión queda en la cola, va en orden con las atenciones de la misma alerta y la tarjeta la muestra como pendiente.
+ */
+export const regularizarHorometroJefe = async (alerta: Alerta, horometroFinal: number, comentario: string, accion: AccionPreparada) => {
+  const dueno = await duenoActual();
+  return enviarOEncolar(
+    dueno,
+    {
+      tipo: 'REGULARIZAR_HOROMETRO',
+      clave: claveAlerta(alerta.id),
+      accion,
+      payload: {
+        idAlerta: alerta.id,
+        horometroFinal,
+        comentario,
+        autor: await nombreAutor(),
+        resumen: `${alerta.operador} en ${alerta.maquina.nombre}`,
+      },
+    },
+    () => regularizarHorometro(alerta.id, horometroFinal, comentario, accion.idCliente),
+  );
+};
+
 /**
  * Cambia el estado o edita la ficha de una máquina (el mismo PATCH). datos: solo lo que cambia, con versionBase y
  * valoresBase. vista: cómo se ve la máquina con el cambio, para mostrarla así mientras no se envía.
@@ -241,19 +269,25 @@ export interface AtencionPendiente {
 export const listarAtencionesPendientes = async (): Promise<AtencionPendiente[]> => {
   const dueno = duenoDeSesion(await leerSesion());
   if (!dueno || !('usuario' in dueno)) return [];
-  const operaciones = await listarOperaciones(dueno, 'ATENDER_ALERTA');
-  return operaciones.map((op) => {
-    const p = op.payload as { idAlerta: string; comentario: string; autor: string };
-    return {
-      idAlerta: p.idAlerta,
-      atencion: {
-        usuario: p.autor,
-        fecha: op.fechaAccion ?? new Date().toISOString(),
-        comentario: p.comentario || null,
-        pendiente: { idOperacion: op.id, error: op.estado === 'ERROR' ? op.ultimoError : null },
-      },
-    };
-  });
+  const [atenciones, regularizaciones] = await Promise.all([
+    listarOperaciones(dueno, 'ATENDER_ALERTA'),
+    listarOperaciones(dueno, 'REGULARIZAR_HOROMETRO'),
+  ]);
+  return [...atenciones, ...regularizaciones]
+    .sort((a, b) => a.id - b.id)
+    .map((op) => {
+      const p = op.payload as { idAlerta: string; comentario: string; autor: string; horometroFinal?: number };
+      const regularizacion = op.tipo === 'REGULARIZAR_HOROMETRO';
+      return {
+        idAlerta: p.idAlerta,
+        atencion: {
+          usuario: p.autor,
+          fecha: op.fechaAccion ?? new Date().toISOString(),
+          comentario: regularizacion ? comentarioRegularizacion(p.horometroFinal ?? 0, p.comentario) : p.comentario || null,
+          pendiente: { idOperacion: op.id, error: op.estado === 'ERROR' ? op.ultimoError : null, regularizacion },
+        },
+      };
+    });
 };
 
 // El jefe de turno descarta una atención que el servidor rechazó (o que ya no quiere enviar)

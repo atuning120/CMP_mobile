@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { AlarmClockOff, AlertTriangle, CheckCircle, Clock, CloudOff, CloudUpload, Layers, MapPin, MessageSquarePlus, Timer, Wrench } from 'lucide-react-native';
 import { darkTheme, lightTheme, ThemeColors } from '../../constants/theme';
-import type { Alerta, AtencionAlerta } from '../../services/alertasService';
+import { faltaHorometroFinal, type Alerta, type AtencionAlerta } from '../../services/alertasService';
 import { formatearDuracion, formatearFecha } from '../../utils/historialFechas';
 import { styles } from './HistorialEventoCard.styles';
 import { estilosAtencion } from './AlertaCard.styles';
@@ -11,6 +11,8 @@ interface Props {
   alerta: Alerta;
   // Abre el modal para atenderla o agregarle una nota
   onAtender?: (alerta: Alerta) => void;
+  // Abre el modal para informar el horómetro de un turno que el sistema cerró sin él
+  onRegularizar?: (alerta: Alerta) => void;
   // Quita una atención hecha sin señal que el servidor rechazó
   onDescartarPendiente?: (idOperacion: number) => void;
 }
@@ -51,7 +53,7 @@ const minutosEntre = (desde: string, hasta: string | null) =>
 const nombreEstadoSinCategoria = (nombre: string) => nombre.replace(/^[^/]+\/\s*/, '');
 
 // Misma tarjeta que el historial: icono, quién y qué máquina, una etiqueta con el estado y los datos del turno
-export const AlertaCard: React.FC<Props> = ({ alerta, onAtender, onDescartarPendiente }) => {
+export const AlertaCard: React.FC<Props> = ({ alerta, onAtender, onRegularizar, onDescartarPendiente }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const { turno } = alerta;
@@ -67,6 +69,8 @@ export const AlertaCard: React.FC<Props> = ({ alerta, onAtender, onDescartarPend
   const ubicacion = [alerta.area, alerta.zona].filter(Boolean).join(' · ');
   // La primera atención es quién la atendió; las siguientes, notas posteriores
   const [atencion, ...notas] = alerta.atenciones ?? [];
+  // No se ofrece de nuevo si ya hay una regularización hecha sin señal esperando en la cola
+  const puedeRegularizar = faltaHorometroFinal(alerta) && !alerta.atenciones?.some((a) => a.pendiente?.regularizacion);
 
   const etiqueta = detencion
     ? `Detenida ${activa ? 'hace ' : ''}${formatearDuracion(minutosEntre(detencion.inicio, detencion.fin))}`
@@ -153,6 +157,17 @@ export const AlertaCard: React.FC<Props> = ({ alerta, onAtender, onDescartarPend
               </View>
             ))}
           </View>
+        )}
+
+        {!!onRegularizar && puedeRegularizar && (
+          <TouchableOpacity
+            style={[estilosAtencion.boton, { borderColor: theme.primary + '73', backgroundColor: theme.primary + '1A' }]}
+            onPress={() => onRegularizar(alerta)}
+            activeOpacity={0.7}
+          >
+            <Timer size={14} color={theme.primary} />
+            <Text style={[estilosAtencion.botonTexto, { color: theme.primary }]}>Regularizar horómetro</Text>
+          </TouchableOpacity>
         )}
 
         {!!onAtender && alerta.atenciones !== undefined && (

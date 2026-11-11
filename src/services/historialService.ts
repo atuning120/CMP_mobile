@@ -14,7 +14,8 @@ export type TipoEventoHistorial =
   | 'DESHABILITAR'
   | 'CAMBIAR_ESTADO'
   | 'REEMPLAZAR'
-  | 'DEVOLVER';
+  | 'DEVOLVER'
+  | 'REGULARIZAR';
 export type FiltroHistorial = 'TODO' | 'TURNOS' | 'FLOTA';
 
 export interface EventoHistorial {

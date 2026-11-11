@@ -31,6 +31,7 @@ import { RangoFechasFiltro } from '../components/supervisor/RangoFechasFiltro';
 import { ListaPorDia } from '../components/supervisor/ListaPorDia';
 import { AlertaCard } from '../components/supervisor/AlertaCard';
 import { AtenderAlertaModal } from '../components/supervisor/AtenderAlertaModal';
+import { RegularizarHorometroModal } from '../components/supervisor/RegularizarHorometroModal';
 import { useRangoFechas } from '../hooks/useRangoFechas';
 import { useAlertas } from '../hooks/useAlertas';
 import { useRecargaManual } from '../hooks/useRecargaManual';
@@ -137,6 +138,8 @@ export const ShipSupervisorScreen = () => {
   const alertas = useAlertas(FILTRO_ALERTAS_API[filtroAlertas], ESTADO_ATENCION_API[estadoAlertas], rangoAlertas.rango);
   // Alerta que se está atendiendo (modal abierto); null = cerrado
   const [alertaAAtender, setAlertaAAtender] = useState<Alerta | null>(null);
+  // Cierre automático cuyo horómetro se está regularizando (modal abierto); null = cerrado
+  const [alertaARegularizar, setAlertaARegularizar] = useState<Alerta | null>(null);
   const conectado = useConectado();
 
   const confirmarDescarteMaquina = (maquina: MaquinaFlota) =>
@@ -278,7 +281,14 @@ export const ShipSupervisorScreen = () => {
         lista={alertas}
         nombre="alertas"
         recargando={recarga.refreshing}
-        renderItem={(alerta) => <AlertaCard alerta={alerta} onAtender={setAlertaAAtender} onDescartarPendiente={confirmarDescarte} />}
+        renderItem={(alerta) => (
+          <AlertaCard
+            alerta={alerta}
+            onAtender={setAlertaAAtender}
+            onRegularizar={setAlertaARegularizar}
+            onDescartarPendiente={confirmarDescarte}
+          />
+        )}
       />
     </GlassCapsule>
   );
@@ -437,6 +447,15 @@ export const ShipSupervisorScreen = () => {
         onClose={() => setAlertaAAtender(null)}
         // Se actualiza la tarjeta aunque ya no calce con el filtro, para que no desaparezca mientras se mira
         onAtendida={(idAlerta, atenciones) => alertas.actualizar(idAlerta, (a) => ({ ...a, atenciones }))}
+      />
+      <RegularizarHorometroModal
+        alerta={alertaARegularizar}
+        onClose={() => setAlertaARegularizar(null)}
+        onRegularizado={(idAlerta, atenciones, horometroFinal) => {
+          alertas.actualizar(idAlerta, (a) => ({ ...a, atenciones, turno: { ...a.turno, horometroFinal } }));
+          // La acción queda en la bitácora: aparece en el historial
+          historial.refetch();
+        }}
       />
       <CambiarEstadoModal
         maquina={maquinaAToggle}
