@@ -8,7 +8,6 @@ import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
 import { Truck, History, ShieldAlert, AlertTriangle, LayoutList, UserRound, AlarmClockOff, CheckCircle, CircleDashed, Layers, Wrench } from 'lucide-react-native';
-import { CambiarEstadoModal } from '../components/supervisor/CambiarEstadoModal';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
 import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
@@ -122,7 +121,6 @@ export const ShipSupervisorScreen = () => {
   const [maquinaAReemplazar, setMaquinaAReemplazar] = useState<MaquinaFlota | null>(null);
   const [isEditarModalVisible, setIsEditarModalVisible] = useState(false);
   const [maquinaAEditar, setMaquinaAEditar] = useState<MaquinaFlota | null>(null);
-  const [maquinaAToggle, setMaquinaAToggle] = useState<MaquinaFlota | null>(null);
   const [maquinaADevolver, setMaquinaADevolver] = useState<MaquinaFlota | null>(null);
 
   // La búsqueda la resuelve el Backend; el filtro por estado se aplica sobre el resultado. Incluye lo hecho sin señal
@@ -187,10 +185,6 @@ export const ShipSupervisorScreen = () => {
   const handleEditar = (maquina: MaquinaFlota) => {
     setMaquinaAEditar(maquina);
     setIsEditarModalVisible(true);
-  };
-
-  const handleToggleEstado = (maquina: MaquinaFlota) => {
-    setMaquinaAToggle(maquina);
   };
 
   const filteredMaquinas = useMemo(
@@ -324,7 +318,6 @@ export const ShipSupervisorScreen = () => {
               maquina={maquina}
               onSustituir={handleSustituir}
               onEditar={handleEditar}
-              onCambiarEstado={handleToggleEstado}
               onDevolver={setMaquinaADevolver}
               conectado={conectado}
               onDescartarPendiente={confirmarDescarteMaquina}
@@ -454,15 +447,6 @@ export const ShipSupervisorScreen = () => {
         onRegularizado={(idAlerta, atenciones, horometroFinal) => {
           alertas.actualizar(idAlerta, (a) => ({ ...a, atenciones, turno: { ...a.turno, horometroFinal } }));
           // La acción queda en la bitácora: aparece en el historial
-          historial.refetch();
-        }}
-      />
-      <CambiarEstadoModal
-        maquina={maquinaAToggle}
-        onClose={() => setMaquinaAToggle(null)}
-        onCambiado={(maquinaActualizada) => {
-          actualizarMaquina(maquinaActualizada);
-          // El cambio queda en la bitácora: aparece en el historial
           historial.refetch();
         }}
       />

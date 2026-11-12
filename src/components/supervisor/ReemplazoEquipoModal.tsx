@@ -22,7 +22,7 @@ import { useVersionBase } from '../../hooks/useVersionBase';
 
 interface Props {
   // Máquina que sale (la de la tarjeta), ya en mantenimiento o fuera de servicio: conserva su estado,
-  // su regreso estimado y su turno ya cerrado, que se fijan con Estado. null = modal cerrado
+  // su regreso estimado y su turno ya cerrado, que se fijan al cambiar su estado en Editar. null = modal cerrado
   maquina: MaquinaFlota | null;
   onClose: () => void;
   // El Backend registró el reemplazo: hay que refrescar la flota y el historial
