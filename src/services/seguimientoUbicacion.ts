@@ -3,7 +3,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { guardarPosicion } from '../db/posicionLocal';
 import { limiteCierreAutomatico, listarTurnosEnCurso } from '../db/turnoLocal';
-import { getAdaptadorHost } from './adaptadorUrl';
+import { enExpoGo, getAdaptadorHost } from './adaptadorUrl';
 import { leerSesion } from './authStorage';
 import { enviarPosicionesPendientes } from './envioUbicacion';
 import { mostrarAviso } from './retroalimentacion';
@@ -169,6 +169,8 @@ export const activarSeguimiento = async () => {
 export const detenerSeguimiento = async () => {
   // El próximo turno puede empezar en otro lugar: no se repite el último punto de este
   ancla = null;
+  // En Expo Go nunca se inició (y consultarlo deja un warning en cada lectura del turno)
+  if (enExpoGo) return;
   try {
     if (await Location.hasStartedLocationUpdatesAsync(TAREA_UBICACION)) {
       await Location.stopLocationUpdatesAsync(TAREA_UBICACION);
