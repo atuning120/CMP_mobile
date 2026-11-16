@@ -14,6 +14,7 @@ import {
   PlusCircle,
   RefreshCw,
   Square,
+  Timer,
   Undo2,
   UserCheck,
   LucideIcon,
@@ -41,6 +42,7 @@ const PRESENTACION: Record<TipoEventoHistorial, { icono: LucideIcon; verbo: stri
   CAMBIAR_ESTADO: { icono: Activity, verbo: 'cambió el estado de', color: (t) => t.primary },
   REEMPLAZAR: { icono: RefreshCw, verbo: 'reemplazó', color: (t) => t.warning },
   DEVOLVER: { icono: Undo2, verbo: 'devolvió a operación', color: (t) => t.success },
+  REGULARIZAR: { icono: Timer, verbo: 'regularizó el horómetro de', color: (t) => t.primary },
 };
 
 const texto = (valor: unknown) => (typeof valor === 'string' && valor.trim() !== '' ? valor : null);
@@ -85,6 +87,8 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
   // El inicio y el cierre del turno son eventos separados, cada uno en su fecha
   const esTurno = evento.tipo === 'INICIO_TURNO' || evento.tipo === 'FIN_TURNO';
   const esCierre = evento.tipo === 'FIN_TURNO';
+  // El jefe de turno informó el horómetro de un turno que el sistema cerró sin él
+  const esRegularizacion = evento.tipo === 'REGULARIZAR';
   const Icono = presentacion.icono;
   const acento = presentacion.color(theme);
   const verbo = presentacion.verbo;
@@ -106,9 +110,9 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
   // Cambio de área/zona: desde dónde y a dónde fue
   const ubicacion = [texto(evento.detalle?.area), texto(evento.detalle?.zona)].filter(Boolean).join(' · ');
   const horometroInicial = numero(evento.detalle?.horometroInicial);
-  const horometroFinal = esCierre ? numero(evento.detalle?.horometroFinal) : null;
+  const horometroFinal = esCierre || esRegularizacion ? numero(evento.detalle?.horometroFinal) : null;
   const formatoHoras = (valor: number) => valor.toLocaleString('es-CL', { maximumFractionDigits: 1 });
-  const horometro = esCierre
+  const horometro = esCierre || esRegularizacion
     ? horometroFinal !== null
       ? `${horometroInicial !== null ? `${formatoHoras(horometroInicial)} → ` : ''}${formatoHoras(horometroFinal)} hrs`
       : 'Sin horómetro final'
@@ -190,7 +194,7 @@ export const HistorialEventoCard: React.FC<Props> = ({ evento }) => {
         )}
         {!!evento.observacion && <Text style={[styles.observacion, { color: theme.textSecondary }]}>{evento.observacion}</Text>}
 
-        {esTurno && (
+        {(esTurno || esRegularizacion) && (
           <View style={styles.metaFila}>
             {!!ubicacion && (
               <View style={styles.metaItem}>

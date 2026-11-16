@@ -9,8 +9,8 @@ import { styles } from './MachineFleetCard.styles';
 interface Props {
   maquina: MaquinaFlota;
   onSustituir: (maquina: MaquinaFlota) => void;
+  // Editar también cambia el estado de la máquina (con su motivo, regreso estimado y cierre del turno en curso)
   onEditar: (maquina: MaquinaFlota) => void;
-  onCambiarEstado: (maquina: MaquinaFlota) => void;
   onDevolver: (maquina: MaquinaFlota) => void;
   // Reemplazar y devolver cambian dos máquinas a la vez: solo se hacen con conexión, nunca quedan en cola
   conectado: boolean;
@@ -24,7 +24,6 @@ export const MachineFleetCard: React.FC<Props> = ({
   maquina,
   onSustituir,
   onEditar,
-  onCambiarEstado,
   onDevolver,
   conectado,
   onDescartarPendiente,
@@ -33,7 +32,8 @@ export const MachineFleetCard: React.FC<Props> = ({
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const estado = presentacionEstado(maquina.estado);
   const colorEstado = estado.color(theme);
-  // Se reemplaza una máquina que ya salió de operación (con Estado: ahí se fija el regreso y se cierra el turno);
+  // Se reemplaza una máquina que ya salió de operación (cambiando su estado en Editar: ahí se fija el regreso y se
+  // cierra el turno);
   // una en reserva no tiene a quién cubrir. Con un respaldo ya puesto, lo que corresponde es devolverla.
   // Con su cambio de estado aún en la cola, el Backend todavía la ve operando: se espera a que se sincronice
   const fueraDeOperacion = maquina.estado === 'EN_MANTENIMIENTO' || maquina.estado === 'BAJA';
@@ -203,13 +203,6 @@ export const MachineFleetCard: React.FC<Props> = ({
 
         <TouchableOpacity style={[styles.btnIcon, { backgroundColor: superficieSecundaria }]} onPress={() => onEditar(maquina)}>
           <Edit2 size={16} color={theme.text} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.btnPill, { backgroundColor: theme.primary }]}
-          onPress={() => onCambiarEstado(maquina)}
-        >
-          <Text style={styles.btnPillText}>Estado</Text>
         </TouchableOpacity>
       </View>
       )}

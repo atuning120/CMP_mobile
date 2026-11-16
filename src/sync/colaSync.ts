@@ -18,6 +18,7 @@ export type TipoOperacion =
   | 'CREAR_REPORTE'
   | 'SUBIR_EVIDENCIA'
   | 'ATENDER_ALERTA'
+  | 'REGULARIZAR_HOROMETRO' // el jefe de turno informa el horómetro de un turno que el sistema cerró sin él
   | 'CERRAR_TURNO' // el jefe de turno cierra el turno de un operador
   | 'EDITAR_MAQUINA' // también el cambio de estado
   | 'CREAR_MAQUINA';

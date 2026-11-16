@@ -8,7 +8,6 @@ import { LoginHeader } from '../components/LoginHeader';
 import { LoginFooter } from '../components/LoginFooter';
 import { TurnoSummaryDropdown } from '../components/workzone/TurnoSummaryDropdown';
 import { Truck, History, ShieldAlert, AlertTriangle, LayoutList, UserRound, AlarmClockOff, CheckCircle, CircleDashed, Layers, Wrench } from 'lucide-react-native';
-import { CambiarEstadoModal } from '../components/supervisor/CambiarEstadoModal';
 import { FleetSearchBar } from '../components/supervisor/FleetSearchBar';
 import { FleetFilterChips, FilterOption } from '../components/supervisor/FleetFilterChips';
 import { MachineFleetCard } from '../components/supervisor/MachineFleetCard';
@@ -31,6 +30,7 @@ import { RangoFechasFiltro } from '../components/supervisor/RangoFechasFiltro';
 import { ListaPorDia } from '../components/supervisor/ListaPorDia';
 import { AlertaCard } from '../components/supervisor/AlertaCard';
 import { AtenderAlertaModal } from '../components/supervisor/AtenderAlertaModal';
+import { RegularizarHorometroModal } from '../components/supervisor/RegularizarHorometroModal';
 import { useRangoFechas } from '../hooks/useRangoFechas';
 import { useAlertas } from '../hooks/useAlertas';
 import { useRecargaManual } from '../hooks/useRecargaManual';
@@ -121,7 +121,6 @@ export const ShipSupervisorScreen = () => {
   const [maquinaAReemplazar, setMaquinaAReemplazar] = useState<MaquinaFlota | null>(null);
   const [isEditarModalVisible, setIsEditarModalVisible] = useState(false);
   const [maquinaAEditar, setMaquinaAEditar] = useState<MaquinaFlota | null>(null);
-  const [maquinaAToggle, setMaquinaAToggle] = useState<MaquinaFlota | null>(null);
   const [maquinaADevolver, setMaquinaADevolver] = useState<MaquinaFlota | null>(null);
 
   // La búsqueda la resuelve el Backend; el filtro por estado se aplica sobre el resultado. Incluye lo hecho sin señal
@@ -137,6 +136,8 @@ export const ShipSupervisorScreen = () => {
   const alertas = useAlertas(FILTRO_ALERTAS_API[filtroAlertas], ESTADO_ATENCION_API[estadoAlertas], rangoAlertas.rango);
   // Alerta que se está atendiendo (modal abierto); null = cerrado
   const [alertaAAtender, setAlertaAAtender] = useState<Alerta | null>(null);
+  // Cierre automático cuyo horómetro se está regularizando (modal abierto); null = cerrado
+  const [alertaARegularizar, setAlertaARegularizar] = useState<Alerta | null>(null);
   const conectado = useConectado();
 
   const confirmarDescarteMaquina = (maquina: MaquinaFlota) =>
@@ -184,10 +185,6 @@ export const ShipSupervisorScreen = () => {
   const handleEditar = (maquina: MaquinaFlota) => {
     setMaquinaAEditar(maquina);
     setIsEditarModalVisible(true);
-  };
-
-  const handleToggleEstado = (maquina: MaquinaFlota) => {
-    setMaquinaAToggle(maquina);
   };
 
   const filteredMaquinas = useMemo(
@@ -278,7 +275,14 @@ export const ShipSupervisorScreen = () => {
         lista={alertas}
         nombre="alertas"
         recargando={recarga.refreshing}
-        renderItem={(alerta) => <AlertaCard alerta={alerta} onAtender={setAlertaAAtender} onDescartarPendiente={confirmarDescarte} />}
+        renderItem={(alerta) => (
+          <AlertaCard
+            alerta={alerta}
+            onAtender={setAlertaAAtender}
+            onRegularizar={setAlertaARegularizar}
+            onDescartarPendiente={confirmarDescarte}
+          />
+        )}
       />
     </GlassCapsule>
   );
@@ -314,7 +318,6 @@ export const ShipSupervisorScreen = () => {
               maquina={maquina}
               onSustituir={handleSustituir}
               onEditar={handleEditar}
-              onCambiarEstado={handleToggleEstado}
               onDevolver={setMaquinaADevolver}
               conectado={conectado}
               onDescartarPendiente={confirmarDescarteMaquina}
@@ -438,12 +441,12 @@ export const ShipSupervisorScreen = () => {
         // Se actualiza la tarjeta aunque ya no calce con el filtro, para que no desaparezca mientras se mira
         onAtendida={(idAlerta, atenciones) => alertas.actualizar(idAlerta, (a) => ({ ...a, atenciones }))}
       />
-      <CambiarEstadoModal
-        maquina={maquinaAToggle}
-        onClose={() => setMaquinaAToggle(null)}
-        onCambiado={(maquinaActualizada) => {
-          actualizarMaquina(maquinaActualizada);
-          // El cambio queda en la bitácora: aparece en el historial
+      <RegularizarHorometroModal
+        alerta={alertaARegularizar}
+        onClose={() => setAlertaARegularizar(null)}
+        onRegularizado={(idAlerta, atenciones, horometroFinal) => {
+          alertas.actualizar(idAlerta, (a) => ({ ...a, atenciones, turno: { ...a.turno, horometroFinal } }));
+          // La acción queda en la bitácora: aparece en el historial
           historial.refetch();
         }}
       />

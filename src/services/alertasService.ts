@@ -19,8 +19,9 @@ export interface AtencionAlerta {
   usuario: string;
   fecha: string; // ISO 8601
   comentario: string | null;
-  // Hecha en este teléfono sin señal y aún no enviada (solo en la app): su operación en la cola y por qué la rechazó el servidor
-  pendiente?: { idOperacion: number; error: string | null };
+  // Hecha en este teléfono sin señal y aún no enviada (solo en la app): su operación en la cola, por qué la rechazó el
+  // servidor y si viene de regularizar el horómetro
+  pendiente?: { idOperacion: number; error: string | null; regularizacion?: boolean };
 }
 
 // Máximo que acepta el Backend
@@ -39,6 +40,8 @@ export interface Alerta {
     horaTermino: string | null;
     horometroInicial: number | null;
     horometroFinal: number | null;
+    // Cierre automático sin horómetro: el inicial del turno siguiente de la máquina (valor sugerido y máximo al regularizar)
+    horometroSiguiente?: number | null;
   };
   area: string | null;
   zona: string | null;
@@ -85,3 +88,20 @@ export const atenderAlerta = (idAlerta: string, comentario: string, idCliente: s
     method: 'POST',
     body: JSON.stringify({ comentario, idCliente, atencionesVistas, fechaAccion }),
   });
+
+// El sistema cerró el turno sin horómetro final: el jefe de turno puede regularizarlo desde la alerta
+export const faltaHorometroFinal = (alerta: Alerta) => alerta.tipo === 'CIERRE_AUTOMATICO' && alerta.turno.horometroFinal === null;
+
+/**
+ * Informa el horómetro final de un turno que el sistema cerró sin él; la alerta queda atendida. Sin señal se usa
+ * `regularizarHorometroJefe` (accionesJefe.ts), que la deja en la cola. idCliente (UUID): el mismo en cada reintento.
+ * fechaAccion: cuándo se hizo, si fue sin señal y se envía después.
+ */
+export const regularizarHorometro = (idAlerta: string, horometroFinal: number, comentario: string, idCliente: string, fechaAccion?: string) =>
+  apiRequest<{ idAlerta: string; atenciones: AtencionAlerta[]; horometroFinal: number }>(
+    `/alertas/${encodeURIComponent(idAlerta)}/horometro-final`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ horometroFinal, comentario, idCliente, fechaAccion }),
+    },
+  );

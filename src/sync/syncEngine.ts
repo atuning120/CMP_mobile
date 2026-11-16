@@ -15,7 +15,7 @@ import { FOTOS_HABILITADAS } from '../constants/features';
 import { mensajeDeError } from '../utils/errores';
 import { leerSesion } from '../services/authStorage';
 import * as api from '../services/turnoService';
-import { atenderAlerta } from '../services/alertasService';
+import { atenderAlerta, regularizarHorometro } from '../services/alertasService';
 import {
   cerrarTurnoDeMaquina,
   crearMaquina,
@@ -167,6 +167,11 @@ const enviarOperacion = async (operacion: OperacionPendiente): Promise<void> => 
       const { idAlerta, comentario, atencionesVistas } = p as { idAlerta: string; comentario: string; atencionesVistas: number };
       // Si la respuesta no llegó y se reenvía, el idCliente evita registrarla dos veces
       await atenderAlerta(idAlerta, comentario, operacion.idEntidad, atencionesVistas, operacion.fechaAccion ?? undefined);
+      return;
+    }
+    case 'REGULARIZAR_HOROMETRO': {
+      const { idAlerta, horometroFinal, comentario } = p as { idAlerta: string; horometroFinal: number; comentario: string };
+      await regularizarHorometro(idAlerta, horometroFinal, comentario, operacion.idEntidad, operacion.fechaAccion ?? undefined);
       return;
     }
     case 'CERRAR_TURNO': {
