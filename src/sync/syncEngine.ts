@@ -340,12 +340,23 @@ const conciliarTurno = async (idOperador: number) => {
     if (local.idCliente === idClienteVigente || !local.sincronizado) continue;
     // Si lo cerró el servidor, se copian su estado, término y horómetro (el jefe de turno lo informa)
     const cerrado = esElMismo(cerradoJefe, local) ? cerradoJefe : esElMismo(cerradoAuto, local) ? cerradoAuto : null;
-    await actualizarTurno(db, local.idCliente, {
-      estado: cerrado ? cerrado.estado : 'CERRADO',
-      fechaFin: cerrado?.fechaFin ?? new Date().toISOString(),
-      ...(cerrado?.horometroFinal !== null && cerrado?.horometroFinal !== undefined ? { horometroFinal: cerrado.horometroFinal } : {}),
+    const fechaFin = cerrado?.fechaFin ?? new Date().toISOString();
+    await db.withExclusiveTransactionAsync(async (txn) => {
+      await actualizarTurno(txn, local.idCliente, {
+        estado: cerrado ? cerrado.estado : 'CERRADO',
+        fechaFin,
+        ...(cerrado?.horometroFinal !== null && cerrado?.horometroFinal !== undefined ? { horometroFinal: cerrado.horometroFinal } : {}),
+      });
+      // Ningún estado termina después del turno: el vigente se cierra cuando terminó el turno (no al sincronizar: el
+      // teléfono pudo pasar horas sin señal), y uno que el teléfono cerró más tarde sin saber del cierre se recorta. Uno
+      // registrado sin señal después del cierre queda en duración cero, nunca negativa. Fechas ISO 8601 en UTC de ambos
+      // lados (toISOString), así que MIN y MAX comparan bien como texto
+      await txn.runAsync('UPDATE turno_estado SET fin = MAX(inicio, MIN(COALESCE(fin, ?), ?)) WHERE id_cliente_turno = ?', [
+        fechaFin,
+        fechaFin,
+        local.idCliente,
+      ]);
     });
-    await db.runAsync('UPDATE turno_estado SET fin = ? WHERE id_cliente_turno = ? AND fin IS NULL', [new Date().toISOString(), local.idCliente]);
     cambios = true;
   }
 
