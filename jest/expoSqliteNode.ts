@@ -60,16 +60,23 @@ class BaseDeDatosNode {
       .map((fila) => plana<T>(fila));
   }
 
-  // En el teléfono la transacción usa otra conexión; aquí basta la misma (los tests no corren en paralelo sobre una base)
-  async withExclusiveTransactionAsync(tarea: (txn: BaseDeDatosNode) => Promise<void>): Promise<void> {
-    this.db.exec('BEGIN EXCLUSIVE');
-    try {
-      await tarea(this);
-      this.db.exec('COMMIT');
-    } catch (error) {
-      this.db.exec('ROLLBACK');
-      throw error;
-    }
+  // Transacciones en fila: como en el teléfono, una segunda espera a que termine la primera (p. ej. una acción del
+  // operador mientras el motor de sincronización concilia). En el teléfono usan otra conexión; aquí basta la misma
+  private transacciones: Promise<void> = Promise.resolve();
+
+  withExclusiveTransactionAsync(tarea: (txn: BaseDeDatosNode) => Promise<void>): Promise<void> {
+    const ejecucion = this.transacciones.then(async () => {
+      this.db.exec('BEGIN EXCLUSIVE');
+      try {
+        await tarea(this);
+        this.db.exec('COMMIT');
+      } catch (error) {
+        this.db.exec('ROLLBACK');
+        throw error;
+      }
+    });
+    this.transacciones = ejecucion.catch(() => undefined);
+    return ejecucion;
   }
 }
 
