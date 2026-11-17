@@ -6,6 +6,7 @@ import { limiteCierreAutomatico, listarTurnosEnCurso } from '../db/turnoLocal';
 import { enExpoGo, getAdaptadorHost } from './adaptadorUrl';
 import { leerSesion } from './authStorage';
 import { enviarPosicionesPendientes } from './envioUbicacion';
+import { crearFiltroDeriva } from './filtroDeriva';
 import { mostrarAviso } from './retroalimentacion';
 
 /*
@@ -25,31 +26,9 @@ const MARGEN_MS = 5 * 1000;
 const ESPERA_LECTURA_MS = 5 * 1000;
 const ANTIGUEDAD_CONOCIDA_MS = 60 * 1000;
 
-// Filtro de deriva (como el de los GPS vehiculares): detenido, cada lectura cae en otro punto de su círculo de error.
-// Una lectura imprecisa (bajo techo o entre galpones) no mueve la máquina, y una precisa solo la mueve si se alejó
-// claramente del punto anterior; si no, se repite ese punto (con la hora nueva, para que el mapa la vea vigente).
-// La primera lectura del turno se acepta aunque sea imprecisa, para que la máquina aparezca de inmediato en el mapa;
-// la primera lectura precisa que caiga lejos de ella la corrige
-const PRECISION_MAXIMA_M = 25;
-const DESPLAZAMIENTO_MINIMO_M = 15;
-
 let ultimaGuardada = 0;
-let ancla: { latitud: number; longitud: number } | null = null;
-
-// Distancia en metros entre dos puntos cercanos (aproximación plana, suficiente dentro de una faena)
-const distanciaM = (a: { latitud: number; longitud: number }, b: { latitud: number; longitud: number }) => {
-  const radianes = Math.PI / 180;
-  const x = (b.longitud - a.longitud) * radianes * Math.cos(((a.latitud + b.latitud) / 2) * radianes);
-  const y = (b.latitud - a.latitud) * radianes;
-  return Math.hypot(x, y) * 6_371_000;
-};
-
-// true si la lectura cuenta como movimiento real: precisa y más lejos del ancla que su propio margen de error
-const seMovio = (punto: { latitud: number; longitud: number }, precision: number | null) => {
-  if (!ancla) return true;
-  if (precision !== null && precision > PRECISION_MAXIMA_M) return false;
-  return distanciaM(ancla, punto) > Math.max(2 * (precision ?? 0), DESPLAZAMIENTO_MINIMO_M);
-};
+// Sin moverse se repite el punto del ancla (con la hora nueva, para que el mapa la vea vigente)
+const filtro = crearFiltroDeriva();
 
 // Máquina del turno en curso del operador con sesión en el teléfono, o null si no hay turno vigente
 const maquinaEnTurno = async (): Promise<number | null> => {
@@ -64,16 +43,16 @@ const maquinaEnTurno = async (): Promise<number | null> => {
 const registrarLectura = async (idMaquina: number, lectura: Location.LocationObject) => {
   if (lectura.timestamp <= ultimaGuardada) return;
   const { latitude, longitude, speed, heading, accuracy } = lectura.coords;
-  const punto = { latitud: latitude, longitud: longitude };
-  const movida = seMovio(punto, accuracy);
-  if (movida) ancla = punto;
+  // Negativa o null cuando el teléfono no la sabe
+  const velocidad = speed !== null && speed >= 0 ? speed : null;
+  const { punto, movida } = filtro.registrar({ latitud: latitude, longitud: longitude }, accuracy, velocidad);
   ultimaGuardada = lectura.timestamp;
   await guardarPosicion({
     idMaquina,
     fechaHora: new Date(lectura.timestamp).toISOString(),
-    ...(ancla ?? punto),
-    // m/s -> km/h; negativo o null cuando el teléfono no lo sabe. Sin moverse, detenida y sin rumbo
-    velocidad: !movida ? 0 : speed !== null && speed >= 0 ? speed * 3.6 : null,
+    ...punto,
+    // m/s -> km/h. Sin moverse, detenida y sin rumbo
+    velocidad: !movida ? 0 : velocidad !== null ? velocidad * 3.6 : null,
     rumbo: movida && heading !== null && heading >= 0 ? heading : null,
   });
 };
@@ -167,8 +146,7 @@ export const activarSeguimiento = async () => {
 };
 
 export const detenerSeguimiento = async () => {
-  // El próximo turno puede empezar en otro lugar: no se repite el último punto de este
-  ancla = null;
+  filtro.reiniciar();
   // En Expo Go nunca se inició (y consultarlo deja un warning en cada lectura del turno)
   if (enExpoGo) return;
   try {
