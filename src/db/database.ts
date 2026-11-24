@@ -159,6 +159,10 @@ const MIGRACIONES: (string | MigracionCodigo)[] = [
   );
   CREATE INDEX IF NOT EXISTS idx_registro_accion_usuario ON registro_accion (usuario, id);
   `,
+  `
+  -- La app ya no envía la ubicación del teléfono: la posición de las máquinas viene de los GPS reales
+  DROP TABLE IF EXISTS posicion_pendiente;
+  `,
 ];
 
 export type Db = SQLite.SQLiteDatabase;

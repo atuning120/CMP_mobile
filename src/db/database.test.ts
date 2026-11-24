@@ -25,11 +25,12 @@ describe('database', () => {
         'reporte',
         'evidencia',
         'operacion_pendiente',
-        'posicion_pendiente',
         'consulta_guardada',
         'registro_accion',
       ]),
     );
+    // Se creó en la migración 2 y se eliminó al dejar de enviar la ubicación del teléfono
+    expect(tablas).not.toContain('posicion_pendiente');
     expect(await columnas('operacion_pendiente')).toEqual(
       expect.arrayContaining(['usuario', 'clave_bloqueo', 'fecha_accion', 'codigo_error']),
     );

@@ -16,7 +16,6 @@ import { suscribirCambioDatos } from '../sync/eventos';
 import { sincronizacionEnCurso } from '../sync/syncEngine';
 import { mostrarAviso } from '../services/retroalimentacion';
 import { mensajeDeError } from '../utils/errores';
-import { activarSeguimiento, finalizarSeguimiento, sincronizarSeguimiento } from '../services/seguimientoUbicacion';
 
 // Tope de espera a la sincronización al abrir la pantalla: con mala señal no se bloquea al operador
 const ESPERA_SINCRONIZACION_MS = 6000;
@@ -43,8 +42,6 @@ export const useTurnoActual = (): UseTurnoActualResult => {
       setTurnoCerradoPorJefe(actual.turnoCerradoPorJefe);
       setEstadosCatalogo(estados);
       setError(null);
-      // El envío de ubicación sigue al turno (p. ej. se detiene si el jefe de turno lo cerró)
-      void sincronizarSeguimiento(actual.turno !== null);
       return actual.turno;
     } catch (e) {
       setError(new Error(mensajeDeError(e, 'No se pudo cargar el turno.')));
@@ -59,17 +56,12 @@ export const useTurnoActual = (): UseTurnoActualResult => {
 
   const iniciarTurno = useCallback(async (datos: IniciarTurnoDatos) => {
     await operaciones.iniciarTurno(datos);
-    // Sin esperar: pide el permiso de ubicación si falta, sin demorar la confirmación del turno
-    void activarSeguimiento();
   }, []);
 
   const finalizarTurno = useCallback(
     async (datos: FinalizarTurnoDatos) => {
       if (!turno) throw new operaciones.OperacionError('No hay un turno en curso.');
-      const estado = await operaciones.finalizarTurno(turno.idCliente, datos);
-      // Sin esperar: manda la última posición de la máquina y detiene el envío
-      void finalizarSeguimiento(turno.maquina.id);
-      return estado;
+      return operaciones.finalizarTurno(turno.idCliente, datos);
     },
     [turno],
   );
