@@ -126,10 +126,10 @@ export const RegularizarHorometroModal: React.FC<Props> = ({ alerta, onClose, on
         accessibilityLabel="Horómetro final del turno"
       />
       <Text style={[styles.ayuda, { color: theme.textSecondary }]}>
-        Partió con {formatoHoras(inicial)} h.{' '}
+        Horómetro inicial: {formatoHoras(inicial)} h.{' '}
         {maximo !== null
-          ? `El turno siguiente de la máquina partió con ${formatoHoras(maximo)} h: es el máximo posible.`
-          : 'Léelo en la cabina de la máquina.'}
+          ? `El turno siguiente de la máquina inicio con ${formatoHoras(maximo)} h: es el máximo posible.`
+          : '.'}
       </Text>
       {muchasHoras && (
         <Text style={[styles.ayuda, { color: theme.warningText }]}>
