@@ -21,7 +21,7 @@ export interface MaquinaFlota {
   // Motivo del estado actual (si no está operativa)
   motivoEstado: string | null;
   // Nadie la tiene asignada ni la está operando: se muestra junto al estado
-  sinOperador: boolean;
+  sinAsignar: boolean;
   idOperadorAsignado: number | null;
   operadorAsignado: string | null; // a cargo de la máquina
   operadorEnTurno: string | null; // con turno en curso (puede ser otro, p. ej. en un relevo)
@@ -96,7 +96,7 @@ export const mapMaquinaFlota = (maquina: MaquinaFlotaApi): MaquinaFlota => ({
         .filter(Boolean)
         .join(': ')
     : null,
-  sinOperador: !maquina.operadorAsignado && !maquina.operadorActual,
+  sinAsignar: !maquina.operadorAsignado && !maquina.operadorActual,
   idOperadorAsignado: maquina.operadorAsignado?.idOperador ?? null,
   operadorAsignado: maquina.operadorAsignado?.nombre ?? null,
   operadorEnTurno: maquina.operadorActual,
@@ -118,7 +118,7 @@ export const conCambios = (maquina: MaquinaFlota, vista: Partial<MaquinaFlota>):
   return {
     ...cambiada,
     marcaModelo: componerMarcaModelo(cambiada.marca, cambiada.modelo, cambiada.tipoMaquina),
-    sinOperador: !cambiada.operadorAsignado && !cambiada.operadorEnTurno,
+    sinAsignar: !cambiada.operadorAsignado && !cambiada.operadorEnTurno,
   };
 };
 
@@ -136,7 +136,7 @@ export const vistaDeNueva = (id: number, datos: CrearMaquinaApi, operadorAsignad
   esContratista: datos.esContratista,
   estado: 'ACTIVA',
   motivoEstado: null,
-  sinOperador: datos.idOperador === null,
+  sinAsignar: datos.idOperador === null,
   idOperadorAsignado: datos.idOperador,
   operadorAsignado,
   operadorEnTurno: null,

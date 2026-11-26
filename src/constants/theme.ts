@@ -9,6 +9,8 @@ export interface ThemeColors {
   success: string;
   danger: string;
   warning: string;
+  // Máquina "Sin operador" (distinto del ámbar de "bajo observación")
+  orange: string;
   white: string;
   // Variantes para TEXTO (contraste ≥ 4,5:1 sobre fondo, card y cardAlt, legibles a pleno sol). Los
   // colores base siguen para fondos de botón, bordes e íconos; como texto quedaban bajo ese mínimo
@@ -16,6 +18,7 @@ export interface ThemeColors {
   successText: string;
   dangerText: string;
   warningText: string;
+  orangeText: string;
   // Superficie invertida (oscura en tema claro y viceversa) para avisos flotantes que deben destacar
   inverseSurface: string;
   inverseText: string;
@@ -44,11 +47,13 @@ export const lightTheme: ThemeColors = {
   success: '#1e8e3e',
   danger: '#d93025',
   warning: '#f9ab00',
+  orange: '#e8710a',
   white: '#FFFFFF',
   primaryText: '#1967d2',
   successText: '#137333',
   dangerText: '#c5221f',
   warningText: '#a35a00',
+  orangeText: '#b06000',
   inverseSurface: '#2d2e31',
   inverseText: '#FFFFFF',
   inverseTextSecondary: '#bdc1c6',
@@ -74,11 +79,13 @@ export const darkTheme: ThemeColors = {
   success: '#1e8e3e',
   danger: '#d93025',
   warning: '#f9ab00',
+  orange: '#fa903e',
   white: '#FFFFFF',
   primaryText: '#8ab4f8',
   successText: '#81c995',
   dangerText: '#f28b82',
   warningText: '#fdd663',
+  orangeText: '#fcad70',
   inverseSurface: '#e8eaed',
   inverseText: '#202124',
   inverseTextSecondary: '#5f6368',

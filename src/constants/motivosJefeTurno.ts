@@ -37,6 +37,15 @@ export const MOTIVOS_OBSERVACION = [
   'Otro',
 ];
 
+// Mismos motivos que el panel web (Frontend/src/pages/Flota/motivos.js)
+export const MOTIVOS_SIN_OPERADOR = [
+  'Operador con licencia médica',
+  'Operador de vacaciones o permiso',
+  'Operador reasignado a otro equipo',
+  'Falta de personal',
+  'Otro',
+];
+
 export const MOTIVOS_MANTENIMIENTO = [
   'Mantención programada',
   'Mantención correctiva',

@@ -69,11 +69,11 @@ export const MachineFleetCard: React.FC<Props> = ({
             <View style={[styles.dot, { backgroundColor: colorEstado }]} />
             <Text style={[styles.estadoText, { color: estado.colorTexto(theme) }]}>{estado.etiqueta}</Text>
           </View>
-          {/* No es un estado: acompaña a cualquiera cuando nadie tiene la máquina */}
-          {maquina.sinOperador && (
+          {/* No es un estado: acompaña a cualquiera cuando nadie tiene la máquina (el estado "Sin operador" ya lo dice) */}
+          {maquina.sinAsignar && maquina.estado !== 'SIN_OPERADOR' && (
             <View style={[styles.estadoBadge, { borderWidth: 1, borderColor: theme.border }]}>
               <User size={10} color={theme.textSecondary} />
-              <Text style={[styles.estadoText, { color: theme.textSecondary }]}>Sin operador</Text>
+              <Text style={[styles.estadoText, { color: theme.textSecondary }]}>Sin asignar</Text>
             </View>
           )}
         </View>
