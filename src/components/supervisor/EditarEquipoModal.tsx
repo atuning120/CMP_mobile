@@ -4,7 +4,7 @@ import { AppBottomSheetModal } from '../common/AppBottomSheetModal';
 import { Edit2, CheckCircle, ChevronDown, Activity, Truck, ClipboardList, AlertTriangle } from 'lucide-react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 import { MaquinaFlota, mapMaquinaFlota } from '../../hooks/useFlotaResumen';
-import { conRegreso, ESTADOS_MAQUINA, EstadoMaquina, operaEnEstado, presentacionEstado } from '../../constants/estadosMaquina';
+import { admiteTurnoEnCurso, conRegreso, ESTADOS_MAQUINA, EstadoMaquina, presentacionEstado } from '../../constants/estadosMaquina';
 import { useOpcionesMaquina } from '../../hooks/useOpcionesMaquina';
 import { useOperadoresAsignables } from '../../hooks/useOperadoresAsignables';
 import { type FichaMaquinaApi } from '../../services/flotaService';
@@ -134,8 +134,8 @@ export const EditarEquipoModal: React.FC<Props> = ({ visible, onClose, maquina, 
   const motivos = motivosPara(estadoOperativo);
 
   const cambiaEstado = estadoOperativo !== maquina.estado;
-  // Sacarla de operación con un operador trabajando: primero se cierra su turno con el horómetro final
-  const pideCierre = cambiaEstado && !operaEnEstado(estadoOperativo) && !!maquina.operadorEnTurno && !turnoCerrado;
+  // Sacarla de operación (o marcarla sin operador) con un operador trabajando: primero se cierra su turno con el horómetro final
+  const pideCierre = cambiaEstado && !admiteTurnoEnCurso(estadoOperativo) && !!maquina.operadorEnTurno && !turnoCerrado;
   const horometro = leerHorometro(horometroCierre);
   const cierreListo = !pideCierre || (horometro !== null && horometro >= maquina.horometroActual);
 

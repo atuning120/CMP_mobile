@@ -45,7 +45,7 @@ const descripcionDe = (m: MaquinaFlota) =>
     .join(' · ');
 
 // Las que quedan operativas al entrar en un reemplazo (igual que el Backend)
-const esRespaldo = (m: MaquinaFlota) => m.estado === 'BAJA' || m.estado === 'EN_RESERVA';
+const esRespaldo = (m: MaquinaFlota) => m.estado === 'BAJA' || m.estado === 'EN_RESERVA' || m.estado === 'SIN_OPERADOR';
 // Puede entrar: no está en mantenimiento ni cubre ya a otra máquina (el Backend lo rechazaría)
 const puedeEntrar = (m: MaquinaFlota) => m.estado !== 'EN_MANTENIMIENTO' && !m.cubreA;
 

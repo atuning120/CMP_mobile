@@ -43,15 +43,16 @@ import { useConectado } from '../hooks/useConectado';
 type TabOption = 'FLOTA' | 'HISTORIAL' | 'ALERTAS';
 
 type FiltroHistorialUI = 'Todo' | 'Turnos' | 'Flota';
-// "Sin operador" se cruza con cualquier estado: una máquina en reserva también puede estar sin operador
+// "Sin asignar" (nadie la tiene asignada) se cruza con cualquier estado: una máquina en reserva también puede estarlo
 const FILTRO_FLOTA: Record<FilterOption, (m: MaquinaFlota) => boolean> = {
   Todos: () => true,
   Operativos: (m) => m.estado === 'ACTIVA',
   'Bajo observación': (m) => m.estado === 'BAJO_OBSERVACION',
   'En mantenimiento': (m) => m.estado === 'EN_MANTENIMIENTO',
   'En reserva': (m) => m.estado === 'EN_RESERVA',
-  'Sin operador': (m) => m.sinOperador,
+  'Sin operador': (m) => m.estado === 'SIN_OPERADOR',
   'Fuera de Servicio': (m) => m.estado === 'BAJA',
+  'Sin asignar': (m) => m.sinAsignar,
 };
 
 const FILTROS_HISTORIAL = [

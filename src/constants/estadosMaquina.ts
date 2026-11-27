@@ -5,10 +5,11 @@ import {
   MOTIVOS_MANTENIMIENTO,
   MOTIVOS_OBSERVACION,
   MOTIVOS_RESERVA,
+  MOTIVOS_SIN_OPERADOR,
 } from './motivosJefeTurno';
 
-// Estados de una máquina (MAQUINA.estado en el Backend). "Sin operador" no es un estado: se deduce de la asignación
-export type EstadoMaquina = 'ACTIVA' | 'BAJO_OBSERVACION' | 'EN_MANTENIMIENTO' | 'EN_RESERVA' | 'BAJA';
+// Estados de una máquina (MAQUINA.estado en el Backend). "Sin asignar" no es un estado: se deduce de la asignación
+export type EstadoMaquina = 'ACTIVA' | 'BAJO_OBSERVACION' | 'EN_MANTENIMIENTO' | 'EN_RESERVA' | 'SIN_OPERADOR' | 'BAJA';
 
 export interface PresentacionEstado {
   valor: EstadoMaquina;
@@ -36,6 +37,7 @@ export const ESTADOS_MAQUINA: PresentacionEstado[] = [
     motivos: MOTIVOS_MANTENIMIENTO,
   },
   { valor: 'EN_RESERVA', etiqueta: 'En reserva', color: (t) => t.textTertiary, colorTexto: (t) => t.textSecondary, motivos: MOTIVOS_RESERVA },
+  { valor: 'SIN_OPERADOR', etiqueta: 'Sin operador', color: (t) => t.orange, colorTexto: (t) => t.orangeText, motivos: MOTIVOS_SIN_OPERADOR },
   { valor: 'BAJA', etiqueta: 'Fuera de servicio', color: (t) => t.danger, colorTexto: (t) => t.dangerText, motivos: MOTIVOS_DESHABILITAR },
 ];
 
@@ -47,6 +49,9 @@ export const presentacionEstado = (estado: string | null): PresentacionEstado =>
 // para pasarla a esos estados, antes hay que cerrar su turno en curso). "Bajo observación" sí opera
 const ESTADOS_SIN_OPERAR: EstadoMaquina[] = ['EN_MANTENIMIENTO', 'EN_RESERVA', 'BAJA'];
 export const operaEnEstado = (estado: EstadoMaquina) => !ESTADOS_SIN_OPERAR.includes(estado);
+// "Sin operador" sí puede iniciar turno (al iniciarlo pasa sola a operativa), pero no se marca así mientras alguien la
+// está operando: primero se cierra ese turno
+export const admiteTurnoEnCurso = (estado: EstadoMaquina) => operaEnEstado(estado) && estado !== 'SIN_OPERADOR';
 
 // Estados con fecha estimada de regreso (una reparación, una falla mayor)
 export const conRegreso = (estado: EstadoMaquina) => estado === 'EN_MANTENIMIENTO' || estado === 'BAJA';

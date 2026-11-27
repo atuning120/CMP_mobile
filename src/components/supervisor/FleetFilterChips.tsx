@@ -10,7 +10,8 @@ export type FilterOption =
   | 'En mantenimiento'
   | 'En reserva'
   | 'Sin operador'
-  | 'Fuera de Servicio';
+  | 'Fuera de Servicio'
+  | 'Sin asignar';
 
 interface Props<T extends string> {
   activeFilter: T;
@@ -19,7 +20,16 @@ interface Props<T extends string> {
   filters?: readonly T[];
 }
 
-const FILTERS: FilterOption[] = ['Todos', 'Operativos', 'Bajo observación', 'En mantenimiento', 'En reserva', 'Sin operador', 'Fuera de Servicio'];
+const FILTERS: FilterOption[] = [
+  'Todos',
+  'Operativos',
+  'Bajo observación',
+  'En mantenimiento',
+  'En reserva',
+  'Sin operador',
+  'Fuera de Servicio',
+  'Sin asignar',
+];
 
 export function FleetFilterChips<T extends string = FilterOption>({ activeFilter, onFilterChange, filters }: Props<T>) {
   const colorScheme = useColorScheme();
